@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIが作ったアニメ風2D格ゲー</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #050816;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    #gameWrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    canvas {
+      width: min(100vw, 1280px);
+      height: min(56.25vw, 720px);
+      max-height: 100vh;
+      display: block;
+      background: linear-gradient(180deg, #0f1f4d 0%, #20143b 50%, #341818 100%);
+      box-shadow: 0 0 30px rgba(120, 180, 255, 0.15);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    #hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.45);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrap">
+    <canvas id="game" width="1280" height="720"></canvas>
+    <div id="hint">← → 移動 / Space ジャンプ / Z 弱攻撃 / X 強攻撃 / C 気弾 / M 音ON-OFF / R 再戦</div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const groundY = 620;
+    const keys = {};
+    let startedAudio = false;
+
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const rand = (a, b) => Math.random() * (b - a) + a;
+    const rectsOverlap = (a, b) => (
+      a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+    );
+
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.master = null;
+        this.musicGain = null;
+        this.sfxGain = null;
+        this.enabled = true;
+        this.musicNodes = [];
+        this.started = false;
+      }
+      init() {
+        if (this.started) return;
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          this.ctx = new AudioCtx();
+          this.master = this.ctx.createGain();
+          this.musicGain = this.ctx.createGain();
+          this.sfxGain = this.ctx.createGain();
+          this.master.gain.value = 0.85;
+          this.musicGain.gain.value = 0.06;
+          this.sfxGain.gain.value = 0.18;
+          this.musicGain.connect(this.master);
+          this.sfxGain.connect(this.master);
+          this.master.connect(this.ctx.destination);
+          this.started = true;
+          this.startBGM();
+        } catch (e) {
+          console.warn('Audio unavailable', e);
+        }
+      }
+      toggle() {
+        this.enabled = !this.enabled;
+        if (this.master) this.master.gain.value = this.enabled ? 0.85 : 0;
+      }
+      tone(freq, start, dur, type = 'sine', volume = 0.2, endFreq = null) {
+        if (!this.ctx || !this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        if (endFreq !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), start + dur);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+        osc.start(start);
+        osc.stop(start + dur + 0.02);
+      }
+      noise(start, dur, volume = 0.08, highpass = 500) {
+        if (!this.ctx || !this.enabled) return;
+        const bufferSize = this.ctx.sampleRate * dur;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = highpass;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(volume, start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.sfxGain);
+        source.start(start);
+      }
+      startBGM() {
+        if (!this.ctx || this.musicNodes.length) return;
+        const now = this.ctx.currentTime + 0.03;
+        const bpm = 112;
+        const beat = 60 / bpm;
+        const patternLen = 16;
+        const bass = [110, 110, 123.47, 123.47, 146.83, 146.83, 123.47, 123.47, 98, 98, 110, 110, 123.47, 123.47, 146.83, 123.47];
+        const lead = [440, 493.88, 523.25, 493.88, 440, 493.88, 659.25, 587.33, 523.25, 493.88, 440, 392, 440, 493.88, 523.25, 587.33];
+        const createLoopOsc = (type, gainValue) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          gain.gain.value = gainValue;
+          osc.connect(gain);
+          gain.connect(this.musicGain);
+          osc.start(now);
+          this.musicNodes.push({ osc, gain });
+          return osc;
+        };
+        const bassOsc = createLoopOsc('triangle', 0.22);
+        const leadOsc = createLoopOsc('square', 0.06);
+        const padOsc = createLoopOsc('sine', 0.04);
+        for (let bar = 0; bar < 64; bar++) {
+          for (let i = 0; i < patternLen; i++) {
+            const t = now + (bar * patternLen + i) * beat;
+            bassOsc.frequency.setValueAtTime(bass[i % bass.length], t);
+            leadOsc.frequency.setValueAtTime(lead[i % lead.length], t);
+            padOsc.frequency.setValueAtTime(lead[(i + 4) % lead.length] / 2, t);
+          }
+        }
+      }
+      jump() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.tone(420, t, 0.06, 'square', 0.08, 620);
+      }
+      weak() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.tone(180, t, 0.05, 'square', 0.08, 100);
+      }
+      strong() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.tone(160, t, 0.09, 'sawtooth', 0.11, 70);
+        this.noise(t, 0.08, 0.04, 700);
+      }
+      shoot() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.tone(320, t, 0.12, 'sawtooth', 0.08, 880);
+      }
+      hitLight() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.noise(t, 0.05, 0.06, 900);
+        this.tone(140, t, 0.05, 'triangle', 0.06, 70);
+      }
+      hitHeavy() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.noise(t, 0.12, 0.09, 600);
+        this.tone(120, t, 0.1, 'sawtooth', 0.08, 50);
+      }
+      ko() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        this.tone(523.25, t, 0.12, 'square', 0.08, 392);
+        this.tone(659.25, t + 0.08, 0.16, 'square', 0.08, 493.88);
+        this.tone(783.99, t + 0.18, 0.22, 'triangle', 0.1, 523.25);
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    function loadSpriteSheet(src, frames) {
+      const img = new Image();
+      const sheet = { img, loaded: false, frames };
+      img.onload = () => { sheet.loaded = true; };
+      img.onerror = () => { sheet.loaded = false; };
+      img.src = src;
+      return sheet;
+    }
+
+    const gokuSheet = loadSpriteSheet('そんごくう-removebg-preview.png', {
+      idle:   { x: 15,  y: 37,  w: 83,  h: 140 },
+      weak:   { x: 116, y: 37,  w: 116, h: 140 },
+      strong: { x: 245, y: 37,  w: 124, h: 142 },
+      jump:   { x: 372, y: 15,  w: 87,  h: 151 },
+      shoot:  { x: 141, y: 205, w: 289, h: 145 },
+      damage: { x: 580, y: 195, w: 78,  h: 155 },
+      win:    { x: 580, y: 27,  w: 75,  h: 152 }
+    });
+
+    const vegetaSheet = loadSpriteSheet('ベジータ-removebg-preview.png', {
+      idle:   { x: 25,  y: 30,  w: 67,  h: 150 },
+      weak:   { x: 117, y: 37,  w: 115, h: 140 },
+      strong: { x: 245, y: 35,  w: 116, h: 144 },
+      jump:   { x: 372, y: 13,  w: 88,  h: 153 },
+      shoot:  { x: 141, y: 201, w: 289, h: 149 },
+      damage: { x: 586, y: 194, w: 74,  h: 156 },
+      win:    { x: 589, y: 28,  w: 59,  h: 152 }
+    });
+
+    class Projectile {
+      constructor(owner, x, y, vx, color) {
+        this.owner = owner;
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.radius = 11;
+        this.color = color;
+        this.life = 2.2;
+        this.dead = false;
+      }
+      update(dt) {
+        this.x += this.vx * dt;
+        this.life -= dt;
+        if (this.life <= 0 || this.x < -100 || this.x > W + 100) this.dead = true;
+      }
+      draw() {
+        const glow = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, 28);
+        glow.addColorStop(0, 'rgba(255,255,255,0.95)');
+        glow.addColorStop(0.3, this.color);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      getRect() {
+        return { x: this.x - this.radius, y: this.y - this.radius, w: this.radius * 2, h: this.radius * 2 };
+      }
+    }
+
+    class Effect {
+      constructor(x, y, color, kind = 'hit') {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.life = kind === 'burst' ? 0.35 : 0.18;
+        this.maxLife = this.life;
+        this.kind = kind;
+        this.dead = false;
+        this.particles = Array.from({ length: kind === 'burst' ? 18 : 8 }, () => ({
+          a: rand(0, Math.PI * 2),
+          s: rand(kind === 'burst' ? 70 : 35, kind === 'burst' ? 220 : 100),
+          r: rand(2, 5)
+        }));
+      }
+      update(dt) {
+        this.life -= dt;
+        if (this.life <= 0) this.dead = true;
+      }
+      draw() {
+        const p = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = p;
+        for (const particle of this.particles) {
+          const d = (1 - p) * particle.s;
+          const px = this.x + Math.cos(particle.a) * d;
+          const py = this.y + Math.sin(particle.a) * d;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(px, py, particle.r * p + 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    class Fighter {
+      constructor(opts) {
+        Object.assign(this, opts);
+        this.w = 64;
+        this.h = 118;
+        this.x = opts.x;
+        this.y = groundY - 118;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = opts.speed;
+        this.jumpPower = -770;
+        this.gravity = 1750;
+        this.hpMax = 100;
+        this.hp = 100;
+        this.facing = opts.facing;
+        this.onGround = true;
+        this.attackTimer = 0;
+        this.attackType = '';
+        this.attackHitDone = false;
+        this.shootCooldown = 0;
+        this.hitstun = 0;
+        this.flash = 0;
+        this.aiTimer = 0;
+        this.aiJumpTimer = 0;
+        this.intent = 'idle';
+        this.actionFlash = 0;
+        this.roundWins = 0;
+      }
+
+      reset(x, facing) {
+        this.x = x;
+        this.y = groundY - this.h;
+        this.vx = 0;
+        this.vy = 0;
+        this.hp = this.hpMax;
+        this.facing = facing;
+        this.onGround = true;
+        this.attackTimer = 0;
+        this.attackType = '';
+        this.attackHitDone = false;
+        this.shootCooldown = 0;
+        this.hitstun = 0;
+        this.flash = 0;
+        this.intent = 'idle';
+        this.actionFlash = 0;
+      }
+
+      getRect() {
+        return { x: this.x, y: this.y, w: this.w, h: this.h };
+      }
+
+      getAttackRect() {
+        if (!this.attackTimer) return null;
+        if (this.attackType === 'weak') {
+          return {
+            x: this.facing === 1 ? this.x + this.w - 4 : this.x - 34,
+            y: this.y + 26,
+            w: 38,
+            h: 24
+          };
+        }
+        if (this.attackType === 'strong') {
+          return {
+            x: this.facing === 1 ? this.x + this.w - 2 : this.x - 58,
+            y: this.y + 20,
+            w: 64,
+            h: 32
+          };
+        }
+        return null;
+      }
+
+      currentAction() {
+        if (gameState === 'over') {
+          if (winnerText === 'PLAYER WIN' && this === player) return 'win';
+          if (winnerText === 'CPU WIN' && this === cpu) return 'win';
+          if (winnerText === 'DRAW') return 'idle';
+          return 'damage';
+        }
+        if (this.hitstun > 0) return 'damage';
+        if (this.actionFlash > 0) return 'shoot';
+        if (this.attackType === 'strong') return 'strong';
+        if (this.attackType === 'weak') return 'weak';
+        if (!this.onGround) return 'jump';
+        return 'idle';
+      }
+
+      takeHit(damage, kb, fromDir, heavy = false) {
+        this.hp = Math.max(0, this.hp - damage);
+        this.hitstun = heavy ? 0.22 : 0.13;
+        this.flash = heavy ? 0.18 : 0.11;
+        this.vx = fromDir * kb;
+        this.vy = heavy && this.onGround ? -120 : this.vy;
+        effects.push(new Effect(this.x + this.w / 2, this.y + 40, heavy ? '#ff8a66' : '#fff37a', heavy ? 'burst' : 'hit'));
+        heavy ? sound.hitHeavy() : sound.hitLight();
+      }
+
+      startAttack(type) {
+        if (this.attackTimer > 0 || this.hitstun > 0) return false;
+        this.attackType = type;
+        this.attackHitDone = false;
+        if (type === 'weak') {
+          this.attackTimer = 0.18;
+          sound.weak();
+        } else if (type === 'strong') {
+          this.attackTimer = 0.32;
+          sound.strong();
+        }
+        return true;
+      }
+
+      shoot() {
+        if (this.shootCooldown > 0 || this.attackTimer > 0 || this.hitstun > 0) return false;
+        this.shootCooldown = 0.45;
+        this.actionFlash = 0.18;
+        const px = this.facing === 1 ? this.x + this.w + 8 : this.x - 8;
+        const py = this.y + 44;
+        projectiles.push(new Projectile(this, px, py, this.facing * 650, this.shotColor));
+        effects.push(new Effect(px, py, this.auraColor, 'hit'));
+        sound.shoot();
+        return true;
+      }
+
+      jump() {
+        if (!this.onGround || this.hitstun > 0) return false;
+        this.vy = this.jumpPower;
+        this.onGround = false;
+        sound.jump();
+        return true;
+      }
+
+      update(dt, enemy) {
+        this.shootCooldown = Math.max(0, this.shootCooldown - dt);
+        this.attackTimer = Math.max(0, this.attackTimer - dt);
+        this.hitstun = Math.max(0, this.hitstun - dt);
+        this.flash = Math.max(0, this.flash - dt);
+        this.actionFlash = Math.max(0, this.actionFlash - dt);
+
+        if (this.isCPU) this.runAI(dt, enemy);
+
+        if (this.hitstun <= 0) {
+          this.vx = 0;
+          if (!this.isCPU) {
+            if (keys['ArrowLeft']) { this.vx = -this.speed; this.facing = -1; }
+            if (keys['ArrowRight']) { this.vx = this.speed; this.facing = 1; }
+          } else {
+            if (this.intent === 'left') { this.vx = -this.speed * 0.93; this.facing = -1; }
+            if (this.intent === 'right') { this.vx = this.speed * 0.93; this.facing = 1; }
+          }
+        }
+
+        this.vy += this.gravity * dt;
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.y + this.h >= groundY) {
+          this.y = groundY - this.h;
+          this.vy = 0;
+          this.onGround = true;
+        } else {
+          this.onGround = false;
+        }
+
+        this.x = clamp(this.x, 32, W - this.w - 32);
+
+        const attack = this.getAttackRect();
+        if (attack && !this.attackHitDone) {
+          const activeStart = this.attackType === 'weak' ? 0.08 : 0.14;
+          const timerWindow = this.attackType === 'weak' ? 0.10 : 0.16;
+          const elapsed = (this.attackType === 'weak' ? 0.18 : 0.32) - this.attackTimer;
+          if (elapsed >= activeStart && elapsed <= activeStart + timerWindow && rectsOverlap(attack, enemy.getRect())) {
+            this.attackHitDone = true;
+            if (this.attackType === 'weak') {
+              enemy.takeHit(6, 180, this.facing, false);
+            } else {
+              enemy.takeHit(12, 320, this.facing, true);
+            }
+          }
+        }
+
+        if (this.attackTimer <= 0) this.attackType = '';
+      }
+
+      runAI(dt, enemy) {
+        this.aiTimer -= dt;
+        this.aiJumpTimer -= dt;
+        if (this.aiTimer <= 0) {
+          const dx = enemy.x - this.x;
+          const d = Math.abs(dx);
+          if (d > 260) {
+            this.intent = dx > 0 ? 'right' : 'left';
+            if (Math.random() < 0.5) this.shoot();
+          } else if (d > 120) {
+            if (Math.random() < 0.6) this.intent = dx > 0 ? 'right' : 'left';
+            else if (Math.random() < 0.7) this.shoot();
+            else this.intent = 'idle';
+          } else {
+            this.intent = 'idle';
+            const roll = Math.random();
+            if (roll < 0.52) this.startAttack('weak');
+            else if (roll < 0.82) this.startAttack('strong');
+            else this.shoot();
+          }
+
+          if (enemy.vy < -80 && this.onGround && this.aiJumpTimer <= 0 && Math.random() < 0.3) {
+            this.jump();
+            this.aiJumpTimer = rand(0.8, 1.4);
+          } else if (this.onGround && this.aiJumpTimer <= 0 && Math.random() < 0.11) {
+            this.jump();
+            this.aiJumpTimer = rand(0.9, 1.8);
+          }
+          this.aiTimer = rand(0.09, 0.24);
+        }
+      }
+
+      drawSprite(action) {
+        if (!this.spriteSheet || !this.spriteSheet.loaded) return false;
+        const frame = this.spriteSheet.frames[action] || this.spriteSheet.frames.idle;
+        if (!frame) return false;
+
+        const anchorX = this.x + this.w / 2;
+        const bottomY = this.y + this.h + 6;
+        const scale = action === 'shoot' ? 0.78 : 0.92;
+        const dw = frame.w * scale;
+        const dh = frame.h * scale;
+        const dx = anchorX - dw / 2;
+        const dy = bottomY - dh;
+
+        ctx.save();
+        if (this.flash > 0) {
+          ctx.globalAlpha = 0.78 + Math.sin(this.flash * 70) * 0.22;
+        }
+        if (this.facing === -1) {
+          ctx.translate(anchorX, 0);
+          ctx.scale(-1, 1);
+          ctx.drawImage(this.spriteSheet.img, frame.x, frame.y, frame.w, frame.h, -dw / 2, dy, dw, dh);
+        } else {
+          ctx.drawImage(this.spriteSheet.img, frame.x, frame.y, frame.w, frame.h, dx, dy, dw, dh);
+        }
+        ctx.restore();
+        return true;
+      }
+
+      drawFallback(action) {
+        const cx = this.x + this.w / 2;
+        const cy = this.y + 56;
+        const auraR = this.flash > 0 ? 58 : 44 + Math.sin(performance.now() * 0.008 + this.x * 0.01) * 5;
+        const grad = ctx.createRadialGradient(cx, cy, 12, cx, cy, auraR);
+        grad.addColorStop(0, this.auraInner);
+        grad.addColorStop(0.55, this.auraColor);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, auraR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        if (this.flash > 0) {
+          ctx.globalAlpha = 0.7 + Math.sin(this.flash * 70) * 0.3;
+        }
+
+        const bob = this.onGround ? Math.sin(performance.now() * 0.015 + this.x * 0.1) * 2 : -6;
+        const bodyY = this.y + bob;
+        const dir = this.facing;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(this.x + this.w / 2, groundY + 2, 26, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = this.outline;
+        ctx.lineWidth = 7;
+        ctx.lineCap = 'round';
+        const legSpread = this.vx !== 0 ? Math.sin(performance.now() * 0.03) * 9 : 0;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 30, bodyY + 76);
+        ctx.lineTo(this.x + 24 - legSpread, bodyY + 116);
+        ctx.moveTo(this.x + 36, bodyY + 76);
+        ctx.lineTo(this.x + 44 + legSpread, bodyY + 116);
+        ctx.stroke();
+
+        ctx.fillStyle = this.bodyColor;
+        ctx.fillRect(this.x + 18, bodyY + 26, 28, 52);
+
+        ctx.fillStyle = this.skin;
+        ctx.beginPath();
+        ctx.arc(this.x + 32, bodyY + 14, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = this.hair;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 18, bodyY + 16);
+        ctx.lineTo(this.x + 26, bodyY - 8);
+        ctx.lineTo(this.x + 34, bodyY + 4);
+        ctx.lineTo(this.x + 42, bodyY - 10);
+        ctx.lineTo(this.x + 48, bodyY + 16);
+        ctx.closePath();
+        ctx.fill();
+
+        const armReach = action === 'strong' ? 22 : action === 'weak' ? 14 : 0;
+        const frontX = dir === 1 ? this.x + 54 + armReach : this.x + 10 - armReach;
+        const backX = dir === 1 ? this.x + 10 : this.x + 54;
+        ctx.strokeStyle = this.bodyColor;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(this.x + 32, bodyY + 36);
+        ctx.lineTo(frontX, bodyY + 40);
+        ctx.moveTo(this.x + 32, bodyY + 38);
+        ctx.lineTo(backX, bodyY + 50);
+        ctx.stroke();
+
+        ctx.fillStyle = this.accent;
+        ctx.fillRect(this.x + 18, bodyY + 54, 28, 8);
+
+        ctx.fillStyle = '#111';
+        ctx.fillRect(this.x + 26, bodyY + 12, 3, 2);
+        ctx.fillRect(this.x + 35, bodyY + 12, 3, 2);
+
+        if (action === 'weak' || action === 'strong') {
+          ctx.save();
+          ctx.globalAlpha = 0.35;
+          ctx.fillStyle = this.auraColor;
+          const atk = this.getAttackRect();
+          if (atk) ctx.fillRect(atk.x, atk.y, atk.w, atk.h);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      draw() {
+        const action = this.currentAction();
+        if (!this.drawSprite(action)) {
+          this.drawFallback(action);
+        }
+      }
+    }
+
+    const player = new Fighter({
+      name: '1P',
+      x: 240,
+      speed: 340,
+      facing: 1,
+      isCPU: false,
+      spriteSheet: gokuSheet,
+      auraColor: 'rgba(72, 190, 255, 0.55)',
+      auraInner: 'rgba(255,255,255,0.95)',
+      auraGlow: '#57d1ff',
+      bodyColor: '#3a76ff',
+      accent: '#d9f2ff',
+      shotColor: 'rgba(110,210,255,0.9)',
+      hair: '#d8ecff',
+      skin: '#ffd7b0',
+      outline: '#dfeeff'
+    });
+
+    const cpu = new Fighter({
+      name: 'CPU',
+      x: 960,
+      speed: 320,
+      facing: -1,
+      isCPU: true,
+      spriteSheet: vegetaSheet,
+      auraColor: 'rgba(255, 90, 90, 0.55)',
+      auraInner: 'rgba(255,245,245,0.95)',
+      auraGlow: '#ff7070',
+      bodyColor: '#d84242',
+      accent: '#ffe0d8',
+      shotColor: 'rgba(255,130,90,0.95)',
+      hair: '#ffcc8a',
+      skin: '#ffd1ab',
+      outline: '#ffe8e0'
+    });
+
+    let projectiles = [];
+    let effects = [];
+    let gameState = 'intro';
+    let stateTimer = 0.7;
+    let timeLeft = 60;
+    let winnerText = '';
+
+    function resetMatch() {
+      player.reset(240, 1);
+      cpu.reset(960, -1);
+      projectiles = [];
+      effects = [];
+      gameState = 'intro';
+      stateTimer = 0.7;
+      timeLeft = 60;
+      winnerText = '';
+    }
+    resetMatch();
+
+    function ensureAudio() {
+      if (!startedAudio) {
+        sound.init();
+        startedAudio = true;
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'ArrowRight', 'Space', 'KeyZ', 'KeyX', 'KeyC', 'KeyM', 'KeyR'].includes(e.code)) {
+        e.preventDefault();
+      }
+      keys[e.code] = true;
+      ensureAudio();
+
+      if (gameState === 'fight') {
+        if (e.code === 'Space') player.jump();
+        if (e.code === 'KeyZ') player.startAttack('weak');
+        if (e.code === 'KeyX') player.startAttack('strong');
+        if (e.code === 'KeyC') player.shoot();
+      }
+      if (e.code === 'KeyM') sound.toggle();
+      if (gameState === 'over' && e.code === 'KeyR') resetMatch();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    canvas.addEventListener('pointerdown', () => ensureAudio());
+
+    function update(dt) {
+      if (gameState === 'intro') {
+        stateTimer -= dt;
+        if (stateTimer <= 0) gameState = 'fight';
+        return;
+      }
+
+      if (gameState === 'fight') {
+        timeLeft -= dt;
+        if (timeLeft <= 0) {
+          timeLeft = 0;
+          endMatch(player.hp === cpu.hp ? 'DRAW' : player.hp > cpu.hp ? 'PLAYER WIN' : 'CPU WIN');
+          return;
+        }
+
+        player.update(dt, cpu);
+        cpu.update(dt, player);
+
+        for (const p of projectiles) {
+          p.update(dt);
+          const target = p.owner === player ? cpu : player;
+          if (!p.dead && rectsOverlap(p.getRect(), target.getRect())) {
+            target.takeHit(9, 230, p.vx > 0 ? 1 : -1, true);
+            p.dead = true;
+            effects.push(new Effect(p.x, p.y, p.color, 'burst'));
+          }
+        }
+        projectiles = projectiles.filter(p => !p.dead);
+
+        for (const ef of effects) ef.update(dt);
+        effects = effects.filter(e => !e.dead);
+
+        if (player.hp <= 0 || cpu.hp <= 0) {
+          endMatch(player.hp === cpu.hp ? 'DRAW' : player.hp > cpu.hp ? 'PLAYER WIN' : 'CPU WIN');
+        }
+      } else if (gameState === 'over') {
+        for (const ef of effects) ef.update(dt);
+        effects = effects.filter(e => !e.dead);
+      }
+    }
+
+    function endMatch(text) {
+      if (gameState === 'over') return;
+      gameState = 'over';
+      winnerText = text;
+      sound.ko();
+      effects.push(new Effect(W / 2, 250, text === 'CPU WIN' ? '#ff7a6c' : text === 'PLAYER WIN' ? '#89dbff' : '#ffffff', 'burst'));
+    }
+
+    function drawBackground() {
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#102b67');
+      bg.addColorStop(0.5, '#291747');
+      bg.addColorStop(1, '#381717');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = 0; i < 40; i++) {
+        const x = (i * 173) % W;
+        const y = 40 + ((i * 97) % 230);
+        const r = 1.5 + ((i * 13) % 10) * 0.08;
+        ctx.fillStyle = `rgba(255,255,255,${0.15 + (i % 5) * 0.05})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = 'rgba(26, 14, 40, 0.8)';
+      ctx.beginPath();
+      ctx.moveTo(0, 500);
+      ctx.lineTo(160, 360);
+      ctx.lineTo(290, 510);
+      ctx.lineTo(450, 340);
+      ctx.lineTo(620, 520);
+      ctx.lineTo(810, 330);
+      ctx.lineTo(1010, 520);
+      ctx.lineTo(1160, 380);
+      ctx.lineTo(1280, 520);
+      ctx.lineTo(1280, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fill();
+
+      const groundGrad = ctx.createLinearGradient(0, groundY - 20, 0, H);
+      groundGrad.addColorStop(0, '#6f4b2a');
+      groundGrad.addColorStop(1, '#372012');
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, groundY, W, H - groundY);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let i = 0; i < 18; i++) {
+        const x = i * 80 + ((i * 37) % 22);
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x + 18, groundY - 22 - (i % 4) * 8);
+        ctx.lineTo(x + 42, groundY);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    function drawHPBar(x, y, w, h, value, max, label, color) {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(x, y, w, h);
+      const p = clamp(value / max, 0, 1);
+      const grad = ctx.createLinearGradient(x, y, x + w, y);
+      grad.addColorStop(0, '#fff');
+      grad.addColorStop(0.12, color);
+      grad.addColorStop(1, color);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x + 4, y + 4, (w - 8) * p, h - 8);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 22px system-ui';
+      ctx.fillText(label, x, y - 10);
+    }
+
+    function drawUI() {
+      drawHPBar(40, 34, 420, 28, player.hp, player.hpMax, 'PLAYER', '#57cfff');
+      drawHPBar(W - 460, 34, 420, 28, cpu.hp, cpu.hpMax, 'CPU', '#ff7d68');
+
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.fillRect(W / 2 - 62, 20, 124, 52);
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.strokeRect(W / 2 - 62, 20, 124, 52);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 34px system-ui';
+      ctx.fillText(Math.ceil(timeLeft).toString(), W / 2, 58);
+      ctx.textAlign = 'left';
+
+      ctx.fillStyle = 'rgba(0,0,0,0.34)';
+      ctx.fillRect(26, H - 96, 390, 58);
+      ctx.fillStyle = '#fff';
+      ctx.font = '18px system-ui';
+      ctx.fillText('← → 移動   Space ジャンプ   Z 弱攻撃   X 強攻撃   C 気弾', 40, H - 60);
+      ctx.fillText(`M 音${sound.enabled ? 'OFF' : 'ON'}切替   R 再戦`, 40, H - 36);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(W - 290, H - 96, 250, 58);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px system-ui';
+      ctx.fillText(`主人公画像: ${player.spriteSheet.loaded ? '使用中' : '未検出'}`, W - 274, H - 60);
+      ctx.fillText(`ライバル画像: ${cpu.spriteSheet.loaded ? '使用中' : '未検出'}`, W - 274, H - 36);
+    }
+
+    function drawOverlay() {
+      if (gameState === 'intro') {
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 78px system-ui';
+        ctx.fillText('FIGHT!', W / 2, 320);
+        ctx.restore();
+      }
+      if (gameState === 'over') {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 110px system-ui';
+        ctx.fillStyle = winnerText === 'CPU WIN' ? '#ff8d78' : winnerText === 'PLAYER WIN' ? '#86dcff' : '#ffffff';
+        ctx.fillText(winnerText === 'DRAW' ? 'DRAW' : 'K.O.', W / 2, 280);
+        ctx.font = 'bold 60px system-ui';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(winnerText, W / 2, 370);
+        ctx.font = '28px system-ui';
+        ctx.fillText('Rキーで再戦', W / 2, 435);
+        ctx.restore();
+      }
+    }
+
+    function draw() {
+      drawBackground();
+      player.draw();
+      cpu.draw();
+      for (const p of projectiles) p.draw();
+      for (const ef of effects) ef.draw();
+      drawUI();
+      drawOverlay();
+    }
+
+    let last = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
