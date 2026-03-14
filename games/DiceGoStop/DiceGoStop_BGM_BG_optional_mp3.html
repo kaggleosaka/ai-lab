@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dice: Go or Stop</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --line:#334155;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+
+      --accent:#38bdf8;
+      --safe:#22c55e;
+      --danger:#ef4444;
+      --gold:#fbbf24;
+
+      --p1:#3b82f6;
+      --p1-dark:#1d4ed8;
+      --cpu:#ef4444;
+      --cpu-dark:#b91c1c;
+      --temp:#f59e0b;
+      --temp-dark:#d97706;
+
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56,189,248,.15), transparent 22%),
+        radial-gradient(circle at 80% 10%, rgba(245,158,11,.12), transparent 20%),
+        linear-gradient(180deg, #020617, #0f172a 40%, #111827);
+      color:var(--text);
+      font-family:"Segoe UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
+      min-height:100%;
+    }
+
+    body.has-bg-image{
+      background-image:
+        linear-gradient(rgba(2,6,23,.42), rgba(2,6,23,.62)),
+        url("背景画像.png");
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+      background-attachment:fixed;
+    }
+
+    body.has-bg-image::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56,189,248,.10), transparent 24%),
+        radial-gradient(circle at 80% 10%, rgba(245,158,11,.08), transparent 22%);
+      z-index:-1;
+    }
+
+    .app{
+      width:min(1280px, calc(100vw - 24px));
+      min-height:720px;
+      margin:12px auto;
+      padding:14px;
+      display:grid;
+      grid-template-columns:1.55fr 0.95fr;
+      grid-template-rows:auto 1fr;
+      gap:14px;
+    }
+
+    .topbar{
+      grid-column:1 / -1;
+      background:linear-gradient(180deg, rgba(17,24,39,.92), rgba(15,23,42,.96));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:14px 18px;
+      display:grid;
+      grid-template-columns:1.2fr .95fr;
+      gap:16px;
+      align-items:center;
+    }
+
+    .title{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .title-badge{
+      background:linear-gradient(135deg, var(--accent), #2563eb);
+      color:white;
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:800;
+      letter-spacing:.5px;
+      box-shadow:0 8px 20px rgba(37,99,235,.3);
+      white-space:nowrap;
+    }
+
+    h1{
+      font-size:34px;
+      line-height:1;
+      margin:0;
+      letter-spacing:.5px;
+    }
+
+    .subtitle{
+      width:100%;
+      color:var(--muted);
+      font-size:14px;
+      margin-top:2px;
+    }
+
+    .rules{
+      font-size:13px;
+      color:#dbeafe;
+      background:rgba(56,189,248,.08);
+      border:1px solid rgba(56,189,248,.25);
+      border-radius:14px;
+      padding:10px 12px;
+      line-height:1.6;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:10px;
+    }
+
+    .stat{
+      background:linear-gradient(180deg, rgba(31,41,55,.96), rgba(17,24,39,.96));
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:10px 12px;
+      min-height:78px;
+    }
+
+    .stat-label{
+      color:var(--muted);
+      font-size:12px;
+      margin-bottom:6px;
+    }
+
+    .stat-value{
+      font-size:22px;
+      font-weight:800;
+      letter-spacing:.3px;
+    }
+
+    .small-note{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
+    }
+
+    .board-panel,.side-panel{
+      background:linear-gradient(180deg, rgba(17,24,39,.96), rgba(15,23,42,.98));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-height:0;
+    }
+
+    .panel-header{
+      padding:12px 16px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      background:rgba(255,255,255,.02);
+    }
+
+    .panel-title{
+      font-size:18px;
+      font-weight:800;
+    }
+
+    .status-pill{
+      padding:7px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.1);
+      background:#0b1220;
+      white-space:nowrap;
+    }
+
+    .status-normal{ color:#dbeafe; border-color:rgba(56,189,248,.35); }
+    .status-select{ color:#fde68a; border-color:rgba(245,158,11,.35); }
+    .status-burst{ color:#fecaca; border-color:rgba(239,68,68,.45); background:rgba(127,29,29,.24); }
+    .status-clear{ color:#fef3c7; border-color:rgba(251,191,36,.45); background:rgba(120,53,15,.22); }
+
+    .board-wrap{
+      height:100%;
+      padding:14px 14px 24px;
+      display:flex;
+      flex-direction:column;
+      overflow:auto;
+    }
+
+    .marker-info{
+      margin-bottom:12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .legend-chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:6px 10px;
+    }
+
+    .legend-dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      display:inline-block;
+      border:1px solid rgba(255,255,255,.25);
+    }
+
+    .dot-p1{ background:var(--p1); }
+    .dot-cpu{ background:var(--cpu); }
+    .dot-temp{ background:var(--temp); }
+
+    .board{
+      flex:1;
+      min-height:470px;
+      display:grid;
+      grid-template-columns:repeat(11, minmax(44px, 1fr));
+      gap:10px;
+      align-items:end;
+      padding:8px 2px 12px;
+    }
+
+    .column{
+      background:linear-gradient(180deg, rgba(30,41,59,.65), rgba(15,23,42,.7));
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:10px 6px 12px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      min-height:100%;
+      position:relative;
+      overflow:visible;
+    }
+
+    .column.locked{
+      background:
+        linear-gradient(180deg, rgba(251,191,36,.18), rgba(120,53,15,.15)),
+        linear-gradient(180deg, rgba(30,41,59,.85), rgba(15,23,42,.95));
+      border-color:rgba(251,191,36,.5);
+      box-shadow:inset 0 0 22px rgba(251,191,36,.15);
+    }
+
+    .col-head{
+      font-size:24px;
+      font-weight:900;
+      margin-bottom:8px;
+      line-height:1;
+      color:#f8fafc;
+      text-shadow:0 2px 6px rgba(0,0,0,.4);
+    }
+
+    .col-sub{
+      color:var(--muted);
+      font-size:11px;
+      margin-bottom:8px;
+      text-align:center;
+      min-height:28px;
+    }
+
+    .track{
+      flex:1;
+      width:100%;
+      display:flex;
+      flex-direction:column-reverse;
+      align-items:center;
+      gap:4px;
+      justify-content:flex-start;
+      padding-bottom:4px;
+    }
+
+    .cell{
+      width:min(100%, 46px);
+      height:21px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:10px;
+      font-weight:800;
+      color:rgba(255,255,255,.16);
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+      flex:0 0 auto;
+    }
+
+    .cell.p1{
+      background:linear-gradient(180deg, var(--p1), var(--p1-dark));
+      color:white;
+      box-shadow:0 4px 10px rgba(59,130,246,.25);
+    }
+
+    .cell.cpu{
+      background:linear-gradient(180deg, var(--cpu), var(--cpu-dark));
+      color:white;
+      box-shadow:0 4px 10px rgba(239,68,68,.28);
+    }
+
+    .cell.temp{
+      background:linear-gradient(180deg, var(--temp), var(--temp-dark));
+      color:white;
+      box-shadow:0 4px 10px rgba(245,158,11,.28);
+      transform:scale(1.03);
+      animation:pulseTemp .9s ease-in-out infinite alternate;
+    }
+
+    .cell.goal{
+      border-color:rgba(255,255,255,.18);
+    }
+
+    .cell.locked{
+      background:linear-gradient(180deg, rgba(251,191,36,.98), rgba(217,119,6,.98));
+      color:#111827;
+      box-shadow:0 4px 12px rgba(251,191,36,.3);
+    }
+
+    .cell > span{
+      position:relative;
+      z-index:1;
+    }
+
+    .crown{
+      position:absolute;
+      top:8px;
+      right:6px;
+      font-size:16px;
+      filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+    }
+
+    @keyframes pulseTemp{
+      from{ transform:translateY(0) scale(1.02); }
+      to{ transform:translateY(-1px) scale(1.06); }
+    }
+
+    .side-inner{
+      display:grid;
+      grid-template-rows:auto auto auto 1fr;
+      gap:12px;
+      padding:14px;
+      height:100%;
+    }
+
+    .dice-area,.option-area,.control-area,.log-area{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+    }
+
+    .section-title{
+      font-size:16px;
+      font-weight:800;
+      margin-bottom:10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .section-note{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:500;
+    }
+
+    .dice-grid{
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      gap:10px;
+    }
+
+    .die{
+      aspect-ratio:1/1;
+      border-radius:18px;
+      background:
+        radial-gradient(circle at 30% 28%, rgba(255,255,255,.2), transparent 22%),
+        linear-gradient(180deg, #f8fafc, #dbeafe);
+      color:#0f172a;
+      border:2px solid rgba(255,255,255,.3);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:34px;
+      font-weight:900;
+      box-shadow:0 10px 18px rgba(0,0,0,.22);
+      user-select:none;
+    }
+
+    .die.rolling{
+      animation:rollShake .55s ease;
+    }
+
+    @keyframes rollShake{
+      0%{ transform:translate(0,0) rotate(0deg); }
+      20%{ transform:translate(-3px,2px) rotate(-5deg); }
+      40%{ transform:translate(4px,-3px) rotate(6deg); }
+      60%{ transform:translate(-4px,3px) rotate(-6deg); }
+      80%{ transform:translate(3px,-2px) rotate(4deg); }
+      100%{ transform:translate(0,0) rotate(0deg); }
+    }
+
+    .option-list{
+      display:grid;
+      gap:10px;
+    }
+
+    .option-btn{
+      width:100%;
+      text-align:left;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(30,41,59,.92), rgba(15,23,42,.98));
+      color:var(--text);
+      padding:12px 12px;
+      cursor:pointer;
+      transition:.16s ease;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      min-height:64px;
+    }
+
+    .option-btn:hover:not(:disabled){
+      transform:translateY(-1px);
+      border-color:rgba(56,189,248,.45);
+      box-shadow:0 8px 18px rgba(2,6,23,.26);
+    }
+
+    .option-btn:disabled{
+      cursor:not-allowed;
+      color:#94a3b8;
+      background:linear-gradient(180deg, rgba(30,41,59,.45), rgba(15,23,42,.68));
+      border-color:rgba(71,85,105,.7);
+      opacity:.72;
+    }
+
+    .option-main{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+
+    .option-title{
+      font-size:18px;
+      font-weight:900;
+      letter-spacing:.3px;
+    }
+
+    .option-desc{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .tag{
+      font-size:12px;
+      font-weight:800;
+      border-radius:999px;
+      padding:6px 10px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      white-space:nowrap;
+    }
+
+    .tag.playable{ color:#bbf7d0; border-color:rgba(34,197,94,.3); background:rgba(20,83,45,.25); }
+    .tag.blocked{ color:#fecaca; border-color:rgba(239,68,68,.3); background:rgba(127,29,29,.22); }
+
+    .controls{
+      display:grid;
+      grid-template-columns:repeat(3, 1fr);
+      gap:10px;
+    }
+
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:14px 12px;
+      font-size:15px;
+      font-weight:900;
+      cursor:pointer;
+      color:white;
+      transition:.15s ease;
+      box-shadow:0 8px 20px rgba(0,0,0,.18);
+    }
+
+    .btn:hover:not(:disabled){ transform:translateY(-1px); }
+    .btn:disabled{
+      cursor:not-allowed;
+      opacity:.52;
+      filter:saturate(.7);
+    }
+
+    .btn-roll{ background:linear-gradient(135deg, var(--accent), #2563eb); }
+    .btn-stop{ background:linear-gradient(135deg, var(--safe), #15803d); }
+    .btn-reset{ background:linear-gradient(135deg, #64748b, #334155); }
+
+    .log-area{
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .log-list{
+      margin:0;
+      padding-left:18px;
+      overflow:auto;
+      flex:1;
+      font-size:13px;
+      color:#e2e8f0;
+      line-height:1.6;
+    }
+
+    .log-list li{ margin-bottom:6px; }
+
+    .banner{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.08);
+      display:none;
+    }
+
+    .banner.show{ display:block; }
+    .banner.warn{
+      color:#fee2e2;
+      background:rgba(127,29,29,.28);
+      border-color:rgba(239,68,68,.35);
+    }
+    .banner.good{
+      color:#dcfce7;
+      background:rgba(20,83,45,.24);
+      border-color:rgba(34,197,94,.35);
+    }
+    .banner.gold{
+      color:#fef3c7;
+      background:rgba(120,53,15,.22);
+      border-color:rgba(251,191,36,.4);
+    }
+
+    .audio-toggle{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      z-index:20;
+      border:none;
+      border-radius:999px;
+      padding:12px 16px;
+      font-size:14px;
+      font-weight:800;
+      letter-spacing:.2px;
+      color:#e0f2fe;
+      background:linear-gradient(135deg, rgba(14,116,144,.96), rgba(37,99,235,.96));
+      box-shadow:0 10px 26px rgba(0,0,0,.3);
+      cursor:pointer;
+      transition:transform .15s ease, opacity .15s ease;
+    }
+
+    .audio-toggle:hover{ transform:translateY(-1px); }
+    .audio-toggle.off{
+      background:linear-gradient(135deg, rgba(71,85,105,.96), rgba(51,65,85,.96));
+      color:#e5e7eb;
+    }
+
+    .footer-note{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    @media (max-width:1080px){
+      .app{
+        grid-template-columns:1fr;
+        min-height:auto;
+      }
+      .topbar{
+        grid-template-columns:1fr;
+      }
+      .stats{
+        grid-template-columns:repeat(2,1fr);
+      }
+      .board{
+        min-height:400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="topbar">
+      <div>
+        <div class="title">
+          <div class="title-badge">PLAYER VS CPU</div>
+          <h1>Dice: Go or Stop</h1>
+          <div class="subtitle">人間 vs CPU。安全性を見ながら、先に3列制覇を目指せ。</div>
+        </div>
+        <div class="rules">
+          4個のサイコロを振り、3通りのペア候補から1つ選びます。<br>
+          出た2つの合計値の列をそれぞれ1マス進行。同じ数が2つならその列を2マス進行。<br>
+          1ターンで使える仮マーカーは最大3列。進める候補がなくなるとバーストして、そのターンの仮進捗は消えます。<br>
+          青＝人間、赤＝CPU、オレンジ＝現在ターンの仮進捗。3列制覇で勝利です。
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">現在の手番</div>
+          <div class="stat-value" id="turnText">人間</div>
+          <div class="small-note">人間→CPUの交互</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">状態</div>
+          <div class="stat-value" id="statusText">開始前</div>
+          <div class="small-note">進行状況</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">スコア</div>
+          <div class="stat-value"><span id="p1Score">0</span> - <span id="cpuScore">0</span></div>
+          <div class="small-note">3列先取</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">仮マーカー</div>
+          <div class="stat-value" id="tempColumnsText">なし</div>
+          <div class="small-note">最大3列</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="board-panel">
+      <div class="panel-header">
+        <div class="panel-title">ボード</div>
+        <div id="statusPill" class="status-pill status-normal">準備完了</div>
+      </div>
+      <div class="board-wrap">
+        <div class="marker-info">
+          <span class="legend-chip"><span class="legend-dot dot-p1"></span>人間の本進捗</span>
+          <span class="legend-chip"><span class="legend-dot dot-cpu"></span>CPUの本進捗</span>
+          <span class="legend-chip"><span class="legend-dot dot-temp"></span>現在ターンの仮進捗</span>
+          <span class="legend-chip">現在の仮列: <strong id="tempColumnsInline">なし</strong></span>
+        </div>
+        <div id="board" class="board"></div>
+      </div>
+    </section>
+
+    <section class="side-panel">
+      <div class="panel-header">
+        <div class="panel-title">操作パネル</div>
+        <div class="section-note">CPUは安全性も判断</div>
+      </div>
+      <div class="side-inner">
+        <div class="dice-area">
+          <div class="section-title">
+            <span>サイコロ</span>
+            <span class="section-note">4d6</span>
+          </div>
+          <div class="dice-grid" id="diceGrid"></div>
+        </div>
+
+        <div class="option-area">
+          <div class="section-title">
+            <span>候補選択</span>
+            <span class="section-note">人間ターンのみクリック</span>
+          </div>
+          <div class="option-list" id="optionList"></div>
+          <div id="infoBanner" class="banner"></div>
+        </div>
+
+        <div class="control-area">
+          <div class="section-title">
+            <span>アクション</span>
+            <span class="section-note">人間専用</span>
+          </div>
+          <div class="controls">
+            <button id="rollBtn" class="btn btn-roll">サイコロを振る</button>
+            <button id="stopBtn" class="btn btn-stop">ここで止める</button>
+            <button id="resetBtn" class="btn btn-reset">リスタート</button>
+          </div>
+          <div class="footer-note">
+            人間ターン：候補を選んでから、さらに振るか、ここで止めるかを決めます。<br>
+            CPUターン：列制覇だけでなく、次ロールの危険度も見て判断します。
+          </div>
+        </div>
+
+        <div class="log-area">
+          <div class="section-title">
+            <span>行動ログ</span>
+            <span class="section-note">最新30件</span>
+          </div>
+          <ol id="logList" class="log-list"></ol>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <button id="audioToggle" class="audio-toggle">BGM ON</button>
+  <audio id="bgmAudio" loop preload="metadata" style="display:none;">
+    <source src="DiceGoStop-BGM.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const HUMAN = "human";
+      const CPU = "cpu";
+
+      const columnLengths = {
+        2: 3, 3: 5, 4: 7, 5: 9, 6: 11, 7: 13,
+        8: 11, 9: 9, 10: 7, 11: 5, 12: 3
+      };
+      const columns = Object.keys(columnLengths).map(Number);
+
+      const state = {
+        progress: {
+          [HUMAN]: {},
+          [CPU]: {}
+        },
+        tempProgress: {},
+        columnOwner: {},
+        completedColumns: new Set(),
+
+        currentPlayer: HUMAN,
+        dice: [1,1,1,1],
+        options: [],
+        selectedOptionIndex: null,
+        logs: [],
+
+        phase: "ready",
+        uiLocked: false,
+        cpuRunning: false,
+        rolling: false,
+
+        winner: null,
+        lastBanner: null
+      };
+
+      const boardEl = document.getElementById("board");
+      const diceGridEl = document.getElementById("diceGrid");
+      const optionListEl = document.getElementById("optionList");
+      const logListEl = document.getElementById("logList");
+      const rollBtn = document.getElementById("rollBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      const turnText = document.getElementById("turnText");
+      const statusText = document.getElementById("statusText");
+      const p1Score = document.getElementById("p1Score");
+      const cpuScore = document.getElementById("cpuScore");
+      const tempColumnsText = document.getElementById("tempColumnsText");
+      const tempColumnsInline = document.getElementById("tempColumnsInline");
+      const statusPill = document.getElementById("statusPill");
+      const infoBanner = document.getElementById("infoBanner");
+      const audioToggle = document.getElementById("audioToggle");
+
+
+      const bgmAudio = document.getElementById("bgmAudio");
+      let bgmEnabled = true;
+      let bgmStarted = false;
+      let bgmAvailable = false;
+
+      function setupOptionalBackgroundImage() {
+        const img = new Image();
+        img.onload = () => document.body.classList.add("has-bg-image");
+        img.onerror = () => document.body.classList.remove("has-bg-image");
+        img.src = "背景画像.png?" + Date.now();
+      }
+
+      function updateAudioButton() {
+        if (!bgmAvailable) {
+          audioToggle.textContent = "BGMなし";
+          audioToggle.classList.add("off");
+          audioToggle.disabled = true;
+          return;
+        }
+        audioToggle.disabled = false;
+        audioToggle.textContent = bgmEnabled ? "BGM ON" : "BGM OFF";
+        audioToggle.classList.toggle("off", !bgmEnabled);
+      }
+
+      async function startBackgroundMusic() {
+        if (!bgmAvailable || bgmStarted || !bgmEnabled) return;
+        bgmAudio.volume = 0.35;
+        try {
+          await bgmAudio.play();
+          bgmStarted = true;
+        } catch (e) {}
+        updateAudioButton();
+      }
+
+      function setAudioEnabled(enabled) {
+        if (!bgmAvailable) {
+          bgmEnabled = false;
+          updateAudioButton();
+          return;
+        }
+        bgmEnabled = enabled;
+        if (!enabled) {
+          bgmAudio.pause();
+        } else {
+          bgmAudio.volume = 0.35;
+          bgmAudio.play().then(() => {
+            bgmStarted = true;
+            updateAudioButton();
+          }).catch(() => {});
+        }
+        updateAudioButton();
+      }
+
+      async function ensureAudioStarted() {
+        await startBackgroundMusic();
+      }
+
+      bgmAudio.addEventListener("canplaythrough", () => {
+        bgmAvailable = true;
+        updateAudioButton();
+      });
+
+      bgmAudio.addEventListener("loadeddata", () => {
+        bgmAvailable = true;
+        updateAudioButton();
+      });
+
+      bgmAudio.addEventListener("error", () => {
+        bgmAvailable = false;
+        bgmEnabled = false;
+        bgmStarted = false;
+        updateAudioButton();
+      });
+
+      function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      function playerLabel(player) {
+        return player === HUMAN ? "人間" : "CPU";
+      }
+
+      function initProgress() {
+        [HUMAN, CPU].forEach(player => {
+          columns.forEach(col => {
+            state.progress[player][col] = 0;
+          });
+        });
+        columns.forEach(col => {
+          state.tempProgress[col] = 0;
+          state.columnOwner[col] = null;
+        });
+      }
+
+      function resetTempProgress() {
+        columns.forEach(col => {
+          state.tempProgress[col] = 0;
+        });
+      }
+
+      function addLog(message) {
+        state.logs.unshift(message);
+        if (state.logs.length > 3) state.logs.length = 3;
+      }
+
+      function setBanner(message, type="warn") {
+        state.lastBanner = { message, type };
+        infoBanner.textContent = message;
+        infoBanner.className = "banner show " + type;
+      }
+
+      function clearBanner() {
+        state.lastBanner = null;
+        infoBanner.textContent = "";
+        infoBanner.className = "banner";
+      }
+
+      function countOwnedColumns(player) {
+        let count = 0;
+        columns.forEach(col => {
+          if (state.columnOwner[col] === player) count++;
+        });
+        return count;
+      }
+
+      function getTempColumns() {
+        return columns.filter(col => state.tempProgress[col] > 0);
+      }
+
+      function getCurrentBase(col) {
+        return state.progress[state.currentPlayer][col];
+      }
+
+      function getEffectiveProgress(col) {
+        return Math.max(getCurrentBase(col), state.tempProgress[col]);
+      }
+
+      function isColumnPlayable(col) {
+        if (state.completedColumns.has(col)) return false;
+        if (state.columnOwner[col] && state.columnOwner[col] !== state.currentPlayer) return false;
+        if (getEffectiveProgress(col) >= columnLengths[col]) return false;
+        return true;
+      }
+
+      function availableMarkerCountAfterAdding(colsNeeded) {
+        const set = new Set(getTempColumns());
+        colsNeeded.forEach(col => {
+          if (isColumnPlayable(col)) set.add(col);
+        });
+        return set.size;
+      }
+
+      function analyzeOption(option) {
+        const counts = {};
+        option.sums.forEach(sum => counts[sum] = (counts[sum] || 0) + 1);
+        const neededCols = Object.keys(counts).map(Number);
+
+        const hasAnyPlayable = neededCols.some(col => isColumnPlayable(col));
+        if (!hasAnyPlayable) return { playable:false, reason:"進める列なし" };
+
+        const allPlayable = neededCols.every(col => isColumnPlayable(col));
+        if (!allPlayable) return { playable:false, reason:"相手列/制覇済み" };
+
+        const markerCount = availableMarkerCountAfterAdding(neededCols);
+        if (markerCount > 3) return { playable:false, reason:"4列目になる" };
+
+        return { playable:true, reason:"採用可能" };
+      }
+
+      function generatePairOptions() {
+        const [a,b,c,d] = state.dice;
+        const raw = [
+          { name:"①", pairs:[[a,b],[c,d]], sums:[a+b, c+d] },
+          { name:"②", pairs:[[a,c],[b,d]], sums:[a+c, b+d] },
+          { name:"③", pairs:[[a,d],[b,c]], sums:[a+d, b+c] }
+        ];
+
+        state.options = raw.map((opt, index) => {
+          const check = analyzeOption(opt);
+          return { ...opt, index, playable:check.playable, reason:check.reason };
+        });
+      }
+
+      function randomDie() {
+        return Math.floor(Math.random() * 6) + 1;
+      }
+
+      async function animateDiceRoll() {
+        state.rolling = true;
+        renderAll();
+        for (let i=0; i<8; i++) {
+          state.dice = [randomDie(), randomDie(), randomDie(), randomDie()];
+          renderDice(true);
+          await wait(55);
+        }
+        state.dice = [randomDie(), randomDie(), randomDie(), randomDie()];
+        state.rolling = false;
+      }
+
+      async function rollDice(internalCall=false) {
+        if (state.winner) return false;
+        if (!internalCall && (state.uiLocked || state.cpuRunning)) return false;
+        if (state.phase === "rolled") return false;
+
+        clearBanner();
+        state.selectedOptionIndex = null;
+        state.options = [];
+
+        await animateDiceRoll();
+        generatePairOptions();
+
+        const anyPlayable = state.options.some(opt => opt.playable);
+        if (!anyPlayable) {
+          addLog(`${playerLabel(state.currentPlayer)}：出目 [${state.dice.join(", ")}] → 進める候補がなくバースト。`);
+          burstTurn();
+          return false;
+        }
+
+        state.phase = "rolled";
+        addLog(`${playerLabel(state.currentPlayer)}：サイコロを振った → [${state.dice.join(", ")}]`);
+        setBanner(state.currentPlayer === HUMAN ? "候補を1つ選んでください。" : "CPUが候補を選択中です。", "good");
+        renderAll();
+        return true;
+      }
+
+      function applyOption(index) {
+        if (state.phase !== "rolled" || state.winner) return false;
+
+        const option = state.options[index];
+        if (!option || !option.playable) {
+          setBanner("その候補は使えません。", "warn");
+          return false;
+        }
+
+        state.selectedOptionIndex = index;
+
+        const counts = {};
+        option.sums.forEach(sum => counts[sum] = (counts[sum] || 0) + 1);
+
+        Object.entries(counts).forEach(([colStr, steps]) => {
+          const col = Number(colStr);
+          if (!isColumnPlayable(col)) return;
+
+          const current = getEffectiveProgress(col);
+          const next = Math.min(columnLengths[col], current + steps);
+          state.tempProgress[col] = Math.max(state.tempProgress[col], next);
+          addLog(`${playerLabel(state.currentPlayer)}：${col}列を ${next - current} マス進めた。`);
+        });
+
+        addLog(`${playerLabel(state.currentPlayer)}：候補${option.name} を採用 → ${option.sums[0]} と ${option.sums[1]}`);
+
+        checkColumnCompleted(true);
+        checkWin();
+
+        if (!state.winner) {
+          state.phase = "ready";
+          if (state.currentPlayer === HUMAN) {
+            setBanner("進行しました。さらに振るか、ここで止めるか選んでください。", "good");
+          }
+        }
+
+        renderAll();
+        return true;
+      }
+
+      async function commitTurnProgress() {
+        if (state.winner) return;
+
+        const tempCols = getTempColumns();
+        if (tempCols.length === 0) {
+          setBanner("確定できる仮進捗がありません。", "warn");
+          return;
+        }
+
+        tempCols.forEach(col => {
+          state.progress[state.currentPlayer][col] = state.tempProgress[col];
+        });
+
+        checkColumnCompleted(false);
+        addLog(`${playerLabel(state.currentPlayer)}：ここで止めた。仮進捗を本進捗として確定。`);
+        checkWin();
+
+        renderAll();
+
+        if (state.winner) return;
+
+        await wait(350);
+        endTurnAndSwitch();
+      }
+
+      function burstTurn() {
+        const lost = getTempColumns().length > 0;
+        resetTempProgress();
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.phase = "ready";
+
+        if (lost) {
+          addLog(`${playerLabel(state.currentPlayer)}：バースト！ このターンの仮進捗を失った。`);
+          setBanner(`${playerLabel(state.currentPlayer)}がバースト！ このターンの仮進捗は消えました。`, "warn");
+        } else {
+          addLog(`${playerLabel(state.currentPlayer)}：バースト。`);
+          setBanner(`${playerLabel(state.currentPlayer)}がバーストしました。`, "warn");
+        }
+
+        renderAll();
+        if (!state.winner) {
+          setTimeout(() => endTurnAndSwitch(), 450);
+        }
+      }
+
+      function endTurnAndSwitch() {
+        if (state.winner) return;
+
+        resetTempProgress();
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.phase = "ready";
+        state.currentPlayer = state.currentPlayer === HUMAN ? CPU : HUMAN;
+
+        setBanner(`${playerLabel(state.currentPlayer)}のターンです。`, "good");
+        renderAll();
+
+        if (state.currentPlayer === CPU && !state.winner) {
+          setTimeout(() => runCpuTurn(), 450);
+        }
+      }
+
+      function checkColumnCompleted(fromTemp) {
+        columns.forEach(col => {
+          const progress = fromTemp ? getEffectiveProgress(col) : state.progress[state.currentPlayer][col];
+          if (progress >= columnLengths[col] && !state.completedColumns.has(col)) {
+            state.completedColumns.add(col);
+            state.progress[state.currentPlayer][col] = columnLengths[col];
+            state.tempProgress[col] = columnLengths[col];
+            state.columnOwner[col] = state.currentPlayer;
+            addLog(`${playerLabel(state.currentPlayer)}：${col}列を制覇！`);
+            setBanner(`${playerLabel(state.currentPlayer)}が ${col}列を制覇！`, "gold");
+          }
+        });
+      }
+
+      function checkWin() {
+        const humanCount = countOwnedColumns(HUMAN);
+        const cpuCount = countOwnedColumns(CPU);
+
+        if (humanCount >= 3) state.winner = HUMAN;
+        if (cpuCount >= 3) state.winner = CPU;
+
+        if (state.winner) {
+          state.phase = "cleared";
+          setBanner(`${playerLabel(state.winner)}の勝利！ 3列制覇達成！`, "gold");
+          addLog(`${playerLabel(state.winner)}がゲームクリア！`);
+        }
+      }
+
+      function simulateOptionResult(option) {
+        const counts = {};
+        option.sums.forEach(s => counts[s] = (counts[s] || 0) + 1);
+
+        let gain = 0;
+        let completeNow = 0;
+        let opensNewCols = 0;
+
+        Object.entries(counts).forEach(([colStr, steps]) => {
+          const col = Number(colStr);
+          if (!isColumnPlayable(col)) return;
+
+          const before = getEffectiveProgress(col);
+          const after = Math.min(columnLengths[col], before + steps);
+          gain += (after - before);
+
+          if (!getTempColumns().includes(col) && getCurrentBase(col) === before) {
+            opensNewCols++;
+          }
+
+          if (after >= columnLengths[col]) completeNow++;
+        });
+
+        return { gain, completeNow, opensNewCols };
+      }
+
+      function estimateBurstRisk() {
+        const tempCols = getTempColumns();
+        if (tempCols.length === 0) return 0.05;
+        if (tempCols.length === 1) return 0.12;
+
+        let risk = 0.18;
+
+        if (tempCols.length === 2) {
+          risk = 0.28;
+        } else if (tempCols.length >= 3) {
+          risk = 0.45;
+        }
+
+        tempCols.forEach(col => {
+          if (col === 2 || col === 12) risk += 0.14;
+          else if (col === 3 || col === 11) risk += 0.10;
+          else if (col === 4 || col === 10) risk += 0.06;
+          else if (col === 7) risk -= 0.04;
+          else if (col === 6 || col === 8) risk -= 0.02;
+        });
+
+        return Math.max(0.05, Math.min(0.9, risk));
+      }
+
+      function chooseCpuOption() {
+        const playable = state.options.filter(o => o.playable);
+        if (!playable.length) return null;
+
+        const cpuOwned = countOwnedColumns(CPU);
+        const humanOwned = countOwnedColumns(HUMAN);
+        const scoreDiff = cpuOwned - humanOwned;
+
+        let best = null;
+        let bestScore = -Infinity;
+
+        playable.forEach(opt => {
+          const sim = simulateOptionResult(opt);
+          const counts = {};
+          opt.sums.forEach(s => counts[s] = (counts[s] || 0) + 1);
+
+          let score = 0;
+
+          score += sim.gain * 12;
+          score += sim.completeNow * 180;
+
+          Object.entries(counts).forEach(([colStr, steps]) => {
+            const col = Number(colStr);
+            if (!isColumnPlayable(col)) return;
+
+            const before = getEffectiveProgress(col);
+            const after = Math.min(columnLengths[col], before + steps);
+            const remainAfter = columnLengths[col] - after;
+
+            if (col === 2 || col === 12) score += 28;
+            else if (col === 3 || col === 11) score += 20;
+            else if (col === 4 || col === 10) score += 12;
+            else if (col === 5 || col === 9) score += 8;
+            else if (col === 6 || col === 8) score += 15;
+            else if (col === 7) score += 18;
+
+            score += Math.max(0, 16 - remainAfter) * 6;
+
+            if (remainAfter === 0) score += 100;
+            else if (remainAfter === 1) score += 55;
+            else if (remainAfter === 2) score += 28;
+
+            const humanProgress = state.progress[HUMAN][col];
+            const cpuProgress = state.progress[CPU][col];
+            const humanRemain = columnLengths[col] - humanProgress;
+            const cpuRemain = columnLengths[col] - cpuProgress;
+
+            if (humanRemain <= 2 && cpuRemain <= 3) score += 45;
+            else if (humanRemain <= 3) score += 22;
+
+            if (cpuRemain <= 2) score += 35;
+            if (getTempColumns().includes(col)) score += 16;
+
+            if (!getTempColumns().includes(col) && getCurrentBase(col) === before) {
+              score -= 6;
+            }
+
+            score += cpuProgress * 1.5;
+
+            if (col === 2 || col === 12) score -= 6;
+            if (col === 3 || col === 11) score -= 3;
+          });
+
+          if (opt.sums[0] === opt.sums[1]) score += 18;
+
+          if (sim.opensNewCols >= 2) score -= 28;
+          else if (sim.opensNewCols >= 1 && getTempColumns().length >= 2) score -= 14;
+
+          if (scoreDiff < 0) {
+            score += sim.completeNow * 30;
+            score += sim.gain * 2;
+          }
+
+          if (scoreDiff <= -2) {
+            Object.keys(counts).forEach(colStr => {
+              const col = Number(colStr);
+              const remain = columnLengths[col] - getEffectiveProgress(col);
+              if (remain <= 2) score += 22;
+            });
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            best = opt;
+          }
+        });
+
+        return best;
+      }
+
+      function cpuShouldStop() {
+        const tempCols = getTempColumns();
+        const cpuOwned = countOwnedColumns(CPU);
+        const humanOwned = countOwnedColumns(HUMAN);
+        const scoreDiff = cpuOwned - humanOwned;
+        const burstRisk = estimateBurstRisk();
+
+        const tempGain = tempCols.reduce((sum, col) => {
+          return sum + (state.tempProgress[col] - state.progress[CPU][col]);
+        }, 0);
+
+        let nearComplete = 0;
+        let winningChance = 0;
+
+        tempCols.forEach(col => {
+          const remain = columnLengths[col] - state.tempProgress[col];
+          if (remain <= 2) nearComplete++;
+          if (cpuOwned === 2 && remain <= 2) winningChance++;
+        });
+
+        if (tempCols.length >= 3 && burstRisk >= 0.45 && tempGain >= 2) return true;
+        if (tempGain >= 5) return true;
+        if (tempGain >= 4 && burstRisk >= 0.35) return true;
+        if (tempGain >= 3 && burstRisk >= 0.5) return true;
+
+        if (winningChance >= 1 && burstRisk < 0.45) return false;
+        if (nearComplete >= 1 && burstRisk >= 0.42 && tempGain >= 2) return true;
+
+        if (scoreDiff < 0) {
+          if (burstRisk >= 0.58 && tempGain >= 2) return true;
+          if (tempGain <= 2) return false;
+          if (nearComplete >= 1 && burstRisk < 0.4) return false;
+        }
+
+        if (scoreDiff > 0) {
+          if (tempGain >= 2) return true;
+          if (burstRisk >= 0.3) return true;
+        }
+
+        if (burstRisk >= 0.55) return true;
+        if (burstRisk >= 0.4 && tempGain >= 2) return true;
+
+        return false;
+      }
+
+      async function runCpuTurn() {
+        if (state.currentPlayer !== CPU || state.cpuRunning || state.winner) return;
+
+        state.cpuRunning = true;
+        renderAll();
+
+        try {
+          let turnEnded = false;
+
+          while (!turnEnded && !state.winner && state.currentPlayer === CPU) {
+            setBanner("CPUのターンです。考え中…", "good");
+            renderAll();
+            await wait(500);
+
+            const rolled = await rollDice(true);
+            if (!rolled || state.winner || state.currentPlayer !== CPU) {
+              turnEnded = true;
+              break;
+            }
+
+            await wait(500);
+
+            const best = chooseCpuOption();
+            if (!best) {
+              burstTurn();
+              turnEnded = true;
+              break;
+            }
+
+            applyOption(best.index);
+            await wait(550);
+
+            if (state.winner || state.currentPlayer !== CPU) {
+              turnEnded = true;
+              break;
+            }
+
+            const stop = cpuShouldStop();
+            if (stop) {
+              addLog("CPU：安全策を選び、ここで止める。");
+              renderAll();
+              await wait(350);
+              await commitTurnProgress();
+              turnEnded = true;
+            } else {
+              addLog("CPU：さらに進むことを選んだ。");
+              setBanner("CPUはさらに進む判断をしました。", "good");
+              renderAll();
+              await wait(550);
+            }
+          }
+        } finally {
+          state.cpuRunning = false;
+          renderAll();
+        }
+      }
+
+      function getStatusInfo() {
+        if (state.winner) return { text:`${playerLabel(state.winner)}勝利`, pill:"ゲーム終了", cls:"status-clear" };
+        if (state.phase === "rolled") return { text:"候補選択中", pill:"候補を選択", cls:"status-select" };
+        if (state.lastBanner?.type === "warn" && state.lastBanner.message.includes("バースト")) {
+          return { text:"バースト", pill:"バースト", cls:"status-burst" };
+        }
+        if (getTempColumns().length > 0) return { text:"進行中", pill:"Go or Stop", cls:"status-normal" };
+        return { text:"待機中", pill:"準備完了", cls:"status-normal" };
+      }
+
+      function renderBoard() {
+        boardEl.innerHTML = "";
+
+        columns.forEach(col => {
+          const len = columnLengths[col];
+          const humanBase = state.progress[HUMAN][col];
+          const cpuBase = state.progress[CPU][col];
+          const temp = state.tempProgress[col];
+          const owner = state.columnOwner[col];
+          const isLocked = state.completedColumns.has(col);
+          const currentBase = state.progress[state.currentPlayer][col];
+          const currentTempActive = temp > currentBase;
+
+          const colEl = document.createElement("div");
+          colEl.className = "column" + (isLocked ? " locked" : "");
+
+          const head = document.createElement("div");
+          head.className = "col-head";
+          head.textContent = col;
+
+          const sub = document.createElement("div");
+          sub.className = "col-sub";
+          if (owner === HUMAN) sub.textContent = "人間が制覇";
+          else if (owner === CPU) sub.textContent = "CPUが制覇";
+          else sub.textContent = `${len}マス`;
+
+          const track = document.createElement("div");
+          track.className = "track";
+
+          for (let i = 1; i <= len; i++) {
+            const cell = document.createElement("div");
+            cell.className = "cell" + (i === len ? " goal" : "");
+            const span = document.createElement("span");
+            span.textContent = i;
+            cell.appendChild(span);
+
+            if (isLocked) {
+              cell.classList.add("locked");
+            } else if (currentTempActive && i <= temp && i > currentBase) {
+              cell.classList.add("temp");
+            } else if (i <= humanBase) {
+              cell.classList.add("p1");
+            } else if (i <= cpuBase) {
+              cell.classList.add("cpu");
+            }
+
+            track.appendChild(cell);
+          }
+
+          colEl.appendChild(head);
+          colEl.appendChild(sub);
+
+          if (isLocked) {
+            const crown = document.createElement("div");
+            crown.className = "crown";
+            crown.textContent = owner === HUMAN ? "👤" : "🤖";
+            colEl.appendChild(crown);
+          }
+
+          colEl.appendChild(track);
+          boardEl.appendChild(colEl);
+        });
+      }
+
+      function renderDice(rolling=false) {
+        diceGridEl.innerHTML = "";
+        state.dice.forEach(value => {
+          const die = document.createElement("div");
+          die.className = "die" + (rolling ? " rolling" : "");
+          die.textContent = value;
+          diceGridEl.appendChild(die);
+        });
+      }
+
+      function renderOptions() {
+        optionListEl.innerHTML = "";
+
+        if (state.options.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "section-note";
+          empty.textContent = state.currentPlayer === HUMAN
+            ? "サイコロを振ると、ここに3通りの候補が表示されます。"
+            : "CPUターンでは候補を自動選択します。";
+          optionListEl.appendChild(empty);
+          return;
+        }
+
+        state.options.forEach((opt, idx) => {
+          const btn = document.createElement("button");
+          btn.className = "option-btn";
+          btn.disabled = state.currentPlayer !== HUMAN || state.phase !== "rolled" || !opt.playable || state.uiLocked || state.cpuRunning || !!state.winner;
+
+          const main = document.createElement("div");
+          main.className = "option-main";
+
+          const title = document.createElement("div");
+          title.className = "option-title";
+          title.textContent = `候補${opt.name}　${opt.sums[0]} と ${opt.sums[1]}`;
+
+          const desc = document.createElement("div");
+          desc.className = "option-desc";
+          desc.textContent = `ペア: (${opt.pairs[0][0]}+${opt.pairs[0][1]}) / (${opt.pairs[1][0]}+${opt.pairs[1][1]})`;
+
+          const tag = document.createElement("div");
+          tag.className = "tag " + (opt.playable ? "playable" : "blocked");
+          tag.textContent = opt.playable ? "採用可能" : opt.reason;
+
+          main.appendChild(title);
+          main.appendChild(desc);
+          btn.appendChild(main);
+          btn.appendChild(tag);
+
+          btn.addEventListener("click", () => {
+            if (state.currentPlayer !== HUMAN) return;
+            applyOption(idx);
+          });
+
+          optionListEl.appendChild(btn);
+        });
+      }
+
+      function renderLogs() {
+        logListEl.innerHTML = "";
+        state.logs.forEach(item => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          logListEl.appendChild(li);
+        });
+      }
+
+      function renderStats() {
+        const tempCols = getTempColumns();
+        const status = getStatusInfo();
+
+        turnText.textContent = playerLabel(state.currentPlayer);
+        statusText.textContent = status.text;
+        p1Score.textContent = countOwnedColumns(HUMAN);
+        cpuScore.textContent = countOwnedColumns(CPU);
+        tempColumnsText.textContent = tempCols.length ? tempCols.join(", ") : "なし";
+        tempColumnsInline.textContent = tempCols.length ? tempCols.join(", ") : "なし";
+
+        statusPill.textContent = status.pill;
+        statusPill.className = "status-pill " + status.cls;
+      }
+
+      function renderButtons() {
+        const humanTurn = state.currentPlayer === HUMAN;
+        const hasTemp = getTempColumns().length > 0;
+
+        rollBtn.disabled = !humanTurn || state.uiLocked || state.cpuRunning || state.rolling || state.phase === "rolled" || !!state.winner;
+        stopBtn.disabled = !humanTurn || state.uiLocked || state.cpuRunning || state.rolling || state.phase === "rolled" || !hasTemp || !!state.winner;
+      }
+
+      function renderAll() {
+        renderBoard();
+        renderDice(state.rolling);
+        renderOptions();
+        renderLogs();
+        renderStats();
+        renderButtons();
+      }
+
+      function resetGame() {
+        initProgress();
+        state.completedColumns = new Set();
+        state.currentPlayer = HUMAN;
+        state.dice = [1,1,1,1];
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.logs = [];
+        state.phase = "ready";
+        state.uiLocked = false;
+        state.cpuRunning = false;
+        state.rolling = false;
+        state.winner = null;
+        state.lastBanner = null;
+
+        addLog("ゲームをリセットしました。人間のターンです。");
+        setBanner("人間のターンです。「サイコロを振る」を押してください。", "good");
+        renderAll();
+      }
+
+      rollBtn.addEventListener("click", async () => {
+        if (state.currentPlayer !== HUMAN || state.cpuRunning || state.winner) return;
+        await rollDice(false);
+      });
+
+      stopBtn.addEventListener("click", async () => {
+        if (state.currentPlayer !== HUMAN || state.cpuRunning || state.winner) return;
+        await commitTurnProgress();
+      });
+
+      async function unlockAudioFromUserGesture() {
+        await ensureAudioStarted();
+      }
+
+      ["pointerdown", "keydown", "touchstart"].forEach(evt => {
+        window.addEventListener(evt, unlockAudioFromUserGesture, { once:true, passive:true });
+      });
+
+      audioToggle.addEventListener("click", async () => {
+        if (!bgmAvailable) return;
+        if (!bgmStarted && bgmEnabled) {
+          await ensureAudioStarted();
+          if (bgmStarted) return;
+        }
+        setAudioEnabled(!bgmEnabled);
+      });
+
+      resetBtn.addEventListener("click", resetGame);
+
+      setupOptionalBackgroundImage();
+      updateAudioButton();
+      resetGame();
+    })();
+  </script>
+</body>
+</html>
