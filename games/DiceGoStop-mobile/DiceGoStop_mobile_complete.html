@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Dice: Go or Stop - Mobile Edition</title>
+  <style>
+
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel2:#0b1220;
+      --line:#334155;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --accent:#38bdf8;
+      --safe:#22c55e;
+      --danger:#ef4444;
+      --gold:#fbbf24;
+      --p1:#3b82f6;
+      --p1-dark:#1d4ed8;
+      --cpu:#ef4444;
+      --cpu-dark:#b91c1c;
+      --temp:#f59e0b;
+      --temp-dark:#d97706;
+      --shadow:0 8px 22px rgba(0,0,0,.24);
+      --radius:16px;
+      --bottom-bar-h:82px;
+      --content-max:760px;
+    }
+
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+    html,body{
+      margin:0;
+      padding:0;
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(56,189,248,.16), transparent 22%),
+        radial-gradient(circle at 85% 6%, rgba(245,158,11,.10), transparent 18%),
+        linear-gradient(180deg, #020617, #0f172a 38%, #111827);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Meiryo",sans-serif;
+    }
+
+    body{
+      padding: max(8px, env(safe-area-inset-top)) 8px calc(var(--bottom-bar-h) + env(safe-area-inset-bottom) + 8px);
+      overscroll-behavior:none;
+    }
+
+    .app{
+      width:100%;
+      max-width:var(--content-max);
+      margin:0 auto;
+      height:calc(100dvh - max(8px, env(safe-area-inset-top)) - calc(var(--bottom-bar-h) + env(safe-area-inset-bottom) + 8px) - 8px);
+      display:flex !important;
+      flex-direction:column !important;
+      gap:8px;
+      overflow:hidden;
+    }
+
+    .panel{
+      background:linear-gradient(180deg, rgba(17,24,39,.97), rgba(11,18,32,.98));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .compact-header{
+      padding:10px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:8px;
+      align-items:start;
+    }
+
+    .title-wrap{min-width:0;}
+    .title-row{display:flex; align-items:center; gap:8px; margin-bottom:4px;}
+    .title-badge{
+      background:linear-gradient(135deg, var(--accent), #2563eb);
+      color:white;
+      padding:5px 8px;
+      border-radius:999px;
+      font-weight:900;
+      font-size:10px;
+      letter-spacing:.4px;
+      white-space:nowrap;
+    }
+    h1{margin:0; font-size:18px; line-height:1.05; letter-spacing:.2px;}
+    .subtitle{color:var(--muted); font-size:11px; line-height:1.35;}
+
+    .mini-actions{display:flex; gap:6px; align-items:flex-start;}
+    .mini-btn, .sheet summary{
+      list-style:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:46px;
+      height:34px;
+      padding:0 10px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      font-size:12px;
+      font-weight:800;
+      cursor:pointer;
+    }
+    .sheet summary::-webkit-details-marker{display:none;}
+
+    .stats-strip{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:6px;
+      padding:0 10px 10px;
+    }
+    .stat{
+      background:linear-gradient(180deg, rgba(31,41,55,.96), rgba(17,24,39,.97));
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:8px 8px 7px;
+      min-height:56px;
+    }
+    .stat-label{font-size:10px; color:var(--muted); margin-bottom:4px;}
+    .stat-value{font-size:15px; font-weight:900; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .small-note{display:none;}
+
+    .sheet{position:relative;}
+    .sheet-panel{
+      display:none;
+      position:fixed;
+      inset:16px 12px calc(var(--bottom-bar-h) + env(safe-area-inset-bottom) + 14px) 12px;
+      z-index:30;
+      background:linear-gradient(180deg, rgba(17,24,39,.99), rgba(11,18,32,.99));
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:0 18px 48px rgba(0,0,0,.45);
+      padding:14px;
+      overflow:auto;
+    }
+    .sheet[open] .sheet-panel{display:block;}
+    .sheet-header{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; font-weight:900;}
+    .sheet-close{color:var(--muted); font-size:12px;}
+    .rules-text{font-size:13px; line-height:1.6; color:#dbeafe;}
+
+    .dice-options{
+      display:flex !important;
+      flex-direction:column !important;
+      gap:8px;
+      min-height:0;
+      flex:0 0 auto;
+    }
+
+    .dice-panel,.option-panel,.board-panel{padding:10px;}
+    .section-title{
+      font-size:14px;
+      font-weight:900;
+      margin-bottom:8px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+    }
+    .section-note{font-size:11px; color:var(--muted); font-weight:600;}
+
+    .dice-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px;
+    }
+    .die{
+      aspect-ratio:1/1;
+      border-radius:16px;
+      background:radial-gradient(circle at 30% 28%, rgba(255,255,255,.22), transparent 22%), linear-gradient(180deg, #f8fafc, #dbeafe);
+      color:#0f172a;
+      border:2px solid rgba(255,255,255,.3);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:24px;
+      font-weight:900;
+      box-shadow:0 8px 16px rgba(0,0,0,.22);
+      user-select:none;
+    }
+    .die.rolling{animation:rollShake .55s ease;}
+    @keyframes rollShake{
+      0%{ transform:translate(0,0) rotate(0deg); }
+      20%{ transform:translate(-3px,2px) rotate(-5deg); }
+      40%{ transform:translate(4px,-3px) rotate(6deg); }
+      60%{ transform:translate(-4px,3px) rotate(-6deg); }
+      80%{ transform:translate(3px,-2px) rotate(4deg); }
+      100%{ transform:translate(0,0) rotate(0deg); }
+    }
+
+    .option-list{display:grid; gap:6px;}
+    .option-btn{
+      width:100%;
+      text-align:left;
+      border-radius:13px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(30,41,59,.95), rgba(15,23,42,.98));
+      color:var(--text);
+      padding:10px;
+      cursor:pointer;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      min-height:56px;
+    }
+    .option-btn:disabled{cursor:not-allowed; color:#94a3b8; opacity:.72;}
+    .option-main{display:flex; flex-direction:column; gap:3px; min-width:0;}
+    .option-title{font-size:16px; font-weight:900; letter-spacing:.2px;}
+    .option-desc{font-size:11px; color:var(--muted);}
+    .tag{
+      font-size:11px; font-weight:800; border-radius:999px; padding:5px 8px;
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); white-space:nowrap;
+    }
+    .tag.playable{ color:#bbf7d0; border-color:rgba(34,197,94,.3); background:rgba(20,83,45,.25); }
+    .tag.blocked{ color:#fecaca; border-color:rgba(239,68,68,.3); background:rgba(127,29,29,.22); }
+
+    .banner{
+      margin-top:8px;
+      padding:9px 10px;
+      border-radius:12px;
+      font-size:12px;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,.08);
+      display:none;
+    }
+    .banner.show{ display:block; }
+    .banner.warn{ color:#fee2e2; background:rgba(127,29,29,.28); border-color:rgba(239,68,68,.35); }
+    .banner.good{ color:#dcfce7; background:rgba(20,83,45,.24); border-color:rgba(34,197,94,.35); }
+    .banner.gold{ color:#fef3c7; background:rgba(120,53,15,.22); border-color:rgba(251,191,36,.4); }
+
+    .board-shell{display:flex; flex-direction:column; min-height:0; flex:1 1 auto;}
+    .panel-header{
+      padding:10px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,.02);
+    }
+    .panel-title{font-size:15px; font-weight:900;}
+    .status-pill{
+      padding:6px 9px; border-radius:999px; font-size:11px; font-weight:800;
+      border:1px solid rgba(255,255,255,.12); background:#0b1220; white-space:nowrap;
+    }
+    .status-normal{ color:#dbeafe; border-color:rgba(56,189,248,.35); }
+    .status-select{ color:#fde68a; border-color:rgba(245,158,11,.35); }
+    .status-burst{ color:#fecaca; border-color:rgba(239,68,68,.45); background:rgba(127,29,29,.24); }
+    .status-clear{ color:#fef3c7; border-color:rgba(251,191,36,.45); background:rgba(120,53,15,.22); }
+
+    .marker-info{display:flex; gap:6px; flex-wrap:wrap; align-items:center; font-size:11px; color:var(--muted); margin-bottom:8px;}
+    .legend-chip{
+      display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,.03);
+      border:1px solid var(--line); border-radius:999px; padding:4px 8px;
+    }
+    .legend-dot{width:10px; height:10px; border-radius:999px; display:inline-block; border:1px solid rgba(255,255,255,.25);}
+    .dot-p1{ background:var(--p1); } .dot-cpu{ background:var(--cpu); } .dot-temp{ background:var(--temp); }
+
+    .board-section{padding:10px; min-height:0; display:flex; flex-direction:column;}
+    .board-scroll{flex:1; min-height:0; overflow:auto hidden; padding-bottom:2px;}
+    .board{
+      min-width:620px;
+      min-height:100%;
+      display:grid;
+      grid-template-columns:repeat(11, minmax(46px, 1fr));
+      gap:7px;
+      align-items:end;
+      padding:2px 2px 4px;
+    }
+    .column{
+      background:linear-gradient(180deg, rgba(30,41,59,.68), rgba(15,23,42,.74));
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:8px 4px 8px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      min-height:100%;
+      position:relative;
+      overflow:visible;
+    }
+    .column.locked{
+      background:linear-gradient(180deg, rgba(251,191,36,.18), rgba(120,53,15,.15)), linear-gradient(180deg, rgba(30,41,59,.85), rgba(15,23,42,.95));
+      border-color:rgba(251,191,36,.5);
+      box-shadow:inset 0 0 18px rgba(251,191,36,.15);
+    }
+    .col-head{font-size:20px; font-weight:900; margin-bottom:5px; line-height:1; color:#f8fafc; text-shadow:0 2px 6px rgba(0,0,0,.4);}
+    .col-sub{color:var(--muted); font-size:9px; margin-bottom:6px; text-align:center; min-height:20px;}
+    .track{flex:1; width:100%; display:flex; flex-direction:column-reverse; align-items:center; gap:3px; justify-content:flex-start; padding-bottom:2px;}
+    .cell{
+      width:min(100%, 34px); height:15px; border-radius:6px; border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04); position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;
+      font-size:9px; font-weight:800; color:rgba(255,255,255,.16); flex:0 0 auto;
+    }
+    .cell.p1{ background:linear-gradient(180deg, var(--p1), var(--p1-dark)); color:white; box-shadow:0 3px 8px rgba(59,130,246,.25); }
+    .cell.cpu{ background:linear-gradient(180deg, var(--cpu), var(--cpu-dark)); color:white; box-shadow:0 3px 8px rgba(239,68,68,.28); }
+    .cell.temp{ background:linear-gradient(180deg, var(--temp), var(--temp-dark)); color:white; box-shadow:0 3px 8px rgba(245,158,11,.28); transform:scale(1.03); animation:pulseTemp .9s ease-in-out infinite alternate; }
+    .cell.goal{ border-color:rgba(255,255,255,.18); }
+    .cell.locked{ background:linear-gradient(180deg, rgba(251,191,36,.98), rgba(217,119,6,.98)); color:#111827; box-shadow:0 3px 10px rgba(251,191,36,.3); }
+    .cell > span{position:relative; z-index:1;}
+    .crown{position:absolute; top:6px; right:5px; font-size:13px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+    @keyframes pulseTemp{ from{ transform:translateY(0) scale(1.02); } to{ transform:translateY(-1px) scale(1.06); } }
+
+    .bottom-bar{
+      position:fixed;
+      left:8px; right:8px; bottom:calc(env(safe-area-inset-bottom) + 8px);
+      z-index:20;
+    }
+    .bottom-inner{
+      width:100%; max-width:var(--content-max); margin:0 auto;
+      background:linear-gradient(180deg, rgba(17,24,39,.98), rgba(11,18,32,.99));
+      border:1px solid var(--line); border-radius:18px; box-shadow:0 14px 30px rgba(0,0,0,.35);
+      padding:8px;
+    }
+    .controls{display:grid; grid-template-columns:1.15fr 1fr .9fr; gap:8px;}
+    .btn{
+      min-height:50px; border:none; border-radius:14px; padding:10px 8px; font-size:15px; font-weight:900; cursor:pointer; color:#fff;
+      touch-action:manipulation; box-shadow:0 8px 20px rgba(0,0,0,.18);
+    }
+    .btn:disabled{ cursor:not-allowed; opacity:.52; filter:saturate(.7); }
+    .btn-roll{ background:linear-gradient(135deg, var(--accent), #2563eb); }
+    .btn-stop{ background:linear-gradient(135deg, var(--safe), #15803d); }
+    .btn-reset{ background:linear-gradient(135deg, #64748b, #334155); }
+    .bottom-note{margin-top:6px; font-size:10px; color:var(--muted); text-align:center; line-height:1.35;}
+
+    .log-list{margin:0; padding-left:18px; font-size:12px; color:#e2e8f0; line-height:1.6;}
+    .log-list li{margin-bottom:6px;}
+
+    @media (max-width:390px){
+      .stats-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .compact-header{grid-template-columns:1fr;}
+      .mini-actions{justify-content:flex-start;}
+      .dice-options{flex-direction:column !important;}
+      .option-title{font-size:14px;}
+      .board{min-width:620px; grid-template-columns:repeat(11, minmax(47px, 1fr));}
+    }
+
+    @media (min-width:768px){
+      .app{gap:10px;}
+      h1{font-size:24px;}
+      .subtitle{font-size:12px;}
+      .board{min-width:0;}
+    }
+
+    /* GitHub Pages / iPhone で横並びに戻らないよう強制 */
+    .app,
+    .dice-options{
+      display:flex !important;
+      flex-direction:column !important;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="app">
+    <section class="panel">
+      <div class="compact-header">
+        <div class="title-wrap">
+          <div class="title-row">
+            <div class="title-badge">PLAYER VS CPU</div>
+            <h1>Dice: Go or Stop</h1>
+          </div>
+          <div class="subtitle">完全スマホ専用UI。1カラム固定で、縦スクロールなしを狙った完成版。</div>
+        </div>
+        <div class="mini-actions">
+          <details class="sheet">
+            <summary>ルール</summary>
+            <div class="sheet-panel">
+              <div class="sheet-header"><span>ルール</span><span class="sheet-close">もう一度タップで閉じる</span></div>
+              <div class="rules-text">
+                4個のサイコロから3通りのペア候補を出し、1つ選びます。<br><br>
+                出た2つの合計値の列を前進。同じ数が2つならその列を2マス進行。<br><br>
+                1ターンで使える仮マーカーは最大3列。進める候補がなくなるとバーストして、そのターンの仮進捗は消えます。先に3列制覇で勝利です。
+              </div>
+            </div>
+          </details>
+          <details class="sheet">
+            <summary>ログ</summary>
+            <div class="sheet-panel">
+              <div class="sheet-header"><span>行動ログ</span><span class="sheet-close">もう一度タップで閉じる</span></div>
+              <ol id="logList" class="log-list"></ol>
+            </div>
+          </details>
+        </div>
+      </div>
+      <div class="stats-strip">
+        <div class="stat">
+          <div class="stat-label">手番</div>
+          <div class="stat-value" id="turnText">人間</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">状態</div>
+          <div class="stat-value" id="statusText">開始前</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">スコア</div>
+          <div class="stat-value"><span id="p1Score">0</span> - <span id="cpuScore">0</span></div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">仮列</div>
+          <div class="stat-value" id="tempColumnsText">なし</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dice-options">
+      <div class="panel dice-panel">
+        <div class="section-title">
+          <span>サイコロ</span>
+          <span class="section-note">4d6</span>
+        </div>
+        <div class="dice-grid" id="diceGrid"></div>
+      </div>
+
+      <div class="panel option-panel">
+        <div class="section-title">
+          <span>候補選択</span>
+          <span class="section-note">大きいボタン</span>
+        </div>
+        <div class="option-list" id="optionList"></div>
+        <div id="infoBanner" class="banner"></div>
+      </div>
+    </section>
+
+    <section class="panel board-shell">
+      <div class="panel-header">
+        <div class="panel-title">ボード</div>
+        <div id="statusPill" class="status-pill status-normal">準備完了</div>
+      </div>
+      <div class="board-section">
+        <div class="marker-info">
+          <span class="legend-chip"><span class="legend-dot dot-p1"></span>人間</span>
+          <span class="legend-chip"><span class="legend-dot dot-cpu"></span>CPU</span>
+          <span class="legend-chip"><span class="legend-dot dot-temp"></span>仮進捗</span>
+          <span class="legend-chip">仮列: <strong id="tempColumnsInline">なし</strong></span>
+        </div>
+        <div class="board-scroll">
+          <div id="board" class="board"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="bottom-inner">
+      <div class="controls">
+        <button id="rollBtn" class="btn btn-roll">サイコロを振る</button>
+        <button id="stopBtn" class="btn btn-stop">ここで止める</button>
+        <button id="resetBtn" class="btn btn-reset">リスタート</button>
+      </div>
+      <div class="bottom-note">ログとルールは上のボタンに収納。メイン画面は縦スクロールなしです。</div>
+    </div>
+  </div>
+
+
+<script>
+    (() => {
+      "use strict";
+
+      const HUMAN = "human";
+      const CPU = "cpu";
+
+      const columnLengths = {
+        2: 3, 3: 5, 4: 7, 5: 9, 6: 11, 7: 13,
+        8: 11, 9: 9, 10: 7, 11: 5, 12: 3
+      };
+      const columns = Object.keys(columnLengths).map(Number);
+
+      const state = {
+        progress: { [HUMAN]: {}, [CPU]: {} },
+        tempProgress: {},
+        columnOwner: {},
+        completedColumns: new Set(),
+        currentPlayer: HUMAN,
+        dice: [1,1,1,1],
+        options: [],
+        selectedOptionIndex: null,
+        logs: [],
+        phase: "ready",
+        uiLocked: false,
+        cpuRunning: false,
+        rolling: false,
+        winner: null,
+        lastBanner: null
+      };
+
+      const boardEl = document.getElementById("board");
+      const diceGridEl = document.getElementById("diceGrid");
+      const optionListEl = document.getElementById("optionList");
+      const logListEl = document.getElementById("logList");
+      const rollBtn = document.getElementById("rollBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      const turnText = document.getElementById("turnText");
+      const statusText = document.getElementById("statusText");
+      const p1Score = document.getElementById("p1Score");
+      const cpuScore = document.getElementById("cpuScore");
+      const tempColumnsText = document.getElementById("tempColumnsText");
+      const tempColumnsInline = document.getElementById("tempColumnsInline");
+      const statusPill = document.getElementById("statusPill");
+      const infoBanner = document.getElementById("infoBanner");
+
+      function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+      function playerLabel(player) { return player === HUMAN ? "人間" : "CPU"; }
+
+      function initProgress() {
+        [HUMAN, CPU].forEach(player => {
+          columns.forEach(col => state.progress[player][col] = 0);
+        });
+        columns.forEach(col => {
+          state.tempProgress[col] = 0;
+          state.columnOwner[col] = null;
+        });
+      }
+
+      function resetTempProgress() { columns.forEach(col => state.tempProgress[col] = 0); }
+
+      function addLog(message) {
+        state.logs.unshift(message);
+        if (state.logs.length > 30) state.logs.length = 30;
+      }
+
+      function setBanner(message, type="warn") {
+        state.lastBanner = { message, type };
+        infoBanner.textContent = message;
+        infoBanner.className = "banner show " + type;
+      }
+
+      function clearBanner() {
+        state.lastBanner = null;
+        infoBanner.textContent = "";
+        infoBanner.className = "banner";
+      }
+
+      function countOwnedColumns(player) {
+        let count = 0;
+        columns.forEach(col => { if (state.columnOwner[col] === player) count++; });
+        return count;
+      }
+
+      function getTempColumns() { return columns.filter(col => state.tempProgress[col] > 0); }
+      function getCurrentBase(col) { return state.progress[state.currentPlayer][col]; }
+      function getEffectiveProgress(col) { return Math.max(getCurrentBase(col), state.tempProgress[col]); }
+
+      function isColumnPlayable(col) {
+        if (state.completedColumns.has(col)) return false;
+        if (state.columnOwner[col] && state.columnOwner[col] !== state.currentPlayer) return false;
+        if (getEffectiveProgress(col) >= columnLengths[col]) return false;
+        return true;
+      }
+
+      function availableMarkerCountAfterAdding(colsNeeded) {
+        const set = new Set(getTempColumns());
+        colsNeeded.forEach(col => { if (isColumnPlayable(col)) set.add(col); });
+        return set.size;
+      }
+
+      function analyzeOption(option) {
+        const counts = {};
+        option.sums.forEach(sum => counts[sum] = (counts[sum] || 0) + 1);
+        const neededCols = Object.keys(counts).map(Number);
+
+        const hasAnyPlayable = neededCols.some(col => isColumnPlayable(col));
+        if (!hasAnyPlayable) return { playable:false, reason:"進める列なし" };
+
+        const allPlayable = neededCols.every(col => isColumnPlayable(col));
+        if (!allPlayable) return { playable:false, reason:"相手列/制覇済み" };
+
+        const markerCount = availableMarkerCountAfterAdding(neededCols);
+        if (markerCount > 3) return { playable:false, reason:"4列目になる" };
+
+        return { playable:true, reason:"採用可能" };
+      }
+
+      function generatePairOptions() {
+        const [a,b,c,d] = state.dice;
+        const raw = [
+          { name:"①", pairs:[[a,b],[c,d]], sums:[a+b, c+d] },
+          { name:"②", pairs:[[a,c],[b,d]], sums:[a+c, b+d] },
+          { name:"③", pairs:[[a,d],[b,c]], sums:[a+d, b+c] }
+        ];
+
+        state.options = raw.map((opt, index) => {
+          const check = analyzeOption(opt);
+          return { ...opt, index, playable:check.playable, reason:check.reason };
+        });
+      }
+
+      function randomDie() { return Math.floor(Math.random() * 6) + 1; }
+
+      async function animateDiceRoll() {
+        state.rolling = true;
+        renderAll();
+        for (let i=0; i<8; i++) {
+          state.dice = [randomDie(), randomDie(), randomDie(), randomDie()];
+          renderDice(true);
+          await wait(55);
+        }
+        state.dice = [randomDie(), randomDie(), randomDie(), randomDie()];
+        state.rolling = false;
+      }
+
+      async function rollDice(internalCall=false) {
+        if (state.winner) return false;
+        if (!internalCall && (state.uiLocked || state.cpuRunning)) return false;
+        if (state.phase === "rolled") return false;
+
+        clearBanner();
+        state.selectedOptionIndex = null;
+        state.options = [];
+
+        await animateDiceRoll();
+        generatePairOptions();
+
+        const anyPlayable = state.options.some(opt => opt.playable);
+        if (!anyPlayable) {
+          addLog(`${playerLabel(state.currentPlayer)}：出目 [${state.dice.join(", ")}] → 進める候補がなくバースト。`);
+          burstTurn();
+          return false;
+        }
+
+        state.phase = "rolled";
+        addLog(`${playerLabel(state.currentPlayer)}：サイコロを振った → [${state.dice.join(", ")}]`);
+        setBanner(state.currentPlayer === HUMAN ? "候補を1つ選んでください。" : "CPUが候補を選択中です。", "good");
+        renderAll();
+        return true;
+      }
+
+      function applyOption(index) {
+        if (state.phase !== "rolled" || state.winner) return false;
+
+        const option = state.options[index];
+        if (!option || !option.playable) {
+          setBanner("その候補は使えません。", "warn");
+          return false;
+        }
+
+        state.selectedOptionIndex = index;
+        const counts = {};
+        option.sums.forEach(sum => counts[sum] = (counts[sum] || 0) + 1);
+
+        Object.entries(counts).forEach(([colStr, steps]) => {
+          const col = Number(colStr);
+          if (!isColumnPlayable(col)) return;
+          const current = getEffectiveProgress(col);
+          const next = Math.min(columnLengths[col], current + steps);
+          state.tempProgress[col] = Math.max(state.tempProgress[col], next);
+          addLog(`${playerLabel(state.currentPlayer)}：${col}列を ${next - current} マス進めた。`);
+        });
+
+        addLog(`${playerLabel(state.currentPlayer)}：候補${option.name} を採用 → ${option.sums[0]} と ${option.sums[1]}`);
+
+        checkColumnCompleted(true);
+        checkWin();
+
+        if (!state.winner) {
+          state.phase = "ready";
+          if (state.currentPlayer === HUMAN) {
+            setBanner("進行しました。さらに振るか、ここで止めるか選んでください。", "good");
+          }
+        }
+
+        renderAll();
+        return true;
+      }
+
+      async function commitTurnProgress() {
+        if (state.winner) return;
+        const tempCols = getTempColumns();
+        if (tempCols.length === 0) {
+          setBanner("確定できる仮進捗がありません。", "warn");
+          return;
+        }
+
+        tempCols.forEach(col => {
+          state.progress[state.currentPlayer][col] = state.tempProgress[col];
+        });
+
+        checkColumnCompleted(false);
+        addLog(`${playerLabel(state.currentPlayer)}：ここで止めた。仮進捗を本進捗として確定。`);
+        checkWin();
+        renderAll();
+
+        if (state.winner) return;
+        await wait(350);
+        endTurnAndSwitch();
+      }
+
+      function burstTurn() {
+        const lost = getTempColumns().length > 0;
+        resetTempProgress();
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.phase = "ready";
+
+        if (lost) {
+          addLog(`${playerLabel(state.currentPlayer)}：バースト！ このターンの仮進捗を失った。`);
+          setBanner(`${playerLabel(state.currentPlayer)}がバースト！ このターンの仮進捗は消えました。`, "warn");
+        } else {
+          addLog(`${playerLabel(state.currentPlayer)}：バースト。`);
+          setBanner(`${playerLabel(state.currentPlayer)}がバーストしました。`, "warn");
+        }
+
+        renderAll();
+        if (!state.winner) setTimeout(() => endTurnAndSwitch(), 450);
+      }
+
+      function endTurnAndSwitch() {
+        if (state.winner) return;
+
+        resetTempProgress();
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.phase = "ready";
+        state.currentPlayer = state.currentPlayer === HUMAN ? CPU : HUMAN;
+
+        setBanner(`${playerLabel(state.currentPlayer)}のターンです。`, "good");
+        renderAll();
+
+        if (state.currentPlayer === CPU && !state.winner) {
+          setTimeout(() => runCpuTurn(), 450);
+        }
+      }
+
+      function checkColumnCompleted(fromTemp) {
+        columns.forEach(col => {
+          const progress = fromTemp ? getEffectiveProgress(col) : state.progress[state.currentPlayer][col];
+          if (progress >= columnLengths[col] && !state.completedColumns.has(col)) {
+            state.completedColumns.add(col);
+            state.progress[state.currentPlayer][col] = columnLengths[col];
+            state.tempProgress[col] = columnLengths[col];
+            state.columnOwner[col] = state.currentPlayer;
+            addLog(`${playerLabel(state.currentPlayer)}：${col}列を制覇！`);
+            setBanner(`${playerLabel(state.currentPlayer)}が ${col}列を制覇！`, "gold");
+          }
+        });
+      }
+
+      function checkWin() {
+        const humanCount = countOwnedColumns(HUMAN);
+        const cpuCount = countOwnedColumns(CPU);
+
+        if (humanCount >= 3) state.winner = HUMAN;
+        if (cpuCount >= 3) state.winner = CPU;
+
+        if (state.winner) {
+          state.phase = "cleared";
+          setBanner(`${playerLabel(state.winner)}の勝利！ 3列制覇達成！`, "gold");
+          addLog(`${playerLabel(state.winner)}がゲームクリア！`);
+        }
+      }
+
+      function simulateOptionResult(option) {
+        const counts = {};
+        option.sums.forEach(s => counts[s] = (counts[s] || 0) + 1);
+
+        let gain = 0, completeNow = 0, opensNewCols = 0;
+
+        Object.entries(counts).forEach(([colStr, steps]) => {
+          const col = Number(colStr);
+          if (!isColumnPlayable(col)) return;
+
+          const before = getEffectiveProgress(col);
+          const after = Math.min(columnLengths[col], before + steps);
+          gain += (after - before);
+          if (!getTempColumns().includes(col) && getCurrentBase(col) === before) opensNewCols++;
+          if (after >= columnLengths[col]) completeNow++;
+        });
+
+        return { gain, completeNow, opensNewCols };
+      }
+
+      function estimateBurstRisk() {
+        const tempCols = getTempColumns();
+        if (tempCols.length === 0) return 0.05;
+        if (tempCols.length === 1) return 0.12;
+
+        let risk = 0.18;
+        if (tempCols.length === 2) risk = 0.28;
+        else if (tempCols.length >= 3) risk = 0.45;
+
+        tempCols.forEach(col => {
+          if (col === 2 || col === 12) risk += 0.14;
+          else if (col === 3 || col === 11) risk += 0.10;
+          else if (col === 4 || col === 10) risk += 0.06;
+          else if (col === 7) risk -= 0.04;
+          else if (col === 6 || col === 8) risk -= 0.02;
+        });
+
+        return Math.max(0.05, Math.min(0.9, risk));
+      }
+
+      function chooseCpuOption() {
+        const playable = state.options.filter(o => o.playable);
+        if (!playable.length) return null;
+
+        const cpuOwned = countOwnedColumns(CPU);
+        const humanOwned = countOwnedColumns(HUMAN);
+        const scoreDiff = cpuOwned - humanOwned;
+
+        let best = null;
+        let bestScore = -Infinity;
+
+        playable.forEach(opt => {
+          const sim = simulateOptionResult(opt);
+          const counts = {};
+          opt.sums.forEach(s => counts[s] = (counts[s] || 0) + 1);
+
+          let score = 0;
+          score += sim.gain * 12;
+          score += sim.completeNow * 180;
+
+          Object.entries(counts).forEach(([colStr]) => {
+            const col = Number(colStr);
+            if (!isColumnPlayable(col)) return;
+
+            const before = getEffectiveProgress(col);
+            const after = Math.min(columnLengths[col], before + counts[col]);
+            const remainAfter = columnLengths[col] - after;
+
+            if (col === 2 || col === 12) score += 28;
+            else if (col === 3 || col === 11) score += 20;
+            else if (col === 4 || col === 10) score += 12;
+            else if (col === 5 || col === 9) score += 8;
+            else if (col === 6 || col === 8) score += 15;
+            else if (col === 7) score += 18;
+
+            score += Math.max(0, 16 - remainAfter) * 6;
+
+            if (remainAfter === 0) score += 100;
+            else if (remainAfter === 1) score += 55;
+            else if (remainAfter === 2) score += 28;
+
+            const humanProgress = state.progress[HUMAN][col];
+            const cpuProgress = state.progress[CPU][col];
+            const humanRemain = columnLengths[col] - humanProgress;
+            const cpuRemain = columnLengths[col] - cpuProgress;
+
+            if (humanRemain <= 2 && cpuRemain <= 3) score += 45;
+            else if (humanRemain <= 3) score += 22;
+
+            if (cpuRemain <= 2) score += 35;
+            if (getTempColumns().includes(col)) score += 16;
+            if (!getTempColumns().includes(col) && getCurrentBase(col) === before) score -= 6;
+
+            score += cpuProgress * 1.5;
+            if (col === 2 || col === 12) score -= 6;
+            if (col === 3 || col === 11) score -= 3;
+          });
+
+          if (opt.sums[0] === opt.sums[1]) score += 18;
+          if (sim.opensNewCols >= 2) score -= 28;
+          else if (sim.opensNewCols >= 1 && getTempColumns().length >= 2) score -= 14;
+
+          if (scoreDiff < 0) {
+            score += sim.completeNow * 30;
+            score += sim.gain * 2;
+          }
+
+          if (scoreDiff <= -2) {
+            Object.keys(counts).forEach(colStr => {
+              const col = Number(colStr);
+              const remain = columnLengths[col] - getEffectiveProgress(col);
+              if (remain <= 2) score += 22;
+            });
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            best = opt;
+          }
+        });
+
+        return best;
+      }
+
+      function cpuShouldStop() {
+        const tempCols = getTempColumns();
+        const cpuOwned = countOwnedColumns(CPU);
+        const humanOwned = countOwnedColumns(HUMAN);
+        const scoreDiff = cpuOwned - humanOwned;
+        const burstRisk = estimateBurstRisk();
+
+        const tempGain = tempCols.reduce((sum, col) => sum + (state.tempProgress[col] - state.progress[CPU][col]), 0);
+
+        let nearComplete = 0;
+        let winningChance = 0;
+
+        tempCols.forEach(col => {
+          const remain = columnLengths[col] - state.tempProgress[col];
+          if (remain <= 2) nearComplete++;
+          if (cpuOwned === 2 && remain <= 2) winningChance++;
+        });
+
+        if (tempCols.length >= 3 && burstRisk >= 0.45 && tempGain >= 2) return true;
+        if (tempGain >= 5) return true;
+        if (tempGain >= 4 && burstRisk >= 0.35) return true;
+        if (tempGain >= 3 && burstRisk >= 0.5) return true;
+
+        if (winningChance >= 1 && burstRisk < 0.45) return false;
+        if (nearComplete >= 1 && burstRisk >= 0.42 && tempGain >= 2) return true;
+
+        if (scoreDiff < 0) {
+          if (burstRisk >= 0.58 && tempGain >= 2) return true;
+          if (tempGain <= 2) return false;
+          if (nearComplete >= 1 && burstRisk < 0.4) return false;
+        }
+
+        if (scoreDiff > 0) {
+          if (tempGain >= 2) return true;
+          if (burstRisk >= 0.3) return true;
+        }
+
+        if (burstRisk >= 0.55) return true;
+        if (burstRisk >= 0.4 && tempGain >= 2) return true;
+        return false;
+      }
+
+      async function runCpuTurn() {
+        if (state.currentPlayer !== CPU || state.cpuRunning || state.winner) return;
+        state.cpuRunning = true;
+        renderAll();
+
+        try {
+          let turnEnded = false;
+
+          while (!turnEnded && !state.winner && state.currentPlayer === CPU) {
+            setBanner("CPUのターンです。考え中…", "good");
+            renderAll();
+            await wait(500);
+
+            const rolled = await rollDice(true);
+            if (!rolled || state.winner || state.currentPlayer !== CPU) {
+              turnEnded = true;
+              break;
+            }
+
+            await wait(500);
+            const best = chooseCpuOption();
+            if (!best) {
+              burstTurn();
+              turnEnded = true;
+              break;
+            }
+
+            applyOption(best.index);
+            await wait(550);
+
+            if (state.winner || state.currentPlayer !== CPU) {
+              turnEnded = true;
+              break;
+            }
+
+            const stop = cpuShouldStop();
+            if (stop) {
+              addLog("CPU：安全策を選び、ここで止める。");
+              renderAll();
+              await wait(350);
+              await commitTurnProgress();
+              turnEnded = true;
+            } else {
+              addLog("CPU：さらに進むことを選んだ。");
+              setBanner("CPUはさらに進む判断をしました。", "good");
+              renderAll();
+              await wait(550);
+            }
+          }
+        } finally {
+          state.cpuRunning = false;
+          renderAll();
+        }
+      }
+
+      function getStatusInfo() {
+        if (state.winner) return { text:`${playerLabel(state.winner)}勝利`, pill:"ゲーム終了", cls:"status-clear" };
+        if (state.phase === "rolled") return { text:"候補選択中", pill:"候補を選択", cls:"status-select" };
+        if (state.lastBanner?.type === "warn" && state.lastBanner.message.includes("バースト")) {
+          return { text:"バースト", pill:"バースト", cls:"status-burst" };
+        }
+        if (getTempColumns().length > 0) return { text:"進行中", pill:"Go or Stop", cls:"status-normal" };
+        return { text:"待機中", pill:"準備完了", cls:"status-normal" };
+      }
+
+      function renderBoard() {
+        boardEl.innerHTML = "";
+        columns.forEach(col => {
+          const len = columnLengths[col];
+          const humanBase = state.progress[HUMAN][col];
+          const cpuBase = state.progress[CPU][col];
+          const temp = state.tempProgress[col];
+          const owner = state.columnOwner[col];
+          const isLocked = state.completedColumns.has(col);
+          const currentBase = state.progress[state.currentPlayer][col];
+          const currentTempActive = temp > currentBase;
+
+          const colEl = document.createElement("div");
+          colEl.className = "column" + (isLocked ? " locked" : "");
+
+          const head = document.createElement("div");
+          head.className = "col-head";
+          head.textContent = col;
+
+          const sub = document.createElement("div");
+          sub.className = "col-sub";
+          if (owner === HUMAN) sub.textContent = "人間が制覇";
+          else if (owner === CPU) sub.textContent = "CPUが制覇";
+          else sub.textContent = `${len}マス`;
+
+          const track = document.createElement("div");
+          track.className = "track";
+
+          for (let i = 1; i <= len; i++) {
+            const cell = document.createElement("div");
+            cell.className = "cell" + (i === len ? " goal" : "");
+            const span = document.createElement("span");
+            span.textContent = i;
+            cell.appendChild(span);
+
+            if (isLocked) {
+              cell.classList.add("locked");
+            } else if (currentTempActive && i <= temp && i > currentBase) {
+              cell.classList.add("temp");
+            } else if (i <= humanBase) {
+              cell.classList.add("p1");
+            } else if (i <= cpuBase) {
+              cell.classList.add("cpu");
+            }
+
+            track.appendChild(cell);
+          }
+
+          colEl.appendChild(head);
+          colEl.appendChild(sub);
+
+          if (isLocked) {
+            const crown = document.createElement("div");
+            crown.className = "crown";
+            crown.textContent = owner === HUMAN ? "👤" : "🤖";
+            colEl.appendChild(crown);
+          }
+
+          colEl.appendChild(track);
+          boardEl.appendChild(colEl);
+        });
+      }
+
+      function renderDice(rolling=false) {
+        diceGridEl.innerHTML = "";
+        state.dice.forEach(value => {
+          const die = document.createElement("div");
+          die.className = "die" + (rolling ? " rolling" : "");
+          die.textContent = value;
+          diceGridEl.appendChild(die);
+        });
+      }
+
+      function renderOptions() {
+        optionListEl.innerHTML = "";
+
+        if (state.options.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "section-note";
+          empty.textContent = state.currentPlayer === HUMAN
+            ? "サイコロを振ると、ここに3通りの候補が表示されます。"
+            : "CPUターンでは候補を自動選択します。";
+          optionListEl.appendChild(empty);
+          return;
+        }
+
+        state.options.forEach((opt, idx) => {
+          const btn = document.createElement("button");
+          btn.className = "option-btn";
+          btn.disabled = state.currentPlayer !== HUMAN || state.phase !== "rolled" || !opt.playable || state.uiLocked || state.cpuRunning || !!state.winner;
+
+          const main = document.createElement("div");
+          main.className = "option-main";
+
+          const title = document.createElement("div");
+          title.className = "option-title";
+          title.textContent = `候補${opt.name}　${opt.sums[0]} と ${opt.sums[1]}`;
+
+          const desc = document.createElement("div");
+          desc.className = "option-desc";
+          desc.textContent = `ペア: (${opt.pairs[0][0]}+${opt.pairs[0][1]}) / (${opt.pairs[1][0]}+${opt.pairs[1][1]})`;
+
+          const tag = document.createElement("div");
+          tag.className = "tag " + (opt.playable ? "playable" : "blocked");
+          tag.textContent = opt.playable ? "採用可能" : opt.reason;
+
+          main.appendChild(title);
+          main.appendChild(desc);
+          btn.appendChild(main);
+          btn.appendChild(tag);
+
+          btn.addEventListener("click", () => {
+            if (state.currentPlayer !== HUMAN) return;
+            applyOption(idx);
+          });
+
+          optionListEl.appendChild(btn);
+        });
+      }
+
+      function renderLogs() {
+        logListEl.innerHTML = "";
+        state.logs.forEach(item => {
+          const li = document.createElement("li");
+          li.textContent = item;
+          logListEl.appendChild(li);
+        });
+      }
+
+      function renderStats() {
+        const tempCols = getTempColumns();
+        const status = getStatusInfo();
+
+        turnText.textContent = playerLabel(state.currentPlayer);
+        statusText.textContent = status.text;
+        p1Score.textContent = countOwnedColumns(HUMAN);
+        cpuScore.textContent = countOwnedColumns(CPU);
+        tempColumnsText.textContent = tempCols.length ? tempCols.join(", ") : "なし";
+        tempColumnsInline.textContent = tempCols.length ? tempCols.join(", ") : "なし";
+
+        statusPill.textContent = status.pill;
+        statusPill.className = "status-pill " + status.cls;
+      }
+
+      function renderButtons() {
+        const humanTurn = state.currentPlayer === HUMAN;
+        const hasTemp = getTempColumns().length > 0;
+
+        rollBtn.disabled = !humanTurn || state.uiLocked || state.cpuRunning || state.rolling || state.phase === "rolled" || !!state.winner;
+        stopBtn.disabled = !humanTurn || state.uiLocked || state.cpuRunning || state.rolling || state.phase === "rolled" || !hasTemp || !!state.winner;
+      }
+
+      function renderAll() {
+        renderBoard();
+        renderDice(state.rolling);
+        renderOptions();
+        renderLogs();
+        renderStats();
+        renderButtons();
+      }
+
+      function resetGame() {
+        initProgress();
+        state.completedColumns = new Set();
+        state.currentPlayer = HUMAN;
+        state.dice = [1,1,1,1];
+        state.options = [];
+        state.selectedOptionIndex = null;
+        state.logs = [];
+        state.phase = "ready";
+        state.uiLocked = false;
+        state.cpuRunning = false;
+        state.rolling = false;
+        state.winner = null;
+        state.lastBanner = null;
+
+        addLog("ゲームをリセットしました。人間のターンです。");
+        setBanner("人間のターンです。「サイコロを振る」を押してください。", "good");
+        renderAll();
+      }
+
+      rollBtn.addEventListener("click", async () => {
+        if (state.currentPlayer !== HUMAN || state.cpuRunning || state.winner) return;
+        await rollDice(false);
+      });
+
+      stopBtn.addEventListener("click", async () => {
+        if (state.currentPlayer !== HUMAN || state.cpuRunning || state.winner) return;
+        await commitTurnProgress();
+      });
+
+      resetBtn.addEventListener("click", resetGame);
+      resetGame();
+    })();
+  </script>
+
+</body>
+</html>
