@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Dice: Go or Stop - Compact Mobile v5</title>
+  <title>Dice: Go or Stop - Compact Mobile v7</title>
   <style>
     :root{
       --bg:#071120;
@@ -25,57 +25,57 @@
     body{display:flex;justify-content:center;align-items:stretch;}
     .app{
       width:min(100vw,430px);
-      height:100dvh;
-      padding:env(safe-area-inset-top) 10px calc(10px + env(safe-area-inset-bottom)) 10px;
+      height:100svh;
+      padding:env(safe-area-inset-top) 8px calc(8px + env(safe-area-inset-bottom)) 8px;
       background:radial-gradient(circle at top,#13254b 0%,#071120 42%,#030915 100%);
       display:grid;
-      grid-template-rows:auto auto auto 1fr auto;
-      gap:8px;
+      grid-template-rows:auto auto auto minmax(0,1fr) auto;
+      gap:5px;
     }
     .header,.panel,.controls{background:rgba(10,20,40,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.28);}
-    .header{position:relative;padding:8px 80px 8px 12px;display:flex;align-items:center;gap:10px;min-height:64px;}
-    .pill{background:linear-gradient(135deg,#5fa6ff,#346be5);padding:7px 12px;border-radius:999px;font-weight:800;font-size:12px;letter-spacing:.06em;white-space:nowrap;}
+    .header{position:relative;padding:6px 68px 6px 10px;display:flex;align-items:center;gap:8px;min-height:50px;}
+    .pill{background:linear-gradient(135deg,#5fa6ff,#346be5);padding:5px 9px;border-radius:999px;font-weight:800;font-size:10px;letter-spacing:.04em;white-space:nowrap;}
     .title{min-width:0;}
-    .title h1{margin:0;font-size:19px;line-height:1.05;font-weight:900;}
-    .title .sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .title h1{margin:0;font-size:17px;line-height:1.05;font-weight:900;}
+    .title .sub{display:none;}
 
-    .panel{padding:9px 10px;overflow:hidden;}
-    .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;}
-    .panel-head h2{margin:0;font-size:15px;line-height:1;font-weight:900;}
-    .small{font-size:11px;color:var(--muted);font-weight:700;}
+    .panel{padding:7px 8px;overflow:hidden;}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+    .panel-head h2{margin:0;font-size:13px;line-height:1;font-weight:900;}
+    .small{font-size:10px;color:var(--muted);font-weight:700;}
 
-    .dice-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-    .die{aspect-ratio:1/1;background:linear-gradient(180deg,#eef3fb,#d8e1f0);border-radius:18px;color:#0d1731;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 12px rgba(0,0,0,.18);}
+    .dice-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+    .die{aspect-ratio:1/1;background:linear-gradient(180deg,#eef3fb,#d8e1f0);border-radius:14px;color:#0d1731;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 4px 10px rgba(0,0,0,.18);}
 
-    .cand-list{display:grid;grid-template-columns:1fr;gap:6px;}
-    .cand-btn{width:100%;background:linear-gradient(180deg,#172b4f,#12213f);border:1px solid #2d4b77;color:var(--text);border-radius:14px;padding:9px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:16px;font-weight:900;min-height:42px;}
-    .cand-btn .pairs{display:flex;gap:8px;flex-wrap:wrap;}
-    .pair{background:#0b1630;border:1px solid #314d77;border-radius:999px;padding:3px 8px;font-size:14px;}
+    .cand-list{display:grid;grid-template-columns:1fr;gap:4px;}
+    .cand-btn{width:100%;background:linear-gradient(180deg,#172b4f,#12213f);border:1px solid #2d4b77;color:var(--text);border-radius:14px;padding:9px 10px;display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:16px;font-weight:900;min-height:42px;}
+    .cand-btn .pairs{display:flex;gap:5px;flex-wrap:wrap;}
+    .pair{background:#0b1630;border:1px solid #314d77;border-radius:999px;padding:2px 7px;font-size:12px;}
     .cand-btn.selected{outline:2px solid #76b2ff;background:linear-gradient(180deg,#1c3c6f,#143058);}
     .cand-btn.invalid{background:linear-gradient(180deg,#5a1f2a,#42151d);border-color:#b14b5d;color:#ffe8ec;opacity:1;}
     .cand-btn.invalid .pair{background:#3a0f17;border-color:#ad4c5c;color:#fff1f3;}
     .cand-btn.invalid .choice-label{color:#ffd8de;}
-    .status{font-size:12px;color:var(--muted);font-weight:700;margin-top:5px;min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .status{font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;min-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
     .board-wrap{height:100%;display:grid;grid-template-rows:auto 1fr;min-height:0;}
-    .legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
-    .tag{display:inline-flex;align-items:center;gap:5px;border:1px solid #37527e;border-radius:999px;padding:4px 8px;font-size:11px;color:var(--muted);font-weight:800;}
-    .dot{width:10px;height:10px;border-radius:999px;display:inline-block;}
+    .legend{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+    .tag{display:inline-flex;align-items:center;gap:4px;border:1px solid #37527e;border-radius:999px;padding:3px 7px;font-size:10px;color:var(--muted);font-weight:800;}
+    .dot{width:8px;height:8px;border-radius:999px;display:inline-block;}
     .dot.blue{background:var(--blue);} .dot.red{background:var(--red);} .dot.yellow{background:var(--yellow);}
 
-    .tracks{display:grid;grid-template-columns:1fr;gap:4px;min-height:0;overflow:hidden;}
-    .track{display:grid;grid-template-columns:18px 1fr 18px;align-items:center;gap:6px;min-height:0;}
-    .track .n,.track .goal{text-align:center;font-size:11px;font-weight:900;color:#dfe8fb;}
-    .bar{position:relative;height:16px;border-radius:999px;background:linear-gradient(180deg,#0a1428,#0d1830);border:1px solid #274165;overflow:hidden;}
-    .segment{position:absolute;top:2px;height:10px;border-radius:999px;opacity:.92;}
-    .playerSeg{background:var(--blue);} .cpuSeg{background:var(--red);} .tempSeg{background:var(--yellow);top:5px;height:4px;opacity:1;}
+    .tracks{display:grid;grid-template-columns:1fr;gap:2px;min-height:0;overflow:hidden;}
+    .track{display:grid;grid-template-columns:16px 1fr 16px;align-items:center;gap:4px;min-height:0;}
+    .track .n,.track .goal{text-align:center;font-size:10px;font-weight:900;color:#dfe8fb;}
+    .bar{position:relative;height:12px;border-radius:999px;background:linear-gradient(180deg,#0a1428,#0d1830);border:1px solid #274165;overflow:hidden;}
+    .segment{position:absolute;top:1px;height:8px;border-radius:999px;opacity:.92;}
+    .playerSeg{background:var(--blue);} .cpuSeg{background:var(--red);} .tempSeg{background:var(--yellow);top:4px;height:2px;opacity:1;}
     .markerLine{position:absolute;top:1px;bottom:1px;width:1px;background:rgba(255,255,255,.07);}
-    .claim{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:900;opacity:.95;}
+    .claim{position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:8px;font-weight:900;opacity:.95;}
     .claim.player{color:var(--blue);} .claim.cpu{color:var(--red);}
 
-    .controls{padding:10px;display:grid;grid-template-columns:1.25fr 1fr .9fr;gap:8px;}
+    .controls{padding:10px;display:grid;grid-template-columns:1.25fr 1fr .9fr;gap:5px;}
     button{appearance:none;border:none;cursor:pointer;touch-action:manipulation;}
-    .ctrl{min-height:52px;border-radius:16px;color:white;font-size:17px;font-weight:900;}
+    .ctrl{min-height:44px;border-radius:14px;color:white;font-size:15px;font-weight:900;}
     .roll{background:linear-gradient(135deg,#65b4ff,#3d6ff0);}
     .stop{background:linear-gradient(135deg,#367153,#25583f);}
     .restart{background:linear-gradient(135deg,#76839d,#5f6d85);}
@@ -85,11 +85,11 @@
     .toast.show{opacity:1;}
 
 
-    .rule-btn{position:absolute;top:8px;right:10px;border:1px solid #4f6fa4;background:linear-gradient(180deg,#172b4f,#12213f);color:#fff;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;z-index:5;box-shadow:0 6px 14px rgba(0,0,0,.24);}    
+    .rule-btn{position:absolute;top:6px;right:8px;border:1px solid #4f6fa4;background:linear-gradient(180deg,#172b4f,#12213f);color:#fff;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;z-index:5;box-shadow:0 4px 10px rgba(0,0,0,.24);}    
     .rule-btn:active{transform:translateY(1px);}    
     .rule-modal{position:fixed;inset:0;z-index:3000;display:none;align-items:flex-start;justify-content:center;background:rgba(2,8,20,.72);backdrop-filter:blur(4px);}    
     .rule-modal.show{display:flex;}    
-    .rule-sheet{width:min(100vw,430px);height:100dvh;padding:calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#122447 0%,#0a1730 55%,#071120 100%);color:var(--text);overflow:auto;}    
+    .rule-sheet{width:min(100vw,430px);height:100svh;padding:calc(16px + env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#122447 0%,#0a1730 55%,#071120 100%);color:var(--text);overflow:auto;}    
     .rule-card{background:rgba(10,20,40,.94);border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 28px rgba(0,0,0,.35);padding:16px 14px 14px;}    
     .rule-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;}    
     .rule-top h2{margin:0;font-size:22px;line-height:1.1;font-weight:900;}    
@@ -99,16 +99,40 @@
     .rule-card h3{margin:14px 0 6px;font-size:16px;}
 
     @media (max-height: 760px){
-      .app{gap:6px;padding-inline:8px;padding-top:env(safe-area-inset-top);padding-bottom:calc(8px + env(safe-area-inset-bottom));}
-      .header{min-height:58px;padding:7px 10px;}
-      .title h1{font-size:18px;}
-      .die{font-size:26px;border-radius:16px;}
-      .cand-btn{min-height:39px;padding:7px 9px;font-size:15px;}
-      .bar{height:14px;}
-      .segment{top:2px;height:8px;}
-      .tempSeg{top:5px;height:3px;}
-      .controls{padding:8px;}
-      .ctrl{min-height:48px;font-size:16px;}
+      .app{gap:4px;padding-inline:6px;padding-top:env(safe-area-inset-top);padding-bottom:calc(6px + env(safe-area-inset-bottom));}
+      .header{min-height:46px;padding:5px 62px 5px 8px;}
+      .title h1{font-size:16px;}
+      .pill{font-size:9px;padding:4px 8px;}
+      .die{font-size:21px;border-radius:12px;}
+      .cand-btn{min-height:30px;padding:5px 7px;font-size:13px;}
+      .pair{font-size:11px;padding:2px 6px;}
+      .tag{font-size:9px;padding:2px 6px;}
+      .bar{height:10px;}
+      .segment{top:1px;height:6px;}
+      .tempSeg{top:4px;height:2px;}
+      .controls{padding:6px;}
+      .ctrl{min-height:40px;font-size:14px;}
+    }
+
+    @media (max-height: 680px){
+      .app{gap:3px;padding-inline:5px;padding-bottom:calc(5px + env(safe-area-inset-bottom));}
+      .header{min-height:42px;padding:4px 58px 4px 7px;}
+      .panel{padding:6px 7px;}
+      .panel-head{margin-bottom:4px;}
+      .panel-head h2{font-size:12px;}
+      .die{font-size:19px;}
+      .cand-list{gap:3px;}
+      .cand-btn{min-height:28px;font-size:12px;padding:4px 6px;}
+      .pair{font-size:10px;padding:1px 5px;}
+      .status{font-size:10px;min-height:12px;}
+      .legend{margin-bottom:3px;gap:4px;}
+      .track{grid-template-columns:14px 1fr 14px;gap:3px;}
+      .track .n,.track .goal{font-size:9px;}
+      .bar{height:9px;}
+      .segment{height:5px;}
+      .tempSeg{top:3px;height:2px;}
+      .claim{font-size:7px;}
+      .ctrl{min-height:36px;font-size:13px;}
     }
   </style>
 </head>
@@ -118,7 +142,7 @@
       <div class="pill">PLAYER VS CPU</div>
       <div class="title">
         <h1>Dice: Go or Stop</h1>
-        <div class="sub">ダイス → 候補 → ボード の順で全部見えるスマホ圧縮版</div>
+        <div class="sub">スマホ1画面に収める超圧縮版</div>
       </div>
       <button class="rule-btn" id="ruleBtn" type="button">？ルール</button>
     </div>
@@ -329,8 +353,8 @@
           const seg=document.createElement('div');
           seg.className='segment cpuSeg';
           seg.style.left='2px';
-          seg.style.top='8px';
-          seg.style.height='4px';
+          seg.style.top='6px';
+          seg.style.height='2px';
           seg.style.width=`calc(${(cpu/goal)*100}% - 4px)`;
           bar.appendChild(seg);
         }
