@@ -1,0 +1,597 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Dice: Go or Stop Mobile Board Clear</title>
+<style>
+  :root{
+    --bg1:#07101f; --bg2:#0d1f44; --panel:rgba(20,30,55,.92); --line:#31476f;
+    --text:#eef4ff; --muted:#aebcd8; --blue:#5ea0ff; --red:#ff7b74; --gold:#f2bd49;
+    --green:#5fcf86; --shadow:0 8px 24px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Sans","Noto Sans JP",sans-serif;background:linear-gradient(180deg,var(--bg1),#08162f 42%,var(--bg2));color:var(--text)}
+  body{display:flex;justify-content:center;align-items:flex-start}
+  .app{
+    width:min(100vw,430px);height:100dvh;padding:calc(env(safe-area-inset-top,0px) + 8px) 8px calc(env(safe-area-inset-bottom,0px) + 8px);
+    display:grid;grid-template-rows:auto auto 1fr auto;gap:6px;overflow:hidden;
+  }
+  .card{
+    background:linear-gradient(180deg, rgba(31,46,78,.95), rgba(15,27,52,.96));
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+  }
+  .top{padding:10px 12px 8px}
+  .brand{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{background:#4e8ef0;color:#fff;font-weight:800;font-size:12px;padding:6px 10px;border-radius:999px;letter-spacing:.5px}
+  .title{font-size:20px;font-weight:900;line-height:1.1}
+  .minirow{margin-top:8px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:6px}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:7px 9px;background:rgba(255,255,255,.03);min-height:52px}
+  .stat .k{font-size:11px;color:var(--muted)}
+  .stat .v{font-size:17px;font-weight:900;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .iconbtn{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--text);border-radius:14px;padding:0 12px;font-size:15px;font-weight:900}
+
+  .mid{display:grid;grid-template-columns:112px 1fr;gap:6px;min-height:0}
+  .diceBox,.candBox,.boardBox,.actBox{padding:10px}
+  .sectionTitle{font-size:14px;font-weight:900;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .sub{color:var(--muted);font-size:11px;font-weight:700}
+
+  .diceGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .die{
+    aspect-ratio:1/1;border-radius:16px;background:linear-gradient(180deg,#f9fbff,#dbe5f7);color:#0d1830;
+    display:flex;justify-content:center;align-items:center;font-size:40px;font-weight:900;
+    box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 6px 16px rgba(0,0,0,.24)
+  }
+
+  .cands{display:grid;grid-template-rows:repeat(3,1fr);gap:7px;min-height:0}
+  .cand{
+    border:2px solid #355178;border-radius:16px;padding:8px 10px;background:rgba(255,255,255,.03);
+    display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;cursor:pointer;min-height:68px
+  }
+  .cand.disabled{opacity:.48;cursor:not-allowed}
+  .candTop{font-size:14px;font-weight:900}
+  .formula{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.25}
+  .badge{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid rgba(255,255,255,.16);white-space:nowrap}
+  .ok{background:rgba(95,207,134,.14);color:#9ae2b4;border-color:rgba(95,207,134,.4)}
+  .ng{background:rgba(255,123,116,.12);color:#ffb0ac;border-color:rgba(255,123,116,.35)}
+  .sel{background:rgba(242,189,73,.14);color:#ffd97f;border-color:rgba(242,189,73,.4)}
+
+  .boardBox{display:flex;flex-direction:column;min-height:0}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:6px}
+  .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:999px;margin-right:5px;vertical-align:-1px}
+  .lgP::before{background:var(--blue)}
+  .lgC::before{background:var(--red)}
+  .lgT::before{background:var(--gold)}
+  .lgH::before{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.15)}
+
+  .tracks{
+    display:grid;grid-template-columns:repeat(11,1fr);gap:4px;align-items:end;min-height:0;flex:1
+  }
+  .track{
+    min-width:0;border:1px solid #2e466e;border-radius:14px;padding:4px 3px 6px;background:rgba(255,255,255,.025);
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative;overflow:hidden
+  }
+  .track.highlight{box-shadow:0 0 0 2px rgba(242,189,73,.20) inset;border-color:#9c7a29}
+  .trackNum{font-weight:900;font-size:15px;margin-bottom:4px}
+  .meter{
+    width:100%;display:flex;flex-direction:column-reverse;align-items:center;gap:2px;
+  }
+  .cell{
+    width:100%;max-width:24px;height:6px;border-radius:999px;background:rgba(255,255,255,.09);position:relative;overflow:hidden;
+    border:1px solid rgba(255,255,255,.03)
+  }
+  .fillP,.fillC,.fillT{
+    position:absolute;left:0;top:0;bottom:0;border-radius:999px
+  }
+  .fillP{background:var(--blue)}
+  .fillC{background:var(--red)}
+  .fillT{background:var(--gold)}
+  .trackMeta{margin-top:4px;text-align:center;font-size:9px;line-height:1.15;color:#dce6ff}
+  .trackMeta .muted{color:var(--muted)}
+  .closedMark{
+    position:absolute;top:4px;right:4px;font-size:9px;padding:2px 5px;border-radius:999px;background:rgba(95,207,134,.15);color:#ace5bf;border:1px solid rgba(95,207,134,.35)
+  }
+
+  .actBox{padding:8px}
+  .step{font-size:13px;font-weight:900;text-align:center;color:#dce7ff;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .buttons{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:8px}
+  .mainBtn{border:none;border-radius:18px;color:white;font-size:15px;font-weight:900;padding:14px 10px;box-shadow:var(--shadow)}
+  #rollBtn{background:linear-gradient(180deg,#517fd6,#315dab)}
+  #stopBtn{background:linear-gradient(180deg,#488a57,#2f6f42)}
+  #restartBtn{background:linear-gradient(180deg,#7f889c,#646d81)}
+  button:disabled{opacity:.45;filter:grayscale(.2)}
+
+  .overlay,.winner{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}
+  .overlay.show,.winner.show{display:flex}
+  .modal,.winnerCard{
+    width:min(100%,420px);max-height:min(82dvh,720px);overflow:auto;border-radius:20px;padding:16px;
+    background:linear-gradient(180deg,#16284d,#101a34);border:1px solid var(--line);box-shadow:var(--shadow)
+  }
+  .modal h2,.winnerCard h2{margin:0 0 10px}
+  .modal p,.modal li,.winnerCard p{color:#d9e5ff;line-height:1.5}
+  .modal ul{padding-left:18px}
+  .logList{font-size:13px;display:flex;flex-direction:column;gap:7px}
+  .logItem{padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+  .closeRow{display:flex;justify-content:flex-end;margin-top:12px}
+  .closeBtn{background:#3c5eaf;border:none;color:white;padding:10px 14px;border-radius:12px;font-weight:900}
+
+  @media (max-height:760px){
+    .title{font-size:18px}
+    .die{font-size:36px}
+    .cand{min-height:62px}
+    .cell{height:5px}
+    .mainBtn{padding:12px 8px}
+    .trackMeta{font-size:8px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top card">
+    <div class="brand">
+      <div class="pill">PLAYER VS CPU</div>
+      <div class="title">Dice: Go or Stop</div>
+    </div>
+    <div class="minirow">
+      <div class="stat"><div class="k">手番</div><div class="v" id="turnLabel">人間</div></div>
+      <div class="stat"><div class="k">状態</div><div class="v" id="phaseLabel">サイコロを振る</div></div>
+      <button class="iconbtn" id="ruleBtn">ルール</button>
+      <button class="iconbtn" id="logBtn">ログ</button>
+    </div>
+  </div>
+
+  <div class="mid">
+    <div class="diceBox card">
+      <div class="sectionTitle">サイコロ <span class="sub">4d6</span></div>
+      <div class="diceGrid" id="diceGrid">
+        <div class="die">-</div><div class="die">-</div><div class="die">-</div><div class="die">-</div>
+      </div>
+    </div>
+    <div class="candBox card">
+      <div class="sectionTitle">候補選択 <span class="sub">3候補固定</span></div>
+      <div class="cands" id="candList"></div>
+    </div>
+  </div>
+
+  <div class="boardBox card">
+    <div class="sectionTitle">ボード <span class="sub" id="scoreMini">先に3列制覇で勝利</span></div>
+    <div class="legend">
+      <span class="lgP">人間</span>
+      <span class="lgC">CPU</span>
+      <span class="lgT">仮進捗</span>
+      <span class="lgH">未到達</span>
+    </div>
+    <div class="tracks" id="tracks"></div>
+  </div>
+
+  <div class="actBox card">
+    <div class="step" id="stepMsg">🎲 サイコロを振ってください</div>
+    <div class="buttons">
+      <button class="mainBtn" id="rollBtn">サイコロを振る</button>
+      <button class="mainBtn" id="stopBtn">ここで止める</button>
+      <button class="mainBtn" id="restartBtn">リスタート</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ruleModal">
+  <div class="modal">
+    <h2>ルール</h2>
+    <ul>
+      <li>4個のサイコロを振ると、必ず3つの候補が出ます。</li>
+      <li>候補は 2本の列番号です。例: 5 と 7。</li>
+      <li>候補を選ぶと、その列に仮進捗が進みます。</li>
+      <li>仮進捗は最大3列まで同時に持てます。新しい列を増やせない候補は選べません。</li>
+      <li>途中で「ここで止める」を押すと仮進捗が確定します。</li>
+      <li>止める前に選べる候補がなくなったらバースト。仮進捗は失われてCPUに交代します。</li>
+      <li>先に3列を完全制覇した方の勝ちです。</li>
+    </ul>
+    <div class="closeRow"><button class="closeBtn" data-close="ruleModal">閉じる</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="logModal">
+  <div class="modal">
+    <h2>ログ</h2>
+    <div class="logList" id="logList"></div>
+    <div class="closeRow"><button class="closeBtn" data-close="logModal">閉じる</button></div>
+  </div>
+</div>
+
+<div class="winner" id="winnerModal">
+  <div class="winnerCard">
+    <h2 id="winnerTitle">勝利！</h2>
+    <p id="winnerText"></p>
+    <button class="mainBtn" id="winnerRestart" style="background:linear-gradient(180deg,#517fd6,#315dab);width:100%;">もう一回遊ぶ</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const trackHeights = {2:3,3:5,4:7,5:9,6:11,7:13,8:11,9:9,10:7,11:5,12:3};
+
+  const state = {
+    players: {
+      human: {name:'人間', progress:{}, closed:[]},
+      cpu:   {name:'CPU', progress:{}, closed:[]}
+    },
+    turn:'human',
+    phase:'roll',
+    dice:[1,1,1,1],
+    candidates:[],
+    temp:{},
+    logs:[],
+    winner:null
+  };
+
+  const el = {
+    turnLabel: document.getElementById('turnLabel'),
+    phaseLabel: document.getElementById('phaseLabel'),
+    diceGrid: document.getElementById('diceGrid'),
+    candList: document.getElementById('candList'),
+    tracks: document.getElementById('tracks'),
+    stepMsg: document.getElementById('stepMsg'),
+    rollBtn: document.getElementById('rollBtn'),
+    stopBtn: document.getElementById('stopBtn'),
+    restartBtn: document.getElementById('restartBtn'),
+    scoreMini: document.getElementById('scoreMini'),
+    logList: document.getElementById('logList'),
+    ruleModal: document.getElementById('ruleModal'),
+    logModal: document.getElementById('logModal'),
+    winnerModal: document.getElementById('winnerModal'),
+    winnerTitle: document.getElementById('winnerTitle'),
+    winnerText: document.getElementById('winnerText'),
+    winnerRestart: document.getElementById('winnerRestart')
+  };
+
+  function addLog(msg){
+    state.logs.unshift(msg);
+    state.logs = state.logs.slice(0, 30);
+    el.logList.innerHTML = state.logs.map(msg => `<div class="logItem">${msg}</div>`).join('');
+  }
+
+  function countClosed(playerKey){ return state.players[playerKey].closed.length; }
+  function otherPlayer(key){ return key === 'human' ? 'cpu' : 'human'; }
+  function activeTempCols(){ return Object.keys(state.temp).map(Number).filter(c => state.temp[c] > 0); }
+  function isColumnClosed(col){ return state.players.human.closed.includes(col) || state.players.cpu.closed.includes(col); }
+  function getBase(playerKey, col){ return state.players[playerKey].progress[col] || 0; }
+  function getTemp(playerKey, col){ return state.turn === playerKey ? (state.temp[col] || 0) : 0; }
+  function totalFor(playerKey, col){ return Math.min(trackHeights[col], getBase(playerKey, col) + getTemp(playerKey, col)); }
+  function rollDie(){ return 1 + Math.floor(Math.random() * 6); }
+
+  function makeCandidates(d){
+    const [a,b,c,e] = d;
+    return [
+      {id:0, cols:[a+b, c+e], formula:`(${a}+${b}) / (${c}+${e})`},
+      {id:1, cols:[a+c, b+e], formula:`(${a}+${c}) / (${b}+${e})`},
+      {id:2, cols:[a+e, b+c], formula:`(${a}+${e}) / (${b}+${c})`}
+    ];
+  }
+
+  function canAdvanceCol(playerKey, col){
+    if(isColumnClosed(col)) return false;
+    const current = totalFor(playerKey, col);
+    if(current >= trackHeights[col]) return false;
+    const actives = activeTempCols();
+    if(actives.includes(col)) return true;
+    return actives.length < 3;
+  }
+
+  function candidatePlayable(cand){
+    const p = state.turn;
+    return cand.cols.every(col => canAdvanceCol(p, col));
+  }
+
+  function updateWinnerCheck(playerKey){
+    if(countClosed(playerKey) >= 3){
+      state.winner = playerKey;
+      el.winnerTitle.textContent = playerKey === 'human' ? 'あなたの勝ち！' : 'CPUの勝ち';
+      el.winnerText.textContent = `${state.players[playerKey].name}が ${countClosed(playerKey)} 列制覇しました。`;
+      el.winnerModal.classList.add('show');
+      return true;
+    }
+    return false;
+  }
+
+  function applyCandidate(cand){
+    if(state.phase !== 'choose' || state.turn !== 'human' || !candidatePlayable(cand)) return;
+    for(const col of cand.cols){
+      if(!state.temp[col]) state.temp[col] = 0;
+      state.temp[col] += 1;
+      const max = trackHeights[col];
+      const over = getBase('human', col) + state.temp[col] - max;
+      if(over > 0) state.temp[col] -= over;
+    }
+    addLog(`人間: 候補 ${cand.cols[0]} と ${cand.cols[1]} を選択`);
+    state.phase = 'roll';
+    updateWinnerCheck('human');
+    render();
+  }
+
+  function bankProgress(playerKey){
+    const tempCols = activeTempCols();
+    if(tempCols.length === 0) return false;
+    for(const col of tempCols){
+      const total = Math.min(trackHeights[col], getBase(playerKey, col) + (state.temp[col] || 0));
+      state.players[playerKey].progress[col] = total;
+      if(total >= trackHeights[col] && !state.players[playerKey].closed.includes(col)){
+        state.players[playerKey].closed.push(col);
+        addLog(`${state.players[playerKey].name}: ${col}列を制覇`);
+      }
+    }
+    state.temp = {};
+    updateWinnerCheck(playerKey);
+    return true;
+  }
+
+  function switchTurn(){
+    state.turn = otherPlayer(state.turn);
+    state.phase = 'roll';
+    state.candidates = [];
+    render();
+    if(state.turn === 'cpu' && !state.winner){
+      setTimeout(cpuTurnStart, 420);
+    }
+  }
+
+  function bust(playerKey){
+    addLog(`${state.players[playerKey].name}: 候補なしでバースト`);
+    state.temp = {};
+    switchTurn();
+  }
+
+  function humanRoll(){
+    if(state.turn !== 'human' || state.phase !== 'roll' || state.winner) return;
+    state.dice = [rollDie(), rollDie(), rollDie(), rollDie()];
+    state.candidates = makeCandidates(state.dice);
+    state.phase = 'choose';
+    addLog(`人間: ${state.dice.join(', ')} を振った`);
+    render();
+    if(!state.candidates.some(candidatePlayable)){
+      setTimeout(() => bust('human'), 220);
+    }
+  }
+
+  function humanStop(){
+    if(state.turn !== 'human' || state.winner || activeTempCols().length === 0) return;
+    bankProgress('human');
+    if(!state.winner){
+      addLog('人間: ここで止めた');
+      switchTurn();
+    } else {
+      render();
+    }
+  }
+
+  function cpuTurnStart(){
+    if(state.turn !== 'cpu' || state.winner) return;
+    state.temp = {};
+    cpuLoop();
+  }
+
+  function cpuChooseCandidate(){
+    const playable = state.candidates.filter(candidatePlayable);
+    if(!playable.length) return null;
+    let best = playable[0], bestScore = -Infinity;
+    for(const cand of playable){
+      let score = 0;
+      for(const col of cand.cols){
+        const remain = trackHeights[col] - totalFor('cpu', col);
+        score += (14 - remain);
+        if(activeTempCols().includes(col)) score += 3;
+        if((state.players.cpu.progress[col] || 0) + (state.temp[col] || 0) + 1 >= trackHeights[col]) score += 8;
+      }
+      const newCols = cand.cols.filter(c => !activeTempCols().includes(c)).length;
+      if(activeTempCols().length >= 2 && newCols > 0) score -= 4;
+      if(activeTempCols().length === 0) score += 2;
+      if(score > bestScore){ best = cand; bestScore = score; }
+    }
+    return best;
+  }
+
+  function cpuShouldStop(){
+    const tempCols = activeTempCols();
+    if(!tempCols.length) return false;
+    let tempSteps = 0, nearWinCols = 0;
+    for(const col of tempCols){
+      tempSteps += state.temp[col] || 0;
+      const remain = trackHeights[col] - totalFor('cpu', col);
+      if(remain <= 1) nearWinCols++;
+    }
+    if(nearWinCols >= 1) return true;
+    if(countClosed('cpu') >= 2 && tempSteps >= 2) return true;
+    if(tempSteps >= 5) return true;
+    if(tempCols.length === 3 && tempSteps >= 3) return Math.random() < 0.7;
+    return Math.random() < 0.22;
+  }
+
+  function cpuApplyCandidate(cand){
+    for(const col of cand.cols){
+      if(!state.temp[col]) state.temp[col] = 0;
+      state.temp[col] += 1;
+      const over = (state.players.cpu.progress[col] || 0) + state.temp[col] - trackHeights[col];
+      if(over > 0) state.temp[col] -= over;
+    }
+    addLog(`CPU: 候補 ${cand.cols[0]} と ${cand.cols[1]} を選択`);
+    render();
+  }
+
+  function cpuLoop(){
+    if(state.turn !== 'cpu' || state.winner) return;
+    state.phase = 'roll';
+    render();
+    setTimeout(() => {
+      state.dice = [rollDie(), rollDie(), rollDie(), rollDie()];
+      state.candidates = makeCandidates(state.dice);
+      state.phase = 'choose';
+      addLog(`CPU: ${state.dice.join(', ')} を振った`);
+      render();
+      if(!state.candidates.some(candidatePlayable)){
+        setTimeout(() => bust('cpu'), 320);
+        return;
+      }
+      setTimeout(() => {
+        const choice = cpuChooseCandidate();
+        if(!choice){ bust('cpu'); return; }
+        cpuApplyCandidate(choice);
+        updateWinnerCheck('cpu');
+        if(state.winner) return;
+        setTimeout(() => {
+          if(cpuShouldStop()){
+            bankProgress('cpu');
+            addLog('CPU: ここで止めた');
+            if(!state.winner) switchTurn();
+            else render();
+          } else {
+            cpuLoop();
+          }
+        }, 340);
+      }, 340);
+    }, 280);
+  }
+
+  function renderDice(){
+    el.diceGrid.innerHTML = state.dice.map(n => `<div class="die">${n}</div>`).join('');
+  }
+
+  function renderCandidates(){
+    el.candList.innerHTML = '';
+    const hiCols = new Set();
+    if(state.phase === 'choose'){
+      state.candidates.forEach(c => c.cols.forEach(col => hiCols.add(col)));
+    }
+
+    const list = state.candidates.length ? state.candidates : [0,1,2].map(i => ({id:i, cols:['-','-'], formula:'サイコロを振るとここに表示', dummy:true}));
+    list.forEach((cand, idx) => {
+      const playable = cand.dummy ? false : candidatePlayable(cand);
+      const div = document.createElement('div');
+      div.className = 'cand' + ((cand.dummy || !playable) ? ' disabled' : '');
+      let badgeClass = cand.dummy ? 'ng' : (playable ? 'ok' : 'ng');
+      let badgeText = cand.dummy ? '待機中' : (playable ? '選択可能' : '選べない');
+      if(state.turn === 'cpu' && state.phase === 'choose' && !cand.dummy){
+        badgeClass = 'sel'; badgeText = 'CPU思考中';
+      }
+      div.innerHTML = `
+        <div>
+          <div class="candTop">候補${idx+1}　${cand.cols[0]} と ${cand.cols[1]}</div>
+          <div class="formula">${cand.formula}</div>
+        </div>
+        <div class="badge ${badgeClass}">${badgeText}</div>`;
+      if(state.turn === 'human' && state.phase === 'choose' && playable){
+        div.addEventListener('click', () => applyCandidate(cand));
+      }
+      el.candList.appendChild(div);
+    });
+  }
+
+  function renderTracks(){
+    el.tracks.innerHTML = '';
+    const highlightCols = new Set();
+    state.candidates.forEach(c => c.cols.forEach(col => highlightCols.add(col)));
+    activeTempCols().forEach(col => highlightCols.add(col));
+
+    for(let col=2; col<=12; col++){
+      const max = trackHeights[col];
+      const hBase = state.players.human.progress[col] || 0;
+      const cBase = state.players.cpu.progress[col] || 0;
+      const hTemp = state.turn === 'human' ? (state.temp[col] || 0) : 0;
+      const cTemp = state.turn === 'cpu' ? (state.temp[col] || 0) : 0;
+      const hTot = Math.min(max, hBase + hTemp);
+      const cTot = Math.min(max, cBase + cTemp);
+
+      const meter = [];
+      for(let i=1; i<=max; i++){
+        let inner = '';
+        if(i <= hBase){
+          inner = `<div class="fillP" style="width:100%"></div>`;
+        } else if(i <= cBase){
+          inner = `<div class="fillC" style="width:100%"></div>`;
+        } else if(i <= hTot){
+          inner = `<div class="fillT" style="width:100%"></div>`;
+        } else if(i <= cTot){
+          inner = `<div class="fillT" style="width:100%"></div>`;
+        }
+        meter.push(`<div class="cell">${inner}</div>`);
+      }
+
+      let closed = '';
+      if(state.players.human.closed.includes(col)) closed = `<div class="closedMark">人間制覇</div>`;
+      if(state.players.cpu.closed.includes(col)) closed = `<div class="closedMark">CPU制覇</div>`;
+
+      const div = document.createElement('div');
+      div.className = 'track' + (highlightCols.has(col) ? ' highlight' : '');
+      div.innerHTML = `
+        ${closed}
+        <div class="trackNum">${col}</div>
+        <div class="meter">${meter.join('')}</div>
+        <div class="trackMeta">
+          <div>人 ${hTot}/${max}</div>
+          <div>CPU ${cTot}/${max}</div>
+        </div>
+      `;
+      el.tracks.appendChild(div);
+    }
+  }
+
+  function renderLabels(){
+    el.turnLabel.textContent = state.turn === 'human' ? '人間' : 'CPU';
+    el.phaseLabel.textContent = state.phase === 'roll' ? 'サイコロを振る' : '候補を選ぶ';
+    el.scoreMini.textContent = `人間 ${countClosed('human')} - ${countClosed('cpu')} CPU`;
+
+    if(state.winner){
+      el.stepMsg.textContent = 'ゲーム終了';
+    } else if(state.turn === 'human'){
+      if(state.phase === 'roll'){
+        el.stepMsg.textContent = activeTempCols().length ? '🎲 続けるか、止めるか選べます' : '🎲 サイコロを振ってください';
+      } else {
+        el.stepMsg.textContent = '👇 候補を1つタップ。光っている列が対象です';
+      }
+    } else {
+      el.stepMsg.textContent = '🤖 CPUのターンです';
+    }
+    el.rollBtn.disabled = !(state.turn === 'human' && state.phase === 'roll' && !state.winner);
+    el.stopBtn.disabled = !(state.turn === 'human' && activeTempCols().length > 0 && !state.winner);
+  }
+
+  function render(){
+    renderLabels();
+    renderDice();
+    renderCandidates();
+    renderTracks();
+  }
+
+  function restart(){
+    state.players.human.progress = {};
+    state.players.human.closed = [];
+    state.players.cpu.progress = {};
+    state.players.cpu.closed = [];
+    state.turn = 'human';
+    state.phase = 'roll';
+    state.dice = [1,1,1,1];
+    state.candidates = [];
+    state.temp = {};
+    state.logs = [];
+    state.winner = null;
+    el.winnerModal.classList.remove('show');
+    addLog('新しいゲームを開始');
+    render();
+  }
+
+  document.getElementById('ruleBtn').addEventListener('click', ()=> el.ruleModal.classList.add('show'));
+  document.getElementById('logBtn').addEventListener('click', ()=> el.logModal.classList.add('show'));
+  document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', e => {
+    document.getElementById(e.target.getAttribute('data-close')).classList.remove('show');
+  }));
+  el.ruleModal.addEventListener('click', e => { if(e.target === el.ruleModal) el.ruleModal.classList.remove('show'); });
+  el.logModal.addEventListener('click', e => { if(e.target === el.logModal) el.logModal.classList.remove('show'); });
+  el.rollBtn.addEventListener('click', humanRoll);
+  el.stopBtn.addEventListener('click', humanStop);
+  el.restartBtn.addEventListener('click', restart);
+  el.winnerRestart.addEventListener('click', restart);
+
+  restart();
+})();
+</script>
+</body>
+</html>
