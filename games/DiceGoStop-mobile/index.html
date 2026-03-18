@@ -33,7 +33,7 @@
       gap:5px;
     }
     .header,.panel,.controls{background:rgba(10,20,40,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 24px rgba(0,0,0,.28);}
-    .header{position:relative;padding:6px 68px 6px 10px;display:flex;align-items:center;gap:8px;min-height:50px;}
+    .header{position:relative;padding:6px 160px 6px 10px;display:flex;align-items:center;gap:8px;min-height:50px;}
     .pill{background:linear-gradient(135deg,#5fa6ff,#346be5);padding:5px 9px;border-radius:999px;font-weight:800;font-size:10px;letter-spacing:.04em;white-space:nowrap;}
     .title{min-width:0;}
     .title h1{margin:0;font-size:17px;line-height:1.05;font-weight:900;}
@@ -87,6 +87,11 @@
     .toast.show{opacity:1;}
 
 
+    .audio-btn{position:absolute;top:6px;right:80px;border:1px solid #4f6fa4;background:linear-gradient(180deg,#172b4f,#12213f);color:#fff;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;z-index:5;box-shadow:0 4px 10px rgba(0,0,0,.24);}    
+    .audio-btn.off{opacity:.72;background:linear-gradient(180deg,#27324a,#1b2538);}    
+    .audio-btn:active{transform:translateY(1px);}    
+
+
     .rule-btn{position:absolute;top:6px;right:8px;border:1px solid #4f6fa4;background:linear-gradient(180deg,#172b4f,#12213f);color:#fff;border-radius:999px;padding:6px 9px;font-size:11px;font-weight:900;z-index:5;box-shadow:0 4px 10px rgba(0,0,0,.24);}    
     .rule-btn:active{transform:translateY(1px);}    
     .rule-modal{position:fixed;inset:0;z-index:3000;display:none;align-items:flex-start;justify-content:center;background:rgba(2,8,20,.72);backdrop-filter:blur(4px);}    
@@ -102,7 +107,7 @@
 
     @media (max-height: 760px){
       .app{gap:4px;padding-inline:6px;padding-top:env(safe-area-inset-top);padding-bottom:calc(6px + env(safe-area-inset-bottom));}
-      .header{min-height:46px;padding:5px 62px 5px 8px;}
+      .header{min-height:46px;padding:5px 150px 5px 8px;}
       .title h1{font-size:16px;}
       .pill{font-size:9px;padding:4px 8px;}
       .die{font-size:21px;border-radius:12px;}
@@ -118,7 +123,7 @@
 
     @media (max-height: 680px){
       .app{gap:3px;padding-inline:5px;padding-bottom:calc(5px + env(safe-area-inset-bottom));}
-      .header{min-height:42px;padding:4px 58px 4px 7px;}
+      .header{min-height:42px;padding:4px 146px 4px 7px;}
       .panel{padding:6px 7px;}
       .panel-head{margin-bottom:4px;}
       .panel-head h2{font-size:12px;}
@@ -160,6 +165,7 @@
         <h1>Dice: Go or Stop</h1>
         <div class="sub">スマホ1画面に収める超圧縮版</div>
       </div>
+      <button class="audio-btn off" id="audioToggleBtn" type="button">BGM OFF</button>
       <button class="rule-btn" id="ruleBtn" type="button">？ルール</button>
     </div>
 
@@ -247,6 +253,8 @@
     </div>
   </div>
 
+  <audio id="bgmAudio" src="DiceGoStop-BGM.mp3" preload="none" loop></audio>
+
   <script>
     const trackHeights = {2:3,3:5,4:7,5:9,6:11,7:13,8:11,9:9,10:7,11:5,12:3};
     const cols = [2,3,4,5,6,7,8,9,10,11,12];
@@ -283,6 +291,46 @@
     const confettiLayer = document.getElementById('confettiLayer');
     const playAgainBtn = document.getElementById('playAgainBtn');
     const closeWinBtn = document.getElementById('closeWinBtn');
+    const bgmAudio = document.getElementById('bgmAudio');
+    const audioToggleBtn = document.getElementById('audioToggleBtn');
+    let bgmEnabled = false;
+    let bgmAvailable = true;
+
+
+    function updateAudioButton(){
+      if(!bgmAvailable){
+        audioToggleBtn.textContent = 'BGMなし';
+        audioToggleBtn.classList.add('off');
+        audioToggleBtn.disabled = true;
+        return;
+      }
+      audioToggleBtn.disabled = false;
+      audioToggleBtn.textContent = bgmEnabled ? 'BGM ON' : 'BGM OFF';
+      audioToggleBtn.classList.toggle('off', !bgmEnabled);
+    }
+
+    async function syncBgmPlayback(){
+      if(!bgmAvailable) return;
+      if(!bgmEnabled){
+        bgmAudio.pause();
+        return;
+      }
+      try{
+        await bgmAudio.play();
+      }catch(err){
+        bgmEnabled = false;
+        updateAudioButton();
+        showToast('BGMの再生を開始できませんでした');
+      }
+    }
+
+    async function toggleBgm(){
+      if(!bgmAvailable) return;
+      bgmEnabled = !bgmEnabled;
+      updateAudioButton();
+      await syncBgmPlayback();
+      showToast(bgmEnabled ? 'BGMをONにしました' : 'BGMをOFFにしました');
+    }
 
 
     function launchConfetti(){
@@ -331,6 +379,7 @@
       state.candidates=pairings(state.dice);
       if(playAgainBtn) playAgainBtn.onclick = restart;
       if(closeWinBtn) closeWinBtn.onclick = hideWinOverlay;
+      updateAudioButton();
       renderDice();
       renderCandidates();
       renderBoard();
@@ -741,6 +790,23 @@
     ruleBtn.addEventListener('click', openRules);
     closeRuleBtn.addEventListener('click', closeRules);
     ruleModal.addEventListener('click', (e)=>{ if(e.target === ruleModal) closeRules(); });
+    audioToggleBtn.addEventListener('click', ()=>{ toggleBgm(); });
+    bgmAudio.addEventListener('error', ()=>{
+      bgmAvailable = false;
+      bgmEnabled = false;
+      updateAudioButton();
+    });
+    bgmAudio.addEventListener('canplaythrough', ()=>{
+      bgmAvailable = true;
+      updateAudioButton();
+    });
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden){
+        bgmAudio.pause();
+      }else{
+        syncBgmPlayback();
+      }
+    });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeRules(); });
 
     init();
