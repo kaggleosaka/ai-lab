@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <title>Dice: Go or Stop - Compact Mobile v7</title>
+  <title>Dice: Go or Stop - Compact Mobile final from v16</title>
   <style>
     :root{
       --bg:#071120;
@@ -45,7 +45,9 @@
     .small{font-size:10px;color:var(--muted);font-weight:700;}
 
     .dice-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
-    .die{aspect-ratio:1/1;background:linear-gradient(180deg,#eef3fb,#d8e1f0);border-radius:14px;color:#0d1731;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 4px 10px rgba(0,0,0,.18);}
+    .die{aspect-ratio:1/1;background:linear-gradient(180deg,#f7fbff,#dfe8f5);border-radius:12px;border:1px solid #8fa6c4;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:5px;box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 4px 10px rgba(0,0,0,.18);color:#15233d;}
+    .die-cell{display:flex;align-items:center;justify-content:center;}
+    .pip{width:7px;height:7px;border-radius:999px;background:#15233d;box-shadow:0 0 0 1px rgba(0,0,0,.06);} .pip.red{width:14px;height:14px;background:#d72828;box-shadow:0 0 0 1px rgba(120,0,0,.10),0 0 8px rgba(215,40,40,.18);}
 
     .cand-list{display:grid;grid-template-columns:1fr;gap:4px;}
     .cand-btn{width:100%;background:linear-gradient(180deg,#172b4f,#12213f);border:1px solid #2d4b77;color:var(--text);border-radius:14px;padding:9px 10px;display:flex;align-items:center;justify-content:space-between;gap:5px;font-size:16px;font-weight:900;min-height:42px;}
@@ -134,7 +136,21 @@
       .claim{font-size:7px;}
       .ctrl{min-height:36px;font-size:13px;}
     }
-  </style>
+  
+    .win-overlay{position:fixed;inset:0;background:rgba(5,10,18,.78);display:none;align-items:center;justify-content:center;z-index:60;padding:18px;}
+    .win-overlay.show{display:flex;}
+    .win-card{width:min(92vw,420px);background:linear-gradient(180deg,#0f1b31,#13223f);border:1px solid #3a5f94;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);padding:20px 16px 16px;text-align:center;position:relative;overflow:hidden;}
+    .win-title{font-size:34px;font-weight:900;letter-spacing:.04em;margin:6px 0 8px;color:#fff;animation:winPop .35s ease-out;}
+    .win-sub{font-size:14px;color:#d8e6ff;margin-bottom:14px;}
+    .win-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+    .win-btn{border:none;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;background:#4ea1ff;color:#08111f;}
+    .win-btn.secondary{background:#203554;color:#dce9ff;}
+    .confetti-layer{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+    .confetti-piece{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;opacity:.95;animation:confettiFall 1200ms linear forwards;}
+    @keyframes winPop{0%{transform:scale(.78);opacity:0;}100%{transform:scale(1);opacity:1;}}
+    @keyframes confettiFall{to{transform:translateY(110vh) rotate(540deg);opacity:0;}}
+
+</style>
 </head>
 <body>
   <div class="app">
@@ -217,6 +233,20 @@
   </div>
   <div class="toast" id="toast"></div>
 
+
+
+  <div id="winOverlay" class="win-overlay" aria-hidden="true">
+    <div class="win-card">
+      <div id="confettiLayer" class="confetti-layer"></div>
+      <div id="winTitle" class="win-title">YOU WIN!</div>
+      <div id="winSub" class="win-sub">3列到達で勝利です。</div>
+      <div class="win-actions">
+        <button id="playAgainBtn" class="win-btn">もう一度遊ぶ</button>
+        <button id="closeWinBtn" class="win-btn secondary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const trackHeights = {2:3,3:5,4:7,5:9,6:11,7:13,8:11,9:9,10:7,11:5,12:3};
     const cols = [2,3,4,5,6,7,8,9,10,11,12];
@@ -247,13 +277,64 @@
     const ruleBtn = document.getElementById('ruleBtn');
     const ruleModal = document.getElementById('ruleModal');
     const closeRuleBtn = document.getElementById('closeRuleBtn');
+    const winOverlay = document.getElementById('winOverlay');
+    const winTitle = document.getElementById('winTitle');
+    const winSub = document.getElementById('winSub');
+    const confettiLayer = document.getElementById('confettiLayer');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const closeWinBtn = document.getElementById('closeWinBtn');
+
+
+    function launchConfetti(){
+      confettiLayer.innerHTML = '';
+      const colors = ['#ffd84d','#4ea1ff','#ff6b6b','#7df1b8','#ffffff'];
+      for(let i=0;i<38;i++){
+        const piece = document.createElement('div');
+        piece.className='confetti-piece';
+        piece.style.left = (Math.random()*100).toFixed(2)+'%';
+        piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+        piece.style.transform = `translateY(0) rotate(${Math.random()*180}deg)`;
+        piece.style.animationDuration = (900 + Math.random()*700).toFixed(0)+'ms';
+        piece.style.animationDelay = (Math.random()*180).toFixed(0)+'ms';
+        confettiLayer.appendChild(piece);
+      }
+    }
+
+    function showWinOverlay(winner){
+      if(winner === 'player'){
+        winTitle.textContent = 'YOU WIN!';
+        winSub.textContent = '3列到達であなたの勝ちです。';
+      }else{
+        winTitle.textContent = 'CPU WIN';
+        winSub.textContent = 'CPUが3列到達しました。';
+      }
+      launchConfetti();
+      winOverlay.classList.add('show');
+      winOverlay.setAttribute('aria-hidden','false');
+    }
+
+    function hideWinOverlay(){
+      winOverlay.classList.remove('show');
+      winOverlay.setAttribute('aria-hidden','true');
+      confettiLayer.innerHTML = '';
+    }
 
     function init(){
       cols.forEach(c=>{state.player[c]=0;state.cpu[c]=0;state.temp[c]=0;});
+      Object.keys(state.claimed).forEach(k=> delete state.claimed[k]);
+      state.turn='player';
+      state.selectedCandidate=null;
+      state.turnStarted=false;
+      state.awaitingChoice=false;
+      state.gameOver=false;
+      state.dice=[rollDie(),rollDie(),rollDie(),rollDie()];
+      state.candidates=pairings(state.dice);
+      if(playAgainBtn) playAgainBtn.onclick = restart;
+      if(closeWinBtn) closeWinBtn.onclick = hideWinOverlay;
       renderDice();
       renderCandidates();
       renderBoard();
-      setStatus('サイコロを振って候補を選んでください。');
+      setStatus('起動直後の候補はプレビューです。最初の操作は「サイコロを振る」です。');
       updateButtons();
     }
 
@@ -291,12 +372,36 @@
       }));
     }
 
+
+    function getPipPositions(value){
+      const map = {
+        1:[4],
+        2:[0,8],
+        3:[0,4,8],
+        4:[0,2,6,8],
+        5:[0,2,4,6,8],
+        6:[0,2,3,5,6,8]
+      };
+      return map[value] || [4];
+    }
+
     function renderDice(){
       diceRow.innerHTML = '';
       state.dice.forEach(v=>{
         const d=document.createElement('div');
         d.className='die';
-        d.textContent=v;
+        const pips = new Set(getPipPositions(v));
+        for(let i=0;i<9;i++){
+          const cell=document.createElement('div');
+          cell.className='die-cell';
+          if(pips.has(i)){
+            const pip=document.createElement('span');
+            pip.className = (v===1) ? 'pip red' : 'pip';
+            cell.appendChild(pip);
+          }
+          d.appendChild(cell);
+        }
+        d.setAttribute('aria-label', `サイコロ ${v}`);
         diceRow.appendChild(d);
       });
     }
@@ -318,7 +423,8 @@
         const playable = isCandidatePlayable(c);
         btn.className='cand-btn' + (state.selectedCandidate===c.id ? ' selected':'') + (playable ? '' : ' invalid');
         btn.disabled = !state.awaitingChoice || !playable;
-        btn.innerHTML=`<span class="pairs">${c.sums.map(s=>`<span class="pair">${s}</span>`).join('')}</span><span class="choice-label">${playable ? '選ぶ' : '不可'}</span>`;
+        const label = !state.awaitingChoice ? 'プレビュー' : (playable ? '選ぶ' : '不可');
+        btn.innerHTML=`<span class="pairs">${c.sums.map(s=>`<span class="pair">${s}</span>`).join('')}</span><span class="choice-label">${label}</span>`;
         if(playable) btn.onclick=()=>selectCandidate(c.id);
         candidateList.appendChild(btn);
       });
@@ -579,9 +685,11 @@
         state.gameOver=true;
         updateButtons();
         renderBoard();
-        const msg = playerClaims>=3 ? '人間の勝ちです。' : 'CPUの勝ちです。';
+        const winner = playerClaims>=3 ? 'player' : 'cpu';
+        const msg = winner==='player' ? '人間の勝ちです。' : 'CPUの勝ちです。';
         setStatus(msg);
         showToast(msg);
+        showWinOverlay(winner);
         return;
       }
       state.candidates=[];
@@ -610,17 +718,20 @@
     }
 
     function restart(){
+      cols.forEach(c=>{state.player[c]=0;state.cpu[c]=0;state.temp[c]=0;});
+      Object.keys(state.claimed).forEach(k=> delete state.claimed[k]);
       state.turn='player';
-      state.candidates=[];
       state.selectedCandidate=null;
       state.turnStarted=false;
       state.awaitingChoice=false;
       state.gameOver=false;
-      cols.forEach(c=>{state.player[c]=0;state.cpu[c]=0;state.temp[c]=0;});
-      Object.keys(state.claimed).forEach(k=> delete state.claimed[k]);
-      state.dice=[1,1,1,1];
-      renderDice(); renderCandidates(); renderBoard();
-      setStatus('リスタートしました。サイコロを振ってください。');
+      state.dice=[rollDie(),rollDie(),rollDie(),rollDie()];
+      state.candidates=pairings(state.dice);
+      hideWinOverlay();
+      renderDice();
+      renderCandidates();
+      renderBoard();
+      setStatus('リスタートしました。最初の操作は「サイコロを振る」です。');
       updateButtons();
     }
 
@@ -635,4 +746,3 @@
     init();
   </script>
 </body>
-</html>
