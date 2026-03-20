@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>DiceGoStop Kids</title>
+  <style>
+    :root {
+      --bg1: #fff7d6;
+      --bg2: #dff7ff;
+      --card: #ffffff;
+      --text: #234;
+      --accent: #ff7f50;
+      --accent2: #4ecdc4;
+      --accent3: #ffd166;
+      --good: #6ecb63;
+      --cpu: #6c8cff;
+      --shadow: 0 8px 20px rgba(0,0,0,0.12);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height: 100svh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 520px;
+      min-height: 100svh;
+      padding: 12px 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .title {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(24px, 5vw, 34px);
+      line-height: 1.15;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      font-size: 14px;
+      color: #567;
+    }
+
+    .status {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px;
+      text-align: center;
+      font-size: clamp(18px, 4vw, 24px);
+      font-weight: bold;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .board {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+    }
+
+    .track {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .cell {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      background: #f6fbff;
+      border: 3px solid #d9eefb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(18px, 4vw, 26px);
+      font-weight: bold;
+      overflow: hidden;
+    }
+
+    .cell.goal {
+      background: #fff4c7;
+      border-color: #ffd54f;
+    }
+
+    .badge {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      font-size: 11px;
+      color: #678;
+      font-weight: 700;
+    }
+
+    .player, .cpu {
+      position: absolute;
+      bottom: 6px;
+      width: 38%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(18px, 4vw, 26px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      border: 3px solid #fff;
+      transition: transform 180ms ease;
+    }
+
+    .player {
+      left: 6px;
+      background: #ff8fab;
+    }
+
+    .cpu {
+      right: 6px;
+      background: #7aa8ff;
+    }
+
+    .controls {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .diceWrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .dice {
+      width: min(34vw, 150px);
+      height: min(34vw, 150px);
+      min-width: 120px;
+      min-height: 120px;
+      background: linear-gradient(180deg, #ffffff, #f7f7f7);
+      border-radius: 24px;
+      border: 5px solid #dde7f0;
+      box-shadow: inset 0 3px 0 rgba(255,255,255,0.8), 0 8px 16px rgba(0,0,0,0.10);
+      display: grid;
+      place-items: center;
+      font-size: clamp(52px, 12vw, 82px);
+      user-select: none;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 18px;
+      padding: 16px 12px;
+      font-size: clamp(20px, 4.4vw, 28px);
+      font-weight: 900;
+      box-shadow: var(--shadow);
+      color: white;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .mainBtn { background: linear-gradient(180deg, #ff9f68, #ff7f50); }
+    .subBtn { background: linear-gradient(180deg, #62d6cc, #38bfb4); }
+
+    .legend {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .legendItem {
+      background: #f7fbff;
+      border-radius: 14px;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .bubble {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .pink { background: #ff8fab; }
+    .blue { background: #7aa8ff; }
+
+    .footerNote {
+      text-align: center;
+      color: #567;
+      font-size: 13px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+
+    .pop {
+      animation: pop 180ms ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.9); }
+      60% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="title">
+      <h1>🎲 Dice Go Stop Kids</h1>
+      <div class="subtitle">サイコロをとめて ゴールしよう！</div>
+    </div>
+
+    <div class="status" id="status">オレンジのボタンを おしてね！</div>
+
+    <div class="board">
+      <div class="track" id="track"></div>
+    </div>
+
+    <div class="controls">
+      <div class="diceWrap">
+        <div class="dice" id="dice">🎲</div>
+      </div>
+
+      <div class="buttons">
+        <button class="mainBtn" id="actionBtn">まわす！</button>
+        <button class="subBtn" id="resetBtn">もういっかい</button>
+      </div>
+
+      <div class="legend">
+        <div class="legendItem"><span class="bubble pink">😊</span> きみ</div>
+        <div class="legendItem"><span class="bubble blue">🐻</span> くま</div>
+      </div>
+    </div>
+
+    <div class="footerNote">1ボタンであそべる 5さいむけゲーム</div>
+  </div>
+
+  <script>
+    const trackEl = document.getElementById('track');
+    const statusEl = document.getElementById('status');
+    const diceEl = document.getElementById('dice');
+    const actionBtn = document.getElementById('actionBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    const TOTAL_CELLS = 10;
+    const faces = ['1','2','3','4','5','6'];
+
+    let playerPos = 0;
+    let cpuPos = 0;
+    let rolling = false;
+    let rollTimer = null;
+    let gameOver = false;
+    let phase = 'player';
+    let currentFace = 1;
+
+    function buildBoard() {
+      trackEl.innerHTML = '';
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (i === TOTAL_CELLS - 1 ? ' goal' : '');
+
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = i === TOTAL_CELLS - 1 ? 'GOAL' : String(i + 1);
+        cell.appendChild(badge);
+
+        if (playerPos === i) {
+          const p = document.createElement('div');
+          p.className = 'player';
+          p.textContent = '😊';
+          cell.appendChild(p);
+        }
+
+        if (cpuPos === i) {
+          const c = document.createElement('div');
+          c.className = 'cpu';
+          c.textContent = '🐻';
+          cell.appendChild(c);
+        }
+
+        trackEl.appendChild(cell);
+      }
+    }
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+      statusEl.classList.remove('pop');
+      void statusEl.offsetWidth;
+      statusEl.classList.add('pop');
+    }
+
+    function setDice(value) {
+      diceEl.textContent = value;
+      diceEl.classList.remove('pop');
+      void diceEl.offsetWidth;
+      diceEl.classList.add('pop');
+    }
+
+    function startRolling() {
+      rolling = true;
+      actionBtn.textContent = 'とめる！';
+      setStatus(phase === 'player' ? 'タップで サイコロを とめよう！' : 'くまが サイコロを まわしてるよ');
+      rollTimer = setInterval(() => {
+        currentFace = Math.floor(Math.random() * 6) + 1;
+        setDice(faces[currentFace - 1]);
+      }, 85);
+    }
+
+    function stopRolling() {
+      clearInterval(rollTimer);
+      rolling = false;
+      actionBtn.textContent = 'まわす！';
+      return currentFace;
+    }
+
+    function movePiece(who, steps) {
+      if (who === 'player') {
+        playerPos = Math.min(TOTAL_CELLS - 1, playerPos + steps);
+      } else {
+        cpuPos = Math.min(TOTAL_CELLS - 1, cpuPos + steps);
+      }
+      buildBoard();
+    }
+
+    function checkWinner() {
+      if (playerPos >= TOTAL_CELLS - 1 && cpuPos >= TOTAL_CELLS - 1) {
+        gameOver = true;
+        setStatus('🤝 ひきわけ！ もういっかい あそぼう！');
+        actionBtn.disabled = true;
+        return true;
+      }
+      if (playerPos >= TOTAL_CELLS - 1) {
+        gameOver = true;
+        setStatus('🎉 きみの かち！ すごい！');
+        actionBtn.disabled = true;
+        return true;
+      }
+      if (cpuPos >= TOTAL_CELLS - 1) {
+        gameOver = true;
+        setStatus('🐻 くまの かち！ つぎは がんばろう！');
+        actionBtn.disabled = true;
+        return true;
+      }
+      return false;
+    }
+
+    function playerTurn() {
+      phase = 'player';
+      actionBtn.disabled = false;
+      setStatus('きみの ばん！ まわす！ を おしてね');
+    }
+
+    function cpuTurn() {
+      phase = 'cpu';
+      actionBtn.disabled = true;
+      setStatus('くまの ばん！');
+      setTimeout(() => {
+        startRolling();
+        setTimeout(() => {
+          const result = stopRolling();
+          setStatus('くまは ' + result + ' すすんだ！');
+          movePiece('cpu', result);
+          if (checkWinner()) return;
+          setTimeout(() => {
+            playerTurn();
+          }, 800);
+        }, 900);
+      }, 600);
+    }
+
+    actionBtn.addEventListener('click', () => {
+      if (gameOver) return;
+      if (phase !== 'player') return;
+
+      if (!rolling) {
+        startRolling();
+      } else {
+        const result = stopRolling();
+        setStatus('きみは ' + result + ' すすんだ！');
+        movePiece('player', result);
+        if (checkWinner()) return;
+        setTimeout(() => {
+          cpuTurn();
+        }, 900);
+      }
+    });
+
+    resetBtn.addEventListener('click', resetGame);
+
+    function resetGame() {
+      clearInterval(rollTimer);
+      playerPos = 0;
+      cpuPos = 0;
+      rolling = false;
+      gameOver = false;
+      phase = 'player';
+      currentFace = 1;
+      actionBtn.disabled = false;
+      actionBtn.textContent = 'まわす！';
+      setDice('🎲');
+      buildBoard();
+      setStatus('オレンジのボタンを おしてね！');
+    }
+
+    buildBoard();
+  </script>
+</body>
+</html>
