@@ -120,7 +120,7 @@
   .board {
     margin-top: 16px;
     display: grid;
-    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
   }
   .card {
@@ -132,7 +132,7 @@
     cursor: pointer;
     transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.12s ease;
     box-shadow: 0 10px 24px rgba(0,0,0,0.2);
-    min-height: 150px;
+    min-height: 170px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
@@ -142,7 +142,7 @@
   .flagcanvas {
     display: block;
     width: 100%;
-    height: 104px;
+    height: 138px;
     border-radius: 12px;
     background: #000;
   }
@@ -203,6 +203,21 @@
     .controls { grid-template-columns: 1fr 1fr; }
     button { font-size: 15px; padding: 10px 12px; }
   }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+  .wrap {
+    min-height: 100dvh;
+  }
+  @media (min-width: 700px) and (max-width: 1180px) {
+    .wrap { padding: 12px; }
+    .titlebox { padding: 14px; }
+    .statbox { min-width: 0; }
+    .board { gap: 10px; }
+    .card { min-height: 160px; }
+    .flagcanvas { height: 128px; }
+  }
 </style>
 </head>
 <body>
@@ -210,7 +225,7 @@
     <div class="header">
       <div class="titlebox">
         <h1>世界の国旗あてゲーム</h1>
-        <div class="sub">画面に15枚の国旗が並びます。上に出る国名と一致する国旗をすばやくクリックしてください。<br>間違えると3秒減点、正解すると次の国名が出ます。</div>
+        <div class="sub">画面に9枚の国旗が並びます。上に出る国名と一致する国旗をすばやくタップしてください。<br>間違えると3秒減点、正解すると次の国名が出ます。</div>
         <div class="target" id="targetName">スタートを押してください</div>
       </div>
       <div class="statbox">
@@ -234,7 +249,7 @@
     <div class="modal">
       <h2>世界の国旗あてゲーム</h2>
       <p>1ゲーム60秒。正しい国旗をできるだけたくさん当ててください。</p>
-      <p>表示される国名に対応する国旗を15枚の中からクリックします。</p>
+      <p>表示される国名に対応する国旗を9枚の中からタップします。</p>
       <button id="overlayStart">ゲーム開始</button>
     </div>
   </div>
@@ -255,7 +270,7 @@ const msgEl = document.getElementById('message');
 const overlayEl = document.getElementById('overlay');
 
 const GAME_TIME = 60;
-const VISIBLE_COUNT = 15;
+const VISIBLE_COUNT = 9;
 
 let state = {
   started: false,
