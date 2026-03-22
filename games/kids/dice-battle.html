@@ -738,7 +738,20 @@
 
         <div id="resultDiceSummary" class="result-dice-summary"></div>
 
+        
+        <div id="playGuide" style="
+          font-size:14px;
+          font-weight:900;
+          margin-top:6px;
+          color:#555;
+          opacity:0;
+          transition:0.3s;
+        ">
+          コメントらんに あそべるURLあるよ👇
+        </div>
+
         <div class="result-actions">
+    
           <button id="resultAgainBtn" class="big-btn">もういっかい</button>
           <button id="resultBackBtn" class="small-btn">えらびなおす</button>
         </div>
@@ -1116,6 +1129,10 @@
       }
 
       showScreen("result");
+      setTimeout(() => {
+        const el = document.getElementById("playGuide");
+        if(el) el.style.opacity = 1;
+      }, 800);
       battleLocked = false;
     }
 
