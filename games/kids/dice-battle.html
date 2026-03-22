@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>3秒バトルゲーム</title>
+  <style>
+    :root{
+      --bg1:#fff7e8;
+      --bg2:#eaf7ff;
+      --card:#ffffff;
+      --text:#333;
+      --shadow:0 10px 30px rgba(0,0,0,.12);
+      --radius:22px;
+    }
+
+    *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+    body{
+      margin:0;
+      font-family: "Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, #fff0c9 0%, transparent 30%),
+        radial-gradient(circle at top right, #dff1ff 0%, transparent 35%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+    }
+
+    .app{
+      width:100%;
+      max-width:480px;
+      min-height:100vh;
+      padding:14px 14px 20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .panel{
+      background:rgba(255,255,255,0.82);
+      backdrop-filter: blur(4px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+
+    .title{
+      text-align:center;
+      font-size:clamp(28px, 6vw, 36px);
+      font-weight:900;
+      line-height:1.2;
+      margin:4px 0;
+      color:#ff7b00;
+      text-shadow:0 2px 0 #fff;
+    }
+
+    .subtitle{
+      text-align:center;
+      font-size:15px;
+      font-weight:700;
+      color:#666;
+      margin-top:4px;
+    }
+
+    .big-btn, .small-btn{
+      border:none;
+      border-radius:999px;
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      transition:transform .08s ease;
+    }
+
+    .big-btn:active, .small-btn:active{
+      transform:scale(.98);
+    }
+
+    .big-btn{
+      width:100%;
+      padding:16px 18px;
+      font-size:24px;
+      color:#fff;
+      background:linear-gradient(180deg, #ffb347, #ff7b00);
+    }
+
+    .small-btn{
+      padding:12px 16px;
+      font-size:18px;
+      color:#fff;
+      background:linear-gradient(180deg, #70b7ff, #3d8cff);
+      flex:1;
+    }
+
+    .hidden{ display:none !important; }
+
+    .screen{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    .pick-grid{
+      display:grid;
+      grid-template-columns:repeat(2, 1fr);
+      gap:10px;
+    }
+
+    .char-card{
+      background:#fff;
+      border-radius:20px;
+      padding:10px;
+      box-shadow:var(--shadow);
+      border:3px solid transparent;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
+      min-height:190px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .char-card.selected{
+      border-color:#ff9d00;
+      transform:translateY(-1px);
+    }
+
+    .char-card .swatch{
+      position:absolute;
+      inset:0 auto auto 0;
+      width:100%;
+      height:8px;
+    }
+
+    .char-name{
+      font-size:20px;
+      font-weight:900;
+      line-height:1.1;
+      text-align:center;
+    }
+
+    .char-power{
+      font-size:22px;
+      font-weight:900;
+      color:#444;
+      background:#fff7df;
+      border-radius:999px;
+      padding:4px 12px;
+    }
+
+    .char-thumb-wrap{
+      width:78px;
+      height:78px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .char-thumb{
+      width:78px;
+      height:78px;
+      object-fit:contain;
+      border-radius:18px;
+      background:#fff;
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
+      display:block;
+    }
+
+    .char-thumb-fallback{
+      font-size:52px;
+      display:none;
+    }
+
+    .battle-head{
+      text-align:center;
+      font-weight:900;
+      font-size:30px;
+      color:#ff7b00;
+      text-shadow:0 2px 0 #fff;
+    }
+
+    .vs-wrap{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+
+    .fighter{
+      background:#fff;
+      border-radius:20px;
+      padding:12px;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:center;
+      text-align:center;
+      overflow:hidden;
+    }
+
+    .fighter .label{
+      font-size:16px;
+      font-weight:900;
+      color:#666;
+    }
+
+    .fighter .name{
+      font-size:26px;
+      font-weight:900;
+      line-height:1.1;
+    }
+
+    .fighter .power{
+      font-size:24px;
+      font-weight:900;
+      background:#f7f7f7;
+      border-radius:999px;
+      padding:4px 14px;
+    }
+
+    .fighter .token{
+      width:min(82vw, 360px);
+      max-width:100%;
+      max-height:40vh;
+      object-fit:contain;
+      border-radius:20px;
+      display:block;
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
+      background:#fff;
+    }
+
+    .fighter .emoji-fallback{
+      font-size:88px;
+      line-height:1;
+      padding:8px 0;
+      display:none;
+    }
+
+    .mid-box{
+      text-align:center;
+      background:#fff;
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      padding:14px 10px;
+    }
+
+    .count{
+      font-size:64px;
+      font-weight:900;
+      line-height:1;
+      color:#ff7b00;
+      min-height:72px;
+    }
+
+    .message{
+      font-size:28px;
+      font-weight:900;
+      min-height:42px;
+    }
+
+    .submsg{
+      font-size:17px;
+      color:#666;
+      font-weight:700;
+      min-height:26px;
+    }
+
+    .dice-area{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:8px;
+    }
+
+    .dice-box{
+      background:#fff;
+      border-radius:18px;
+      padding:10px;
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+
+    .dice-title{
+      font-size:16px;
+      font-weight:900;
+      color:#666;
+      margin-bottom:6px;
+    }
+
+    .dice-rolls{
+      font-size:22px;
+      font-weight:900;
+      min-height:32px;
+      letter-spacing:1px;
+    }
+
+    .dice-total{
+      font-size:34px;
+      font-weight:900;
+      color:#333;
+      margin-top:4px;
+    }
+
+    .result-banner{
+      font-size:34px;
+      font-weight:900;
+      text-align:center;
+      padding:12px;
+      border-radius:22px;
+      color:#fff;
+      box-shadow:var(--shadow);
+    }
+
+    .result-win{ background:linear-gradient(180deg,#ffcf4d,#ff9a00); }
+    .result-lose{ background:linear-gradient(180deg,#7fb7ff,#4f86ff); }
+    .result-draw{ background:linear-gradient(180deg,#8ee08e,#56b856); }
+
+    .actions{
+      display:flex;
+      gap:10px;
+    }
+
+    .foot-note{
+      text-align:center;
+      font-size:13px;
+      color:#666;
+      font-weight:700;
+    }
+
+    /* 動画向け最初のVS画面 */
+    .hero-vs{
+      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.82));
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      padding:14px 12px 16px;
+    }
+
+    .hero-title{
+      text-align:center;
+      font-size:clamp(30px, 8vw, 48px);
+      line-height:1.1;
+      font-weight:900;
+      color:#ff6f00;
+      text-shadow:0 2px 0 #fff;
+      margin-bottom:8px;
+    }
+
+    .hero-sub{
+      text-align:center;
+      font-size:clamp(18px, 5vw, 24px);
+      font-weight:900;
+      color:#5a5a5a;
+      margin-bottom:10px;
+    }
+
+    .hero-vs-grid{
+      display:grid;
+      grid-template-columns:1fr auto 1fr;
+      align-items:center;
+      gap:8px;
+    }
+
+    .hero-char{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+    }
+
+    .hero-img{
+      width:100%;
+      max-width:150px;
+      aspect-ratio:1/1.2;
+      object-fit:contain;
+      border-radius:18px;
+      background:#fff;
+      box-shadow:0 8px 18px rgba(0,0,0,.10);
+    }
+
+    .hero-emoji{
+      font-size:72px;
+      display:none;
+      line-height:1;
+      padding:10px 0;
+    }
+
+    .hero-name{
+      font-size:clamp(18px,4vw,24px);
+      font-weight:900;
+      text-align:center;
+      line-height:1.1;
+    }
+
+    .hero-power{
+      font-size:clamp(20px,4vw,28px);
+      font-weight:900;
+      background:#fff7df;
+      border-radius:999px;
+      padding:4px 12px;
+    }
+
+    .hero-vs-text{
+      font-size:clamp(34px, 10vw, 58px);
+      font-weight:900;
+      color:#ff2d55;
+      text-shadow:0 3px 0 #fff;
+      padding:0 2px;
+    }
+
+    .hero-actions{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:12px;
+    }
+
+    @media (min-width: 430px){
+      .vs-wrap{
+        grid-template-columns:1fr auto 1fr;
+        align-items:stretch;
+      }
+      .mid-box{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        min-width:112px;
+      }
+      .hero-actions{
+        flex-direction:row;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section id="screenTitle" class="screen">
+      <div class="panel">
+        <div class="title">3秒バトルゲーム</div>
+        <div class="subtitle">キャラをえらんで CPU と たいせん！</div>
+      </div>
+
+      <div class="panel" style="text-align:center;">
+        <div style="font-size:72px; line-height:1;">⚔️🎲✨</div>
+        <div class="subtitle">どっちが かつか 3びょうで かんがえよう！</div>
+      </div>
+
+      <button id="startBtn" class="big-btn">スタート！</button>
+
+      <div class="foot-note">
+        dice-battle-char1.png ～ dice-battle-char6.png があれば画像表示、なければ絵文字で動きます
+      </div>
+    </section>
+
+    <section id="screenPick" class="screen hidden">
+      <div class="panel">
+        <div class="title" style="font-size:30px;">キャラを えらんでね</div>
+        <div class="subtitle">1たい えらぶと バトル できます</div>
+      </div>
+
+      <div class="pick-grid" id="pickGrid"></div>
+
+      <button id="battleBtn" class="big-btn" disabled style="opacity:.55;">つぎへ！</button>
+    </section>
+
+    <section id="screenIntro" class="screen hidden">
+      <div class="hero-vs">
+        <div class="hero-title">どっちが かつ？</div>
+        <div class="hero-sub">3びょうで かんがえて！</div>
+
+        <div class="hero-vs-grid">
+          <div class="hero-char">
+            <img id="introPlayerImg" class="hero-img hidden" alt="あなたのキャラ">
+            <div id="introPlayerEmoji" class="hero-emoji"></div>
+            <div id="introPlayerName" class="hero-name"></div>
+            <div id="introPlayerPower" class="hero-power"></div>
+          </div>
+
+          <div class="hero-vs-text">VS</div>
+
+          <div class="hero-char">
+            <img id="introCpuImg" class="hero-img hidden" alt="CPUのキャラ">
+            <div id="introCpuEmoji" class="hero-emoji"></div>
+            <div id="introCpuName" class="hero-name"></div>
+            <div id="introCpuPower" class="hero-power"></div>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <button id="goBattleBtn" class="big-btn">バトル スタート！</button>
+          <button id="reselectBtn" class="small-btn">えらびなおす</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screenBattle" class="screen hidden">
+      <div class="battle-head">どっちが かつ？</div>
+
+      <div class="vs-wrap">
+        <div class="fighter">
+          <div class="label">あなた</div>
+          <img id="playerImg" class="token hidden" alt="あなたのキャラ">
+          <div id="playerEmoji" class="emoji-fallback"></div>
+          <div id="playerName" class="name"></div>
+          <div id="playerPower" class="power"></div>
+        </div>
+
+        <div class="mid-box">
+          <div id="countText" class="count">3</div>
+          <div id="midMessage" class="message">よーい！</div>
+          <div id="midSub" class="submsg">3びょうで かんがえて！</div>
+        </div>
+
+        <div class="fighter">
+          <div class="label">CPU</div>
+          <img id="cpuImg" class="token hidden" alt="CPUのキャラ">
+          <div id="cpuEmoji" class="emoji-fallback"></div>
+          <div id="cpuName" class="name"></div>
+          <div id="cpuPower" class="power"></div>
+        </div>
+      </div>
+
+      <div class="dice-area hidden" id="diceArea">
+        <div class="dice-box">
+          <div class="dice-title">あなた</div>
+          <div id="playerRolls" class="dice-rolls">-</div>
+          <div id="playerTotal" class="dice-total">0</div>
+        </div>
+        <div class="dice-box">
+          <div class="dice-title">CPU</div>
+          <div id="cpuRolls" class="dice-rolls">-</div>
+          <div id="cpuTotal" class="dice-total">0</div>
+        </div>
+      </div>
+
+      <div id="resultBanner" class="result-banner hidden">かった！</div>
+
+      <div class="actions">
+        <button id="againBtn" class="small-btn hidden">もういっかい</button>
+        <button id="backBtn" class="small-btn hidden">えらびなおす</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const characters = [
+      { id:"fire",     name:"ほのおまる", power:"1D+3", emoji:"🔥", color:"#ff7a00", bg:"#fff0e0", img:"dice-battle-char1.png" },
+      { id:"water",    name:"みずぷに",   power:"2D",   emoji:"💧", color:"#4aa3ff", bg:"#e8f4ff", img:"dice-battle-char2.png" },
+      { id:"forest",   name:"きりころ",   power:"1D+2", emoji:"🌿", color:"#48b04d", bg:"#ecffe8", img:"dice-battle-char3.png" },
+      { id:"shadow",   name:"かげぴん",   power:"1D+4", emoji:"🌙", color:"#8c56d8", bg:"#f4eaff", img:"dice-battle-char4.png" },
+      { id:"electric", name:"びりびりん", power:"2D-1", emoji:"⚡", color:"#ffb400", bg:"#fff7da", img:"dice-battle-char5.png" },
+      { id:"angel",    name:"てんしるん", power:"2D",   emoji:"✨", color:"#69bfff", bg:"#eef9ff", img:"dice-battle-char6.png" }
+    ];
+
+    let selectedChar = null;
+    let cpuChar = null;
+    let battleLocked = false;
+    const imageOk = {};
+
+    const screenTitle  = document.getElementById("screenTitle");
+    const screenPick   = document.getElementById("screenPick");
+    const screenIntro  = document.getElementById("screenIntro");
+    const screenBattle = document.getElementById("screenBattle");
+
+    const pickGrid = document.getElementById("pickGrid");
+    const startBtn = document.getElementById("startBtn");
+    const battleBtn = document.getElementById("battleBtn");
+    const goBattleBtn = document.getElementById("goBattleBtn");
+    const reselectBtn = document.getElementById("reselectBtn");
+
+    const playerImg = document.getElementById("playerImg");
+    const cpuImg = document.getElementById("cpuImg");
+    const playerEmoji = document.getElementById("playerEmoji");
+    const cpuEmoji = document.getElementById("cpuEmoji");
+    const playerName = document.getElementById("playerName");
+    const cpuName = document.getElementById("cpuName");
+    const playerPower = document.getElementById("playerPower");
+    const cpuPower = document.getElementById("cpuPower");
+
+    const introPlayerImg = document.getElementById("introPlayerImg");
+    const introCpuImg = document.getElementById("introCpuImg");
+    const introPlayerEmoji = document.getElementById("introPlayerEmoji");
+    const introCpuEmoji = document.getElementById("introCpuEmoji");
+    const introPlayerName = document.getElementById("introPlayerName");
+    const introCpuName = document.getElementById("introCpuName");
+    const introPlayerPower = document.getElementById("introPlayerPower");
+    const introCpuPower = document.getElementById("introCpuPower");
+
+    const countText = document.getElementById("countText");
+    const midMessage = document.getElementById("midMessage");
+    const midSub = document.getElementById("midSub");
+
+    const diceArea = document.getElementById("diceArea");
+    const playerRolls = document.getElementById("playerRolls");
+    const cpuRolls = document.getElementById("cpuRolls");
+    const playerTotal = document.getElementById("playerTotal");
+    const cpuTotal = document.getElementById("cpuTotal");
+
+    const resultBanner = document.getElementById("resultBanner");
+    const againBtn = document.getElementById("againBtn");
+    const backBtn = document.getElementById("backBtn");
+
+    function showScreen(name){
+      screenTitle.classList.add("hidden");
+      screenPick.classList.add("hidden");
+      screenIntro.classList.add("hidden");
+      screenBattle.classList.add("hidden");
+      if(name === "title") screenTitle.classList.remove("hidden");
+      if(name === "pick") screenPick.classList.remove("hidden");
+      if(name === "intro") screenIntro.classList.remove("hidden");
+      if(name === "battle") screenBattle.classList.remove("hidden");
+    }
+
+    function checkOneImage(src){
+      return new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = src;
+      });
+    }
+
+    async function preloadImages(){
+      for(const char of characters){
+        imageOk[char.id] = await checkOneImage(char.img);
+      }
+    }
+
+    function buildPickGrid(){
+      pickGrid.innerHTML = "";
+      characters.forEach(char => {
+        const card = document.createElement("button");
+        card.className = "char-card";
+        card.type = "button";
+        card.dataset.id = char.id;
+        card.style.background = char.bg;
+        card.innerHTML = `
+          <div class="swatch" style="background:${char.color};"></div>
+          <div class="char-thumb-wrap">
+            <img class="char-thumb hidden" alt="${char.name}">
+            <div class="char-thumb-fallback">${char.emoji}</div>
+          </div>
+          <div class="char-name">${char.name}</div>
+          <div class="char-power">${char.power}</div>
+        `;
+        const img = card.querySelector(".char-thumb");
+        const fallback = card.querySelector(".char-thumb-fallback");
+
+        if(imageOk[char.id]){
+          img.src = char.img;
+          img.classList.remove("hidden");
+          fallback.style.display = "none";
+        } else {
+          img.classList.add("hidden");
+          fallback.style.display = "block";
+        }
+
+        card.addEventListener("click", () => selectCharacter(char.id));
+        pickGrid.appendChild(card);
+      });
+    }
+
+    function selectCharacter(id){
+      selectedChar = characters.find(c => c.id === id);
+      [...pickGrid.children].forEach(el => {
+        el.classList.toggle("selected", el.dataset.id === id);
+      });
+      battleBtn.disabled = false;
+      battleBtn.style.opacity = "1";
+    }
+
+    function randomCpu(){
+      const idx = Math.floor(Math.random() * characters.length);
+      return characters[idx];
+    }
+
+    function setVisual(imgEl, emojiEl, char){
+      if(imageOk[char.id]){
+        imgEl.src = char.img;
+        imgEl.classList.remove("hidden");
+        emojiEl.style.display = "none";
+      } else {
+        imgEl.classList.add("hidden");
+        emojiEl.style.display = "block";
+        emojiEl.textContent = char.emoji;
+      }
+    }
+
+    function setIntroView(){
+      introPlayerName.textContent = selectedChar.name;
+      introPlayerPower.textContent = selectedChar.power;
+      introCpuName.textContent = cpuChar.name;
+      introCpuPower.textContent = cpuChar.power;
+      setVisual(introPlayerImg, introPlayerEmoji, selectedChar);
+      setVisual(introCpuImg, introCpuEmoji, cpuChar);
+    }
+
+    function setBattleView(){
+      playerName.textContent = selectedChar.name;
+      playerPower.textContent = selectedChar.power;
+      cpuName.textContent = cpuChar.name;
+      cpuPower.textContent = cpuChar.power;
+
+      setVisual(playerImg, playerEmoji, selectedChar);
+      setVisual(cpuImg, cpuEmoji, cpuChar);
+
+      countText.textContent = "3";
+      midMessage.textContent = "よーい！";
+      midSub.textContent = "3びょうで かんがえて！";
+
+      diceArea.classList.add("hidden");
+      resultBanner.classList.add("hidden");
+      againBtn.classList.add("hidden");
+      backBtn.classList.add("hidden");
+
+      playerRolls.textContent = "-";
+      cpuRolls.textContent = "-";
+      playerTotal.textContent = "0";
+      cpuTotal.textContent = "0";
+      resultBanner.className = "result-banner hidden";
+    }
+
+    function prepareIntro(){
+      if(!selectedChar) return;
+      cpuChar = randomCpu();
+      setIntroView();
+      showScreen("intro");
+    }
+
+    function d6(){
+      return 1 + Math.floor(Math.random() * 6);
+    }
+
+    function rollByPower(power){
+      let rolls = [];
+      let total = 0;
+
+      if(power === "1D+3"){
+        const r = d6();
+        rolls = [r];
+        total = r + 3;
+      } else if(power === "2D"){
+        const r1 = d6(), r2 = d6();
+        rolls = [r1, r2];
+        total = r1 + r2;
+      } else if(power === "1D+2"){
+        const r = d6();
+        rolls = [r];
+        total = r + 2;
+      } else if(power === "1D+4"){
+        const r = d6();
+        rolls = [r];
+        total = r + 4;
+      } else if(power === "2D-1"){
+        const r1 = d6(), r2 = d6();
+        rolls = [r1, r2];
+        total = r1 + r2 - 1;
+      } else {
+        const r = d6();
+        rolls = [r];
+        total = r;
+      }
+
+      return { rolls, total };
+    }
+
+    function wait(ms){
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function startBattle(){
+      if(battleLocked || !selectedChar || !cpuChar) return;
+      battleLocked = true;
+
+      showScreen("battle");
+      setBattleView();
+
+      const counts = ["3", "2", "1"];
+      for(const c of counts){
+        countText.textContent = c;
+        midMessage.textContent = "どっちが かつ？";
+        midSub.textContent = "よーく みてね！";
+        await wait(850);
+      }
+
+      countText.textContent = "🎲";
+      midMessage.textContent = "バトル！";
+      midSub.textContent = "ダイス ころころ…";
+      diceArea.classList.remove("hidden");
+
+      for(let i=0;i<7;i++){
+        const a = d6();
+        const b = d6();
+        const c = d6();
+        const d = d6();
+        playerRolls.textContent = `${a} ${b}`;
+        cpuRolls.textContent = `${c} ${d}`;
+        playerTotal.textContent = "?";
+        cpuTotal.textContent = "?";
+        await wait(110);
+      }
+
+      const p = rollByPower(selectedChar.power);
+      const c = rollByPower(cpuChar.power);
+
+      playerRolls.textContent = p.rolls.join(" + ");
+      cpuRolls.textContent = c.rolls.join(" + ");
+      playerTotal.textContent = p.total;
+      cpuTotal.textContent = c.total;
+
+      countText.textContent = "✨";
+      midSub.textContent = "けっか はっぴょう！";
+
+      if(p.total > c.total){
+        midMessage.textContent = "あなたの かち！";
+        resultBanner.textContent = "かった！";
+        resultBanner.className = "result-banner result-win";
+      } else if(p.total < c.total){
+        midMessage.textContent = "CPU の かち！";
+        resultBanner.textContent = "まけた！";
+        resultBanner.className = "result-banner result-lose";
+      } else {
+        midMessage.textContent = "ひきわけ！";
+        resultBanner.textContent = "ひきわけ！";
+        resultBanner.className = "result-banner result-draw";
+      }
+
+      resultBanner.classList.remove("hidden");
+      againBtn.classList.remove("hidden");
+      backBtn.classList.remove("hidden");
+      battleLocked = false;
+    }
+
+    function resetToPick(){
+      showScreen("pick");
+      resultBanner.className = "result-banner hidden";
+    }
+
+    function replaySameChar(){
+      if(!selectedChar) return;
+      prepareIntro();
+    }
+
+    startBtn.addEventListener("click", () => showScreen("pick"));
+    battleBtn.addEventListener("click", prepareIntro);
+    goBattleBtn.addEventListener("click", startBattle);
+    reselectBtn.addEventListener("click", resetToPick);
+    againBtn.addEventListener("click", replaySameChar);
+    backBtn.addEventListener("click", resetToPick);
+
+    (async function init(){
+      await preloadImages();
+      buildPickGrid();
+      showScreen("title");
+    })();
+  </script>
+</body>
+</html>
