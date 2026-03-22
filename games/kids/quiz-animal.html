@@ -5,467 +5,216 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <title>3秒でできる知育クイズ</title>
   <style>
-    :root {
-      --bg1: #fff8e1;
-      --bg2: #e3f2fd;
-      --card: #ffffff;
-      --text: #222;
-      --accent: #ff9800;
-      --ok: #2e7d32;
-      --ng: #d32f2f;
-      --shadow: 0 10px 24px rgba(0,0,0,0.12);
-      --radius: 22px;
-    }
+    :root { --accent:#ff9800; --ok:#2e7d32; --ng:#d32f2f; --glow:#43a047; }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;font-family:sans-serif;background:linear-gradient(#fff8e1,#e3f2fd);overflow:hidden}
+    .app{max-width:420px;margin:auto;height:100vh;display:grid;grid-template-rows:auto auto auto 1fr auto auto;gap:8px;padding:10px}
+    .box{background:#fff;border-radius:20px;box-shadow:0 6px 16px rgba(0,0,0,.15)}
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    .hook{background:#ffecb3;text-align:center;font-weight:900;font-size:20px;padding:6px;animation:blink 1s infinite;border-radius:16px}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+    @keyframes glowPulse{0%{transform:scale(1);box-shadow:0 0 0 rgba(67,160,71,0)}50%{transform:scale(1.04);box-shadow:0 0 24px rgba(67,160,71,.65)}100%{transform:scale(1);box-shadow:0 0 0 rgba(67,160,71,0)}}
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      background: linear-gradient(180deg, var(--bg1), var(--bg2));
-      color: var(--text);
-      overflow: hidden;
-      touch-action: manipulation;
-    }
+    .top{display:flex;justify-content:space-between;padding:8px 12px;font-weight:700}
+    .count{font-size:28px;text-align:center;font-weight:900}
+    .question{text-align:center;font-size:34px;font-weight:900;padding:10px}
 
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .choice{border:none;border-radius:18px;padding:10px;font-size:22px;font-weight:900;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.2);min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .choice:active{transform:scale(.95)}
+    .choice.correct{background:#c8e6c9 !important;animation:glowPulse .7s 2;border:3px solid #43a047}
+    .choice.wrong{background:#ffcdd2 !important;border:3px solid #e53935}
+    .emoji{font-size:46px;line-height:1;margin-bottom:6px}
+    .name{font-size:24px;line-height:1.1}
 
-    .app {
-      width: min(100vw, 430px);
-      height: 100vh;
-      max-height: 100dvh;
-      padding: env(safe-area-inset-top, 12px) 12px env(safe-area-inset-bottom, 12px);
-      display: grid;
-      grid-template-rows: auto auto auto 1fr auto auto;
-      gap: 10px;
-    }
+    .result{font-size:32px;text-align:center;font-weight:900;height:50px}
+    .ok{color:var(--ok)} .ng{color:var(--ng)}
 
-    .topbar, .panel, .footer {
-      background: rgba(255,255,255,0.88);
-      backdrop-filter: blur(8px);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
+    .footer{text-align:center;font-weight:900;font-size:18px;color:#e65100;animation:blink 1s infinite}
 
-    .topbar {
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-weight: 700;
-      font-size: 16px;
-    }
+    .start{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:10}
+    .startbox{text-align:center;padding:20px}
+    .title{font-size:38px;font-weight:900;color:#ef6c00}
+    .sub{font-size:22px;margin:10px 0}
+    .startbtn{font-size:28px;padding:12px 20px;border:none;border-radius:999px;background:#ff9800;color:#fff;font-weight:900}
 
-    .brand { color: #ef6c00; }
-    .score { font-size: 15px; }
-
-    .countdown {
-      text-align: center;
-      font-size: clamp(26px, 7vw, 36px);
-      font-weight: 900;
-      padding: 8px;
-      color: #1565c0;
-      text-shadow: 0 1px 0 #fff;
-    }
-
-    .panel {
-      padding: 14px 12px;
-      text-align: center;
-    }
-
-    .question-label {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #6d4c41;
-    }
-
-    .question {
-      font-size: clamp(30px, 8vw, 44px);
-      font-weight: 900;
-      line-height: 1.15;
-      margin: 0;
-      min-height: 56px;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      align-content: stretch;
-      min-height: 0;
-    }
-
-    .choice {
-      border: none;
-      border-radius: 24px;
-      background: var(--card);
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 118px;
-      padding: 10px 6px;
-      font-size: 18px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 0.08s ease, box-shadow 0.15s ease;
-      user-select: none;
-    }
-
-    .choice:active {
-      transform: scale(0.97);
-    }
-
-    .emoji {
-      font-size: clamp(44px, 11vw, 62px);
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-
-    .name {
-      font-size: clamp(20px, 5vw, 28px);
-      line-height: 1.1;
-    }
-
-    .choice.correct {
-      outline: 5px solid rgba(46,125,50,0.22);
-      background: #e8f5e9;
-    }
-
-    .choice.wrong {
-      outline: 5px solid rgba(211,47,47,0.22);
-      background: #ffebee;
-    }
-
-    .result {
-      min-height: 58px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      font-size: clamp(26px, 7vw, 40px);
-      font-weight: 900;
-      padding: 8px;
-    }
-
-    .result.ok { color: var(--ok); }
-    .result.ng { color: var(--ng); }
-
-    .footer {
-      padding: 10px 12px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: 700;
-      color: #5d4037;
-    }
-
-    .start-overlay {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(255,248,225,0.96), rgba(227,242,253,0.96));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      padding: 16px;
-    }
-
-    .start-card {
-      width: min(100%, 420px);
-      background: white;
-      border-radius: 28px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.16);
-      padding: 24px 18px;
-      text-align: center;
-    }
-
-    .start-title {
-      font-size: clamp(28px, 8vw, 40px);
-      font-weight: 900;
-      margin: 0 0 10px;
-      color: #ef6c00;
-      line-height: 1.2;
-    }
-
-    .start-sub {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 18px;
-    }
-
-    .start-btn, .restart-btn {
-      border: none;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #ffb74d, #fb8c00);
-      color: white;
-      font-size: 28px;
-      font-weight: 900;
-      padding: 16px 26px;
-      cursor: pointer;
-      box-shadow: 0 8px 18px rgba(251, 140, 0, 0.35);
-    }
-
-    .end-box {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.28);
-      z-index: 9;
-      padding: 16px;
-    }
-
-    .end-card {
-      width: min(100%, 420px);
-      background: #fff;
-      border-radius: 28px;
-      padding: 24px 18px;
-      text-align: center;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.2);
-    }
-
-    .end-title {
-      font-size: 34px;
-      font-weight: 900;
-      margin: 0 0 8px;
-      color: #1565c0;
-    }
-
-    .end-score {
-      font-size: 28px;
-      font-weight: 900;
-      margin: 12px 0 18px;
-      color: #ef6c00;
-    }
-
-    @media (max-height: 720px) {
-      .app {
-        gap: 8px;
-        grid-template-rows: auto auto auto 1fr auto auto;
-      }
-      .choice { min-height: 98px; }
-      .emoji { font-size: clamp(36px, 10vw, 52px); }
-      .name { font-size: clamp(18px, 4.6vw, 24px); }
-      .result { min-height: 48px; }
-    }
+    .end{position:fixed;inset:0;background:rgba(0,0,0,.3);display:none;align-items:center;justify-content:center}
+    .endbox{background:#fff;padding:20px;border-radius:20px;text-align:center;min-width:260px}
+    .endbox button{margin-top:12px;font-size:22px;padding:10px 18px;border:none;border-radius:999px;background:#ff9800;color:#fff;font-weight:900}
   </style>
 </head>
 <body>
-  <div class="start-overlay" id="startOverlay">
-    <div class="start-card">
-      <h1 class="start-title">3秒でできる<br>どうぶつクイズ</h1>
-      <div class="start-sub">4たくの中から えらんでね！</div>
-      <button class="start-btn" id="startBtn">スタート</button>
-    </div>
+
+<div class="start" id="start">
+  <div class="startbox">
+    <div class="title">3秒でわかる？🔥</div>
+    <div class="sub">どうぶつクイズ</div>
+    <div class="sub">👇コメントにゲームあるよ👇</div>
+    <button class="startbtn" onclick="startGame()">スタート</button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="hook">👇コメントにURLあるよ👇</div>
+
+  <div class="top box">
+    <div>3秒クイズ</div>
+    <div>せいかい <span id="score">0</span></div>
   </div>
 
-  <div class="app">
-    <div class="topbar">
-      <div class="brand">3秒クイズ</div>
-      <div class="score">せいかい: <span id="score">0</span></div>
-    </div>
+  <div class="count" id="count">3</div>
 
-    <div class="countdown" id="countdown">3</div>
+  <div class="question box" id="q">いぬはどれ？</div>
 
-    <div class="panel">
-      <div class="question-label">もんだい</div>
-      <p class="question" id="question">いぬ は どれ？</p>
-    </div>
+  <div class="grid" id="grid"></div>
 
-    <div class="grid" id="grid"></div>
+  <div class="result" id="res"></div>
 
-    <div class="result" id="result"></div>
+  <div class="footer">👇コメントからあそべる👇</div>
+</div>
 
-    <div class="footer">👇コメントにURLあるよ！タップしてあそんでね👇</div>
+<div class="end" id="end">
+  <div class="endbox">
+    <h2>おしまい！</h2>
+    <div id="final"></div>
+    <div style="margin-top:8px;font-weight:900;color:#e65100;">👇コメントからあそべる👇</div>
+    <button onclick="restart()">もういっかい</button>
   </div>
+</div>
 
-  <div class="end-box" id="endBox">
-    <div class="end-card">
-      <div class="end-title">おしまい！</div>
-      <div class="end-score">せいかい <span id="finalScore">0</span> / 10</div>
-      <button class="restart-btn" id="restartBtn">もういっかい</button>
-    </div>
-  </div>
+<script>
+const data = [
+  { name:"いぬ", emoji:"🐶" },
+  { name:"ねこ", emoji:"🐱" },
+  { name:"ぞう", emoji:"🐘" },
+  { name:"うさぎ", emoji:"🐰" },
+  { name:"くま", emoji:"🐻" },
+  { name:"ぱんだ", emoji:"🐼" },
+  { name:"とら", emoji:"🐯" },
+  { name:"さる", emoji:"🐵" },
+  { name:"きりん", emoji:"🦒" },
+  { name:"らいおん", emoji:"🦁" },
+  { name:"こあら", emoji:"🐨" },
+  { name:"ぺんぎん", emoji:"🐧" },
+  { name:"きつね", emoji:"🦊" },
+  { name:"ぶた", emoji:"🐷" },
+  { name:"ひよこ", emoji:"🐥" },
+  { name:"かえる", emoji:"🐸" }
+];
 
-  <script>
-    const animals = [
-      { name: 'いぬ', emoji: '🐶' },
-      { name: 'ねこ', emoji: '🐱' },
-      { name: 'ぞう', emoji: '🐘' },
-      { name: 'うさぎ', emoji: '🐰' },
-      { name: 'きりん', emoji: '🦒' },
-      { name: 'さる', emoji: '🐵' },
-      { name: 'ぶた', emoji: '🐷' },
-      { name: 'くま', emoji: '🐻' },
-      { name: 'ぱんだ', emoji: '🐼' },
-      { name: 'ひよこ', emoji: '🐥' },
-      { name: 'とら', emoji: '🐯' },
-      { name: 'かえる', emoji: '🐸' },
-      { name: 'きつね', emoji: '🦊' },
-      { name: 'こあら', emoji: '🐨' },
-      { name: 'らいおん', emoji: '🦁' },
-      { name: 'ぺんぎん', emoji: '🐧' }
-    ];
+let score = 0;
+let q = 0;
+let ans, choices, timer, t = 3, lock = false;
 
-    const totalQuestions = 10;
-    const secondsPerQuestion = 3;
+function rand() {
+  return [...data].sort(() => Math.random() - 0.5).slice(0, 4);
+}
 
-    const startOverlay = document.getElementById('startOverlay');
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const endBox = document.getElementById('endBox');
-    const questionEl = document.getElementById('question');
-    const countdownEl = document.getElementById('countdown');
-    const resultEl = document.getElementById('result');
-    const gridEl = document.getElementById('grid');
-    const scoreEl = document.getElementById('score');
-    const finalScoreEl = document.getElementById('finalScore');
+function next() {
+  if (q >= 10) {
+    end();
+    return;
+  }
 
-    let score = 0;
-    let qIndex = 0;
-    let currentChoices = [];
-    let currentAnswer = null;
-    let timer = null;
-    let timeLeft = secondsPerQuestion;
-    let locked = false;
+  lock = false;
+  document.getElementById('res').textContent = '';
+  document.getElementById('res').className = 'result';
 
-    function shuffle(arr) {
-      const a = [...arr];
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    }
+  choices = rand();
+  ans = choices[Math.floor(Math.random() * 4)];
+  document.getElementById('q').textContent = ans.name + 'はどれ？';
 
-    function pickQuestion() {
-      const choices = shuffle(animals).slice(0, 4);
-      const answer = choices[Math.floor(Math.random() * choices.length)];
-      return { choices: shuffle(choices), answer };
-    }
+  draw();
+  countdown();
+}
 
-    function renderChoices() {
-      gridEl.innerHTML = '';
-      currentChoices.forEach((item) => {
-        const btn = document.createElement('button');
-        btn.className = 'choice';
-        btn.innerHTML = `<div class="emoji">${item.emoji}</div><div class="name">${item.name}</div>`;
-        btn.addEventListener('click', () => handleChoice(item, btn));
-        gridEl.appendChild(btn);
-      });
-    }
+function draw() {
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
 
-    function startCountdown() {
+  choices.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.innerHTML = `<div class="emoji">${c.emoji}</div><div class="name">${c.name}</div>`;
+    b.onclick = () => click(c, b);
+    g.appendChild(b);
+  });
+}
+
+function countdown() {
+  clearInterval(timer);
+  t = 3;
+  document.getElementById('count').textContent = t;
+
+  timer = setInterval(() => {
+    t--;
+    document.getElementById('count').textContent = t;
+    if (t === 0) {
       clearInterval(timer);
-      timeLeft = secondsPerQuestion;
-      countdownEl.textContent = timeLeft;
-      timer = setInterval(() => {
-        timeLeft--;
-        countdownEl.textContent = timeLeft > 0 ? timeLeft : '0';
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          if (!locked) {
-            timeoutQuestion();
-          }
-        }
-      }, 1000);
+      timeout();
     }
+  }, 1000);
+}
 
-    function showResult(text, type) {
-      resultEl.textContent = text;
-      resultEl.className = `result ${type}`;
+function lightCorrectChoice() {
+  const buttons = document.querySelectorAll('.choice');
+  buttons.forEach((btn, i) => {
+    if (choices[i].name === ans.name) {
+      btn.classList.add('correct');
     }
+  });
+}
 
-    function clearResult() {
-      resultEl.textContent = '';
-      resultEl.className = 'result';
-    }
+function click(c, b) {
+  if (lock) return;
+  lock = true;
+  clearInterval(timer);
 
-    function nextQuestion() {
-      if (qIndex >= totalQuestions) {
-        endGame();
-        return;
-      }
+  if (c.name === ans.name) {
+    b.classList.add('correct');
+    document.getElementById('res').textContent = 'せいかい！';
+    document.getElementById('res').className = 'result ok';
+    score++;
+    document.getElementById('score').textContent = score;
+  } else {
+    b.classList.add('wrong');
+    lightCorrectChoice();
+    document.getElementById('res').textContent = 'ざんねん！';
+    document.getElementById('res').className = 'result ng';
+  }
 
-      locked = false;
-      clearResult();
-      const q = pickQuestion();
-      currentChoices = q.choices;
-      currentAnswer = q.answer;
-      questionEl.textContent = `${currentAnswer.name} は どれ？`;
-      renderChoices();
-      startCountdown();
-    }
+  q++;
+  setTimeout(next, 1000);
+}
 
-    function markCorrectChoice() {
-      const buttons = [...document.querySelectorAll('.choice')];
-      buttons.forEach((btn, i) => {
-        if (currentChoices[i].name === currentAnswer.name) {
-          btn.classList.add('correct');
-        }
-      });
-    }
+function timeout() {
+  if (lock) return;
+  lock = true;
+  lightCorrectChoice();
+  document.getElementById('res').textContent = 'じかんぎれ！';
+  document.getElementById('res').className = 'result ng';
+  q++;
+  setTimeout(next, 1000);
+}
 
-    function handleChoice(item, btn) {
-      if (locked) return;
-      locked = true;
-      clearInterval(timer);
+function end() {
+  document.getElementById('final').textContent = 'せいかい ' + score + '/10';
+  document.getElementById('end').style.display = 'flex';
+}
 
-      const allButtons = [...document.querySelectorAll('.choice')];
-      if (item.name === currentAnswer.name) {
-        btn.classList.add('correct');
-        score++;
-        scoreEl.textContent = score;
-        showResult('せいかい！', 'ok');
-      } else {
-        btn.classList.add('wrong');
-        markCorrectChoice();
-        showResult(`ざんねん！ ${item.name}`, 'ng');
-      }
+function startGame() {
+  document.getElementById('start').style.display = 'none';
+  score = 0;
+  q = 0;
+  document.getElementById('score').textContent = 0;
+  next();
+}
 
-      qIndex++;
-      setTimeout(nextQuestion, 900);
-    }
+function restart() {
+  document.getElementById('end').style.display = 'none';
+  startGame();
+}
+</script>
 
-    function timeoutQuestion() {
-      locked = true;
-      markCorrectChoice();
-      showResult('じかんぎれ！', 'ng');
-      qIndex++;
-      setTimeout(nextQuestion, 900);
-    }
-
-    function endGame() {
-      clearInterval(timer);
-      finalScoreEl.textContent = score;
-      endBox.style.display = 'flex';
-    }
-
-    function resetGame() {
-      clearInterval(timer);
-      score = 0;
-      qIndex = 0;
-      scoreEl.textContent = '0';
-      endBox.style.display = 'none';
-      nextQuestion();
-    }
-
-    startBtn.addEventListener('click', () => {
-      startOverlay.style.display = 'none';
-      resetGame();
-    });
-
-    restartBtn.addEventListener('click', resetGame);
-  </script>
 </body>
 </html>
