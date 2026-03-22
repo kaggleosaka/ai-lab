@@ -32,7 +32,7 @@
 
     .app{
       width:100%;
-      max-width:480px;
+      max-width:420px;
       min-height:100vh;
       padding:14px 14px 20px;
       display:flex;
@@ -82,7 +82,7 @@
     .big-btn{
       width:100%;
       padding:16px 18px;
-      font-size:24px;
+      font-size:22px;
       color:#fff;
       background:linear-gradient(180deg, #ffb347, #ff7b00);
     }
@@ -210,13 +210,13 @@
     }
 
     .fighter .name{
-      font-size:26px;
+      font-size:24px;
       font-weight:900;
       line-height:1.1;
     }
 
     .fighter .power{
-      font-size:24px;
+      font-size:22px;
       font-weight:900;
       background:#f7f7f7;
       border-radius:999px;
@@ -224,9 +224,9 @@
     }
 
     .fighter .token{
-      width:min(82vw, 360px);
+      width:min(78vw, 280px);
       max-width:100%;
-      max-height:40vh;
+      max-height:32vh;
       object-fit:contain;
       border-radius:20px;
       display:block;
@@ -250,7 +250,7 @@
     }
 
     .count{
-      font-size:64px;
+      font-size:56px;
       font-weight:900;
       line-height:1;
       color:#ff7b00;
@@ -258,7 +258,7 @@
     }
 
     .message{
-      font-size:28px;
+      font-size:24px;
       font-weight:900;
       min-height:42px;
     }
@@ -300,14 +300,14 @@
     }
 
     .dice-total{
-      font-size:34px;
+      font-size:30px;
       font-weight:900;
       color:#333;
       margin-top:4px;
     }
 
     .result-banner{
-      font-size:34px;
+      font-size:30px;
       font-weight:900;
       text-align:center;
       padding:12px;
@@ -360,12 +360,13 @@
 
     .hero-vs-grid{
       display:grid;
-      grid-template-columns:1fr auto 1fr;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
       align-items:center;
-      gap:8px;
+      gap:6px;
     }
 
     .hero-char{
+      min-width:0;
       display:flex;
       flex-direction:column;
       align-items:center;
@@ -374,8 +375,8 @@
 
     .hero-img{
       width:100%;
-      max-width:150px;
-      aspect-ratio:1/1.2;
+      max-width:118px;
+      aspect-ratio:1/1.15;
       object-fit:contain;
       border-radius:18px;
       background:#fff;
@@ -390,14 +391,14 @@
     }
 
     .hero-name{
-      font-size:clamp(18px,4vw,24px);
+      font-size:clamp(16px,4.2vw,24px);
       font-weight:900;
       text-align:center;
       line-height:1.1;
     }
 
     .hero-power{
-      font-size:clamp(20px,4vw,28px);
+      font-size:clamp(18px,4.5vw,28px);
       font-weight:900;
       background:#fff7df;
       border-radius:999px;
@@ -405,7 +406,7 @@
     }
 
     .hero-vs-text{
-      font-size:clamp(34px, 10vw, 58px);
+      font-size:clamp(28px, 8vw, 50px);
       font-weight:900;
       color:#ff2d55;
       text-shadow:0 3px 0 #fff;
@@ -417,6 +418,91 @@
       flex-direction:column;
       gap:10px;
       margin-top:12px;
+    }
+
+
+    @media (max-width: 390px){
+      .app{
+        padding:10px 10px 16px;
+      }
+      .pick-grid{
+        gap:8px;
+      }
+      .char-card{
+        min-height:170px;
+        padding:8px;
+      }
+      .char-thumb-wrap{
+        width:68px;
+        height:68px;
+      }
+      .char-thumb{
+        width:68px;
+        height:68px;
+      }
+      .char-name{
+        font-size:18px;
+      }
+      .char-power{
+        font-size:19px;
+        padding:4px 10px;
+      }
+      .hero-vs{
+        padding:10px 8px 12px;
+      }
+      .hero-img{
+        max-width:98px;
+      }
+      .hero-emoji{
+        font-size:58px;
+      }
+      .hero-vs-text{
+        font-size:30px;
+      }
+      .fighter{
+        padding:10px;
+      }
+      .fighter .token{
+        width:min(74vw, 240px);
+        max-height:28vh;
+      }
+      .fighter .name{
+        font-size:21px;
+      }
+      .fighter .power{
+        font-size:19px;
+        padding:4px 10px;
+      }
+      .count{
+        font-size:48px;
+        min-height:56px;
+      }
+      .message{
+        font-size:21px;
+        min-height:32px;
+      }
+      .submsg{
+        font-size:15px;
+        min-height:22px;
+      }
+      .dice-rolls{
+        font-size:19px;
+      }
+      .dice-total{
+        font-size:28px;
+      }
+      .result-banner{
+        font-size:26px;
+        padding:10px;
+      }
+      .big-btn{
+        font-size:20px;
+        padding:14px 16px;
+      }
+      .small-btn{
+        font-size:16px;
+        padding:10px 12px;
+      }
     }
 
     @media (min-width: 430px){
