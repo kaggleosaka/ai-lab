@@ -79,15 +79,15 @@
 
     .big-btn{
       width:100%;
-      padding:14px 16px;
-      font-size:21px;
+      padding:12px 14px;
+      font-size:20px;
       color:#fff;
       background:linear-gradient(180deg, #ffb347, #ff7b00);
     }
 
     .small-btn{
-      padding:10px 12px;
-      font-size:16px;
+      padding:9px 12px;
+      font-size:15px;
       color:#fff;
       background:linear-gradient(180deg, #70b7ff, #3d8cff);
       flex:1;
@@ -428,89 +428,91 @@
 
     .result-screen{
       background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.86));
-      border-radius:24px;
+      border-radius:22px;
       box-shadow:var(--shadow);
-      padding:14px 10px 16px;
+      padding:10px 8px 12px;
       text-align:center;
       overflow:hidden;
     }
 
     .result-icon{
-      font-size:56px;
+      font-size:42px;
       line-height:1;
-      margin-bottom:6px;
+      margin-bottom:2px;
       animation:popBounce 0.7s ease;
     }
 
     .result-title{
-      font-size:clamp(28px, 9vw, 40px);
+      font-size:clamp(24px, 8vw, 34px);
       font-weight:900;
-      line-height:1.1;
-      margin-bottom:6px;
+      line-height:1.05;
+      margin-bottom:2px;
       color:#ff7b00;
       text-shadow:0 2px 0 #fff;
       animation:popBounce 0.7s ease;
     }
 
     .result-sub{
-      font-size:clamp(18px, 5vw, 24px);
+      font-size:clamp(16px, 4.6vw, 20px);
       font-weight:900;
       color:#555;
-      margin-bottom:10px;
+      margin-bottom:6px;
+      line-height:1.1;
     }
 
     .result-char-wrap{
       display:flex;
       flex-direction:column;
       align-items:center;
-      gap:6px;
-      margin:8px 0 10px;
+      gap:4px;
+      margin:4px 0 6px;
     }
 
     .result-char-img{
-      width:min(74vw, 240px);
+      width:min(58vw, 180px);
       max-width:100%;
-      max-height:34vh;
+      max-height:24vh;
       object-fit:contain;
-      border-radius:18px;
+      border-radius:16px;
       display:block;
-      box-shadow:0 10px 22px rgba(0,0,0,.10);
+      box-shadow:0 8px 18px rgba(0,0,0,.10);
       background:#fff;
       animation:popBounce 0.7s ease;
     }
 
     .result-char-emoji{
-      font-size:84px;
+      font-size:64px;
       line-height:1;
       display:none;
       animation:popBounce 0.7s ease;
     }
 
     .result-char-name{
-      font-size:clamp(22px, 6vw, 30px);
+      font-size:clamp(18px, 5vw, 24px);
       font-weight:900;
-      line-height:1.1;
+      line-height:1.05;
     }
 
     .result-char-power{
-      font-size:clamp(20px, 5vw, 28px);
+      font-size:clamp(16px, 4.3vw, 22px);
       font-weight:900;
       background:#fff7df;
       border-radius:999px;
-      padding:4px 12px;
+      padding:3px 10px;
       white-space:nowrap;
     }
 
     .result-total{
-      font-size:clamp(22px, 5.5vw, 30px);
+      font-size:clamp(18px, 4.8vw, 24px);
       font-weight:900;
       color:#333;
-      margin:6px 0 10px;
+      margin:4px 0 6px;
+      line-height:1.1;
     }
 
 
     .result-dice-summary{
-      margin:8px auto 10px;
+      margin:4px auto 8px;
       max-width:320px;
     }
 
@@ -518,7 +520,7 @@
       display:flex;
       gap:8px;
       flex-direction:column;
-      margin-top:10px;
+      margin-top:6px;
     }
 
     @keyframes popBounce{
@@ -527,6 +529,83 @@
       100%{ transform:scale(1); opacity:1; }
     }
 
+
+
+    @media (max-height: 700px){
+      .app{
+        padding:8px 8px 10px;
+        gap:8px;
+      }
+      .result-screen{
+        padding:8px 6px 10px;
+      }
+      .result-icon{
+        font-size:34px;
+        margin-bottom:0;
+      }
+      .result-title{
+        font-size:22px;
+        margin-bottom:0;
+      }
+      .result-sub{
+        font-size:15px;
+        margin-bottom:4px;
+      }
+      .result-char-wrap{
+        margin:2px 0 4px;
+        gap:3px;
+      }
+      .result-char-img{
+        width:min(50vw, 145px);
+        max-height:18vh;
+      }
+      .result-char-emoji{
+        font-size:52px;
+      }
+      .result-char-name{
+        font-size:17px;
+      }
+      .result-char-power{
+        font-size:15px;
+        padding:2px 8px;
+      }
+      .result-total{
+        font-size:16px;
+        margin:2px 0 4px;
+      }
+      .result-dice-summary{
+        margin:2px auto 6px;
+      }
+      .dice-area{
+        gap:5px;
+      }
+      .dice-box{
+        padding:6px 4px;
+      }
+      .dice-title{
+        font-size:12px;
+        margin-bottom:2px;
+      }
+      .dice-rolls{
+        font-size:14px;
+        min-height:18px;
+      }
+      .dice-total{
+        font-size:16px;
+      }
+      .result-actions{
+        margin-top:4px;
+        gap:6px;
+      }
+      .big-btn{
+        padding:10px 12px;
+        font-size:18px;
+      }
+      .small-btn{
+        padding:8px 10px;
+        font-size:14px;
+      }
+    }
 
     @media (min-width: 430px){
       .app{
@@ -552,7 +631,7 @@
       .hero-actions{ flex-direction:row; gap:10px; }
   
     .result-dice-summary{
-      margin:8px auto 10px;
+      margin:4px auto 8px;
       max-width:320px;
     }
 
@@ -597,9 +676,7 @@
 
       <button id="startBtn" class="big-btn">スタート！</button>
 
-      <div class="foot-note">
-        dice-battle-char1.png ～ dice-battle-char6.png があれば画像表示、なければ絵文字で動きます
-      </div>
+      
     </section>
 
     <section id="screenPick" class="screen hidden">
@@ -1051,7 +1128,12 @@
       prepareIntro();
     }
 
-    startBtn.addEventListener("click", () => showScreen("pick"));
+    startBtn.addEventListener("click", () => {
+      selectedChar = characters[Math.floor(Math.random()*characters.length)];
+      cpuChar = randomCpu();
+      setIntroView();
+      showScreen("intro");
+    });
     battleBtn.addEventListener("click", prepareIntro);
     goBattleBtn.addEventListener("click", startBattle);
     reselectBtn.addEventListener("click", resetToPick);
@@ -1061,7 +1143,10 @@
     (async function init(){
       await preloadImages();
       buildPickGrid();
-      showScreen("title");
+      selectedChar = characters[Math.floor(Math.random()*characters.length)];
+      cpuChar = randomCpu();
+      setIntroView();
+      showScreen("intro");
     })();
   </script>
 </body>
