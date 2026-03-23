@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>犬のママはどれ？（スクロール最小版）</title>
+<style>
+:root{
+  --bg1:#fff7f2;
+  --bg2:#eefbff;
+  --card:#ffffff;
+  --text:#2b2b2b;
+  --accent:#ff8a65;
+  --ok:#17a34a;
+  --ng:#e23d3d;
+  --shadow:0 8px 20px rgba(0,0,0,.10);
+  --radius:20px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  font-family:"Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left, #fffef8 0%, transparent 30%),
+    linear-gradient(160deg,var(--bg1),var(--bg2));
+}
+body{
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:4px;
+  overflow-y:auto;
+}
+.app{
+  width:min(100%, 560px);
+  background:rgba(255,255,255,.52);
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,.6);
+  border-radius:24px;
+  box-shadow:var(--shadow);
+  overflow:visible;
+}
+.top{padding:8px 10px 4px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.pill{background:#fff;border-radius:999px;padding:6px 10px;box-shadow:var(--shadow);font-weight:800;font-size:12px;white-space:nowrap}
+.titleBox{padding:0 10px;text-align:center}
+h1{margin:0;font-size:22px;line-height:1.05}
+.sub{margin-top:2px;font-size:11px;opacity:.82;font-weight:700}
+.stage{padding:6px 10px 8px;display:flex;flex-direction:column;gap:8px}
+.question{background:#fff;border-radius:18px;box-shadow:var(--shadow);padding:9px 8px;text-align:center;font-weight:900;font-size:19px;line-height:1.15}
+.hero{background:#fff;border-radius:18px;box-shadow:var(--shadow);padding:8px;display:flex;justify-content:center;align-items:center;min-height:132px;position:relative}
+.hero .badge{position:absolute;top:7px;left:7px;font-size:10px;font-weight:800;background:#fff8d8;border-radius:999px;padding:4px 7px;border:1px solid #f0df95}
+.heroBox{width:100%;display:flex;align-items:center;justify-content:center}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:start}
+.card{appearance:none;border:none;background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:6px 6px 7px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px;cursor:pointer;transition:transform .12s ease, outline-color .12s ease;outline:3px solid transparent;overflow:hidden}
+.card:active{ transform:scale(.97) }
+.card.correct{ outline-color:rgba(23,163,74,.35); animation:popCorrect .35s ease; }
+.card.wrong{ outline-color:rgba(226,61,61,.35); animation:shakeWrong .35s ease; }
+.visual{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:14px;background:linear-gradient(180deg,#fffdfb,#fff6f0);overflow:hidden}
+.visual img{width:100%;height:100%;object-fit:cover;display:block;background:#fff}
+.fallbackText{font-size:18px;line-height:1.2;font-weight:900;text-align:center;padding:8px}
+.label{font-weight:900;font-size:14px;line-height:1.05;text-align:center}
+.meta{font-size:10px;opacity:.78;font-weight:700;text-align:center}
+.bottom{padding:0 10px 8px;display:flex;flex-direction:column;gap:6px}
+.message{min-height:36px;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;text-align:center;padding:6px 8px;font-size:15px;font-weight:900}
+.controls{display:flex;gap:8px}
+.btn{flex:1;border:none;border-radius:15px;padding:10px 10px;font-size:14px;font-weight:900;cursor:pointer;box-shadow:var(--shadow)}
+.primary{ background:var(--accent); color:#fff; }
+.secondary{ background:#fff; color:var(--text); }
+.footer{text-align:center;font-size:9px;opacity:.68;padding:0 8px 6px;font-weight:700}
+.hidden{display:none!important}
+.topScreen{display:flex;flex-direction:column;gap:10px;width:100%}
+.topDogs{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:300px;margin:0 auto}
+.topDogCard{background:#fff7fb;border-radius:16px;padding:8px;box-shadow:var(--shadow);text-align:center}
+.topDogLabel{margin-top:6px;font-size:13px;font-weight:900}
+.bigStart{background:linear-gradient(180deg,#ff9b80,#ff8a65);color:#fff;border:none;border-radius:18px;padding:12px 16px;font-size:20px;font-weight:900;box-shadow:var(--shadow)}
+.helpText{text-align:center;font-size:15px;font-weight:900;line-height:1.35}
+@keyframes popCorrect{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes shakeWrong{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+@media (min-width:421px){body{padding:8px}.app{border-radius:28px}h1{font-size:26px}.sub{font-size:12px}.question{font-size:22px}.hero{min-height:150px}.message{font-size:17px}.btn{font-size:15px}}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="pill">🎯 もんだい <span id="roundNum">1</span>/10</div>
+      <div class="pill">⭐ せいかい <span id="scoreNum">0</span></div>
+    </div>
+
+    <div class="titleBox">
+      <h1>犬の ママは どれ？</h1>
+      <div class="sub">赤ちゃん犬をみて ママ犬を えらぼう！</div>
+    </div>
+
+    <div class="stage">
+      <div class="question" id="questionText">よーい スタート！</div>
+
+      <div class="hero" id="heroBox">
+        <div class="badge" id="heroBadge">TOP</div>
+        <div class="heroBox" id="heroVisual"></div>
+      </div>
+
+      <div class="choices hidden" id="choices"></div>
+    </div>
+
+    <div class="bottom">
+      <div class="message" id="messageBox">スタートをおしてね</div>
+      <div class="controls">
+        <button class="btn secondary" id="restartBtn">🔄 はじめから</button>
+        <button class="btn primary" id="nextBtn">▶ スタート</button>
+      </div>
+    </div>
+
+    <div class="footer">同じフォルダに split_output_dogs の画像があれば表示します</div>
+  </div>
+
+<script>
+const DOGS = [
+  { key:'toy_poodle', jp:'トイプードル', fallback:'🐩' },
+  { key:'chihuahua', jp:'チワワ', fallback:'🐶' },
+  { key:'pomeranian', jp:'ポメラニアン', fallback:'🐶' },
+  { key:'yorkshire_terrier', jp:'ヨークシャーテリア', fallback:'🐶' },
+  { key:'shiba_inu', jp:'しばいぬ', fallback:'🐕' },
+  { key:'golden_retriever', jp:'ゴールデンレトリバー', fallback:'🐕' },
+  { key:'labrador_retriever', jp:'ラブラドールレトリバー', fallback:'🐕' },
+  { key:'dalmatian', jp:'ダルメシアン', fallback:'🐕' },
+  { key:'siberian_husky', jp:'シベリアンハスキー', fallback:'🐕' },
+  { key:'corgi', jp:'コーギー', fallback:'🐶' },
+  { key:'pug', jp:'パグ', fallback:'🐶' },
+  { key:'shetland_sheepdog', jp:'シェットランドシープドッグ', fallback:'🐕' }
+];
+const QUIZ_TOTAL = 10;
+const IMAGE_BASE = 'split_output_dogs/';
+
+const state = { round: 0, score: 0, answered: false, current: null, screen: 'top' };
+const el = {
+  questionText: document.getElementById('questionText'),
+  heroVisual: document.getElementById('heroVisual'),
+  heroBadge: document.getElementById('heroBadge'),
+  choices: document.getElementById('choices'),
+  messageBox: document.getElementById('messageBox'),
+  nextBtn: document.getElementById('nextBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  roundNum: document.getElementById('roundNum'),
+  scoreNum: document.getElementById('scoreNum'),
+};
+
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function sample(arr, n, excludeKey){ const filtered = excludeKey ? arr.filter(x => x.key !== excludeKey) : [...arr]; return shuffle(filtered).slice(0, n); }
+function fileCandidates(item, type){ return [IMAGE_BASE + `${item.key}_${type}.png`, `${item.key}_${type}.png`]; }
+
+function makeVisual(item, type){
+  const wrap = document.createElement('div');
+  wrap.className = 'visual';
+  const img = document.createElement('img');
+  img.alt = `${item.jp} ${type}`;
+  const fallback = document.createElement('div');
+  fallback.className = 'fallbackText hidden';
+  fallback.innerHTML = type === 'baby' ? `${item.fallback}<br>あかちゃん` : `${item.fallback}<br>ママ`;
+  const candidates = fileCandidates(item, type);
+  let idx = 0;
+  function tryNext(){
+    if(idx >= candidates.length){ img.remove(); fallback.classList.remove('hidden'); return; }
+    img.src = candidates[idx++];
+  }
+  img.onerror = () => tryNext();
+  tryNext();
+  wrap.appendChild(img);
+  wrap.appendChild(fallback);
+  return wrap;
+}
+
+function createCard(item, index){
+  const button = document.createElement('button');
+  button.className = 'card';
+  button.dataset.index = index;
+  const visual = makeVisual(item, 'mama');
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = item.jp;
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = 'ママいぬ';
+  button.appendChild(visual); button.appendChild(label); button.appendChild(meta);
+  button.addEventListener('click', () => answer(index, button));
+  return button;
+}
+
+function renderHero(item, type){
+  el.heroVisual.innerHTML = '';
+  const visual = makeVisual(item, type);
+  visual.style.maxWidth = window.innerWidth <= 420 ? '170px' : '210px';
+  visual.style.width = '100%';
+  el.heroVisual.appendChild(visual);
+}
+
+function renderTopScreen(){
+  state.screen = 'top'; state.round = 0; state.score = 0; state.answered = false; state.current = null;
+  el.roundNum.textContent = '1'; el.scoreNum.textContent = '0';
+  el.questionText.textContent = '赤ちゃん犬の ママを あてよう！';
+  el.heroBadge.textContent = 'TOP';
+  el.choices.classList.add('hidden'); el.heroVisual.innerHTML = '';
+
+  const topWrap = document.createElement('div'); topWrap.className = 'topScreen';
+  const help = document.createElement('div'); help.className = 'helpText'; help.innerHTML = '赤ちゃん犬をみて<br>ママ犬をえらんでね！'; topWrap.appendChild(help);
+  const dogs = document.createElement('div'); dogs.className = 'topDogs';
+
+  const babyCard = document.createElement('div'); babyCard.className = 'topDogCard';
+  const babyVisual = makeVisual({ key:'toy_poodle', jp:'トイプードル', fallback:'🐩' }, 'baby');
+  const babyLabel = document.createElement('div'); babyLabel.className = 'topDogLabel'; babyLabel.textContent = 'あかちゃん';
+  babyCard.appendChild(babyVisual); babyCard.appendChild(babyLabel);
+
+  const mamaCard = document.createElement('div'); mamaCard.className = 'topDogCard';
+  const mamaVisual = makeVisual({ key:'toy_poodle', jp:'トイプードル', fallback:'🐩' }, 'mama');
+  const mamaLabel = document.createElement('div'); mamaLabel.className = 'topDogLabel'; mamaLabel.textContent = 'ママ';
+  mamaCard.appendChild(mamaVisual); mamaCard.appendChild(mamaLabel);
+
+  dogs.appendChild(babyCard); dogs.appendChild(mamaCard); topWrap.appendChild(dogs);
+  const start = document.createElement('button'); start.className = 'bigStart'; start.type = 'button'; start.textContent = '▶ スタート'; start.addEventListener('click', startGame); topWrap.appendChild(start);
+  el.heroVisual.appendChild(topWrap); el.messageBox.textContent = 'スタートをおしてね'; el.messageBox.style.color = ''; el.nextBtn.textContent = '▶ スタート';
+}
+
+function makeQuestion(){
+  state.screen = 'quiz';
+  const target = shuffle(DOGS)[0];
+  const wrongs = sample(DOGS, 3, target.key);
+  const options = shuffle([target, ...wrongs]);
+  state.current = { target, correctIndex: options.findIndex(x => x.key === target.key), options };
+  state.answered = false;
+  el.questionText.textContent = 'この あかちゃんの ママは どれ？';
+  el.heroBadge.textContent = 'あかちゃん';
+  renderHero(target, 'baby');
+  el.choices.innerHTML = ''; el.choices.classList.remove('hidden');
+  options.forEach((item, index) => el.choices.appendChild(createCard(item, index)));
+  el.messageBox.textContent = 'タップして こたえてね！'; el.messageBox.style.color = '';
+  el.nextBtn.textContent = state.round >= QUIZ_TOTAL ? '🏁 けっか' : '▶ つぎへ';
+  el.roundNum.textContent = String(state.round); el.scoreNum.textContent = String(state.score);
+}
+
+function answer(index, button){
+  if(state.answered || state.screen !== 'quiz') return;
+  state.answered = true;
+  const buttons = [...document.querySelectorAll('.card')];
+  const correctBtn = buttons[state.current.correctIndex];
+  const correctItem = state.current.options[state.current.correctIndex];
+  if(index === state.current.correctIndex){ state.score += 1; button.classList.add('correct'); el.messageBox.textContent = '⭕ せいかい！'; el.messageBox.style.color = 'var(--ok)'; }
+  else { button.classList.add('wrong'); if(correctBtn) correctBtn.classList.add('correct'); el.messageBox.textContent = `❌ ちがう！ せいかいは「${correctItem.jp}」`; el.messageBox.style.color = 'var(--ng)'; }
+  renderHero(correctItem, 'mama'); el.heroBadge.textContent = 'こたえ'; el.scoreNum.textContent = String(state.score);
+  if(state.round >= QUIZ_TOTAL){ el.nextBtn.textContent = '🏁 けっか'; }
+}
+
+function showResult(){
+  state.screen = 'result'; el.questionText.textContent = 'おしまい！'; el.heroBadge.textContent = 'けっか'; el.heroVisual.innerHTML = '';
+  const big = document.createElement('div'); big.className = 'fallbackText'; big.style.fontSize = '40px'; big.innerHTML = state.score >= 8 ? '🎉<br>すごい！' : state.score >= 5 ? '👏<br>がんばった！' : '😊<br>またやってね！';
+  el.heroVisual.appendChild(big); el.choices.innerHTML = ''; el.choices.classList.add('hidden'); el.messageBox.style.color = ''; el.messageBox.textContent = `10もんちゅう ${state.score}もん せいかい！`; el.nextBtn.textContent = '🔁 もういちど';
+}
+function startGame(){ state.round = 1; makeQuestion(); }
+function nextStep(){ if(state.screen === 'top'){ startGame(); return; } if(state.screen === 'result'){ renderTopScreen(); return; } if(!state.answered){ el.messageBox.textContent = 'まず こたえてね！'; return; } if(state.round >= QUIZ_TOTAL){ showResult(); return; } state.round += 1; makeQuestion(); }
+function resetGame(){ renderTopScreen(); }
+el.nextBtn.addEventListener('click', nextStep); el.restartBtn.addEventListener('click', resetGame); renderTopScreen();
+</script>
+</body>
+</html>
