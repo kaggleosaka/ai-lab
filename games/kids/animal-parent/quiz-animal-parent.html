@@ -130,29 +130,25 @@
       background:var(--card);
       border-radius:22px;
       box-shadow:var(--shadow);
-      padding:8px 8px;
-      min-height:0;
+      padding:8px 8px 10px;
+      min-height:158px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:flex-start;
-      gap:6px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
+      gap:8px;
       cursor:pointer;
-      transition:transform .08s ease, box-shadow .08s ease, outline-color .08s ease;
+      transition:transform .12s ease, box-shadow .12s ease, outline-color .12s ease;
       outline:4px solid transparent;
+      overflow:hidden;
     }
     .card:active{ transform:scale(.98) }
-    .card.correct{ outline-color:rgba(23,163,74,.35); }
-    .card.wrong{ outline-color:rgba(226,61,61,.35); }
+    .card.correct{ outline-color:rgba(23,163,74,.35); animation:popCorrect .35s ease; }
+    .card.wrong{ outline-color:rgba(226,61,61,.35); animation:shakeWrong .35s ease; }
     .visual{
       width:100%;
-      height:86px;
-      flex:0 0 86px;
+      height:100px;
+      flex:0 0 100px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -163,9 +159,10 @@
     .visual img{
       width:100%;
       height:100%;
-      object-fit:contain;
+      object-fit:cover;
       display:block;
       background:#fff;
+      border-radius:14px;
     }
     .emoji{
       font-size:52px;
@@ -230,6 +227,19 @@
     }
     .hidden{display:none!important}
 
+    @keyframes popCorrect{
+      0%{transform:scale(1)}
+      50%{transform:scale(1.06)}
+      100%{transform:scale(1)}
+    }
+    @keyframes shakeWrong{
+      0%{transform:translateX(0)}
+      25%{transform:translateX(-6px)}
+      50%{transform:translateX(6px)}
+      75%{transform:translateX(-4px)}
+      100%{transform:translateX(0)}
+    }
+
     @media (max-width:420px){
       body{padding:4px}
       .app{height:calc(100vh - 8px)}
@@ -244,7 +254,7 @@
       .hero .badge{font-size:11px;padding:5px 8px}
       .choices{gap:8px}
       .card{padding:7px 6px;border-radius:18px}
-      .visual{height:72px;flex:0 0 72px}
+      .visual{height:84px;flex:0 0 84px}
       .emoji{font-size:42px}
       .label{font-size:15px}
       .meta{font-size:11px}
