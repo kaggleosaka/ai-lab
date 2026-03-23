@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>どうぶつ親子クイズ（TOP画面つき）</title>
+<style>
+:root{
+  --bg1:#fff7e8;
+  --bg2:#ffe6f2;
+  --card:#ffffff;
+  --text:#2b2b2b;
+  --accent:#ff7a59;
+  --accent2:#5b8cff;
+  --ok:#17a34a;
+  --ng:#e23d3d;
+  --shadow:0 10px 28px rgba(0,0,0,.10);
+  --radius:24px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  margin:0;
+  padding:0;
+  font-family:"Hiragino Sans","Yu Gothic","Meiryo",system-ui,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at top left, #fffef0 0%, transparent 30%),
+    linear-gradient(160deg,var(--bg1),var(--bg2));
+  min-height:100vh;
+}
+body{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:8px;
+}
+.app{
+  width:min(100%, 560px);
+  min-height:calc(100vh - 16px);
+  background:rgba(255,255,255,.52);
+  backdrop-filter: blur(10px);
+  border:1px solid rgba(255,255,255,.6);
+  border-radius:28px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.top{
+  padding:10px 14px 6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+}
+.pill{
+  background:#fff;
+  border-radius:999px;
+  padding:8px 12px;
+  box-shadow:var(--shadow);
+  font-weight:700;
+  font-size:12px;
+  white-space:nowrap;
+}
+.titleBox{
+  padding:2px 14px 0;
+  text-align:center;
+}
+h1{
+  margin:0;
+  font-size:clamp(24px, 4.4vw, 34px);
+  line-height:1.05;
+}
+.sub{
+  margin-top:4px;
+  font-size:12px;
+  opacity:.8;
+  font-weight:700;
+}
+.stage{
+  padding:8px 14px 8px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  flex:1;
+}
+.question{
+  background:#fff;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:12px 12px;
+  text-align:center;
+  font-weight:900;
+  font-size:clamp(22px, 4.6vw, 34px);
+  line-height:1.15;
+  flex:0 0 auto;
+}
+.hero{
+  background:#fff;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:10px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:220px;
+  position:relative;
+  flex:0 0 auto;
+}
+.hero .badge{
+  position:absolute;
+  top:8px;
+  left:8px;
+  font-size:12px;
+  font-weight:800;
+  background:#fff8d8;
+  border-radius:999px;
+  padding:6px 10px;
+  border:1px solid #f0df95;
+}
+.heroBox{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.choices{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.card{
+  appearance:none;
+  border:none;
+  background:var(--card);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+  padding:8px 8px 10px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, outline-color .12s ease;
+  outline:4px solid transparent;
+  overflow:hidden;
+  min-height:unset;
+  height:100%;
+}
+.card:active{ transform:scale(.96) }
+.card.correct{ outline-color:rgba(23,163,74,.35); animation:popCorrect .35s ease; }
+.card.wrong{ outline-color:rgba(226,61,61,.35); animation:shakeWrong .35s ease; }
+.visual{
+  width:100%;
+  aspect-ratio:1/1;
+  height:auto;
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:18px;
+  background:linear-gradient(180deg,#fffdfb,#fff6f0);
+  overflow:hidden;
+}
+.visual img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  background:#fff;
+}
+.emoji{
+  font-size:52px;
+  line-height:1;
+  user-select:none;
+}
+.label{
+  font-weight:900;
+  font-size:16px;
+  line-height:1.1;
+  text-align:center;
+}
+.meta{
+  font-size:14px;
+  opacity:.78;
+  font-weight:700;
+  text-align:center;
+}
+.bottom{
+  padding:0 14px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.message{
+  min-height:48px;
+  border-radius:20px;
+  background:#fff;
+  box-shadow:var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:10px;
+  font-size:clamp(18px, 3.6vw, 24px);
+  font-weight:900;
+}
+.controls{
+  display:flex;
+  gap:10px;
+}
+.btn{
+  flex:1;
+  border:none;
+  border-radius:18px;
+  padding:14px 16px;
+  font-size:16px;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+}
+.primary{ background:var(--accent); color:#fff; }
+.secondary{ background:#fff; color:var(--text); }
+.footer{
+  text-align:center;
+  font-size:11px;
+  opacity:.68;
+  padding:0 10px 8px;
+  font-weight:700;
+}
+.hidden{display:none!important}
+.topScreen{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.topAnimals{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  width:100%;
+  max-width:380px;
+  margin:0 auto;
+}
+.topAnimalCard{
+  background:#fff7fb;
+  border-radius:20px;
+  padding:10px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+.topAnimalLabel{
+  margin-top:8px;
+  font-size:15px;
+  font-weight:900;
+}
+.bigStart{
+  background:linear-gradient(180deg,#ff8e72,#ff7a59);
+  color:#fff;
+  border:none;
+  border-radius:22px;
+  padding:16px 20px;
+  font-size:24px;
+  font-weight:900;
+  box-shadow:var(--shadow);
+}
+.helpText{
+  text-align:center;
+  font-size:18px;
+  font-weight:900;
+  line-height:1.4;
+}
+@keyframes popCorrect{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.06)}
+  100%{transform:scale(1)}
+}
+@keyframes shakeWrong{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-6px)}
+  50%{transform:translateX(6px)}
+  75%{transform:translateX(-4px)}
+  100%{transform:translateX(0)}
+}
+@media (max-width:420px){
+  body{padding:4px}
+  .app{min-height:calc(100vh - 8px)}
+  .top{padding:8px 10px 4px}
+  .pill{padding:7px 10px;font-size:13px}
+  .titleBox{padding:0 10px}
+  h1{font-size:22px}
+  .sub{font-size:11px}
+  .stage{padding:6px 10px 6px;gap:8px}
+  .question{font-size:19px;padding:10px 8px}
+  .hero{min-height:205px;padding:8px}
+  .hero .badge{font-size:11px;padding:5px 8px}
+  .choices{gap:8px}
+  .card{padding:7px 6px;border-radius:18px}
+  .emoji{font-size:42px}
+  .label{font-size:15px}
+  .meta{font-size:11px}
+  .bottom{padding:0 10px 8px;gap:6px}
+  .message{min-height:42px;font-size:17px;padding:8px}
+  .btn{padding:10px 12px;font-size:15px}
+  .footer{font-size:10px;padding:0 8px 6px}
+  .bigStart{font-size:22px;padding:14px 16px}
+  .helpText{font-size:16px}
+}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="top">
+      <div class="pill">🎯 もんだい <span id="roundNum">1</span>/10</div>
+      <div class="pill">⭐ せいかい <span id="scoreNum">0</span></div>
+    </div>
+
+    <div class="titleBox">
+      <h1>どうぶつ親子クイズ</h1>
+      <div class="sub">画像がなくても 絵文字で あそべるよ</div>
+    </div>
+
+    <div class="stage">
+      <div class="question" id="questionText">よーい スタート！</div>
+
+      <div class="hero" id="heroBox">
+        <div class="badge" id="heroBadge">みほん</div>
+        <div class="heroBox" id="heroVisual"></div>
+      </div>
+
+      <div class="choices hidden" id="choices"></div>
+    </div>
+
+    <div class="bottom">
+      <div class="message" id="messageBox">スタートをおしてね</div>
+      <div class="controls">
+        <button class="btn secondary" id="restartBtn">🔄 はじめから</button>
+        <button class="btn primary" id="nextBtn">▶ スタート</button>
+      </div>
+    </div>
+
+    <div class="footer">同じフォルダに dog_baby.png のような画像があれば自動で表示します</div>
+  </div>
+
+<script>
+const ANIMALS = [
+  { key:'dog', jp:'いぬ', emoji:'🐶' },
+  { key:'wolf', jp:'おおかみ', emoji:'🐺' },
+  { key:'fox', jp:'きつね', emoji:'🦊' },
+  { key:'rhino', jp:'さい', emoji:'🦏' },
+  { key:'owl', jp:'ふくろう', emoji:'🦉' },
+  { key:'hippo', jp:'かば', emoji:'🦛' },
+  { key:'chicken', jp:'にわとり', emoji:'🐔' },
+  { key:'cat', jp:'ねこ', emoji:'🐱' },
+  { key:'lion', jp:'らいおん', emoji:'🦁' },
+  { key:'mouse', jp:'ねずみ', emoji:'🐭' },
+  { key:'otter', jp:'かわうそ', emoji:'🦦' },
+  { key:'sea_otter', jp:'らっこ', emoji:'🦦' },
+  { key:'pigeon', jp:'はと', emoji:'🐦' },
+  { key:'cheetah', jp:'ちーたー', emoji:'🐆' },
+  { key:'eagle', jp:'わし', emoji:'🦅' },
+  { key:'mole', jp:'もぐら', emoji:'🐹' },
+  { key:'hyena', jp:'はいえな', emoji:'🐕' },
+  { key:'seagull', jp:'かもめ', emoji:'🐦' }
+];
+const QUIZ_TOTAL = 10;
+const state = {
+  round: 0,
+  score: 0,
+  answered: false,
+  current: null,
+  screen: 'top'
+};
+const el = {
+  questionText: document.getElementById('questionText'),
+  heroVisual: document.getElementById('heroVisual'),
+  heroBadge: document.getElementById('heroBadge'),
+  choices: document.getElementById('choices'),
+  messageBox: document.getElementById('messageBox'),
+  nextBtn: document.getElementById('nextBtn'),
+  restartBtn: document.getElementById('restartBtn'),
+  roundNum: document.getElementById('roundNum'),
+  scoreNum: document.getElementById('scoreNum'),
+};
+function shuffle(arr){
+  const a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function sample(arr, n, excludeKey){
+  const filtered = excludeKey ? arr.filter(x => x.key !== excludeKey) : [...arr];
+  return shuffle(filtered).slice(0, n);
+}
+function makeVisual(animal, age){
+  const wrap = document.createElement('div');
+  wrap.className = 'visual';
+  const img = document.createElement('img');
+  img.alt = `${animal.jp} ${age}`;
+  img.src = `${animal.key}_${age}.png`;
+  const emoji = document.createElement('div');
+  emoji.className = 'emoji hidden';
+  emoji.textContent = animal.emoji;
+  img.onerror = () => {
+    img.remove();
+    emoji.classList.remove('hidden');
+  };
+  wrap.appendChild(img);
+  wrap.appendChild(emoji);
+  return wrap;
+}
+function createCard(animal, age, index){
+  const button = document.createElement('button');
+  button.className = 'card';
+  button.dataset.index = index;
+  const visual = makeVisual(animal, age);
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = animal.jp;
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = age === 'baby' ? 'あかちゃん' : 'ママ';
+  button.appendChild(visual);
+  button.appendChild(label);
+  button.appendChild(meta);
+  button.addEventListener('click', () => answer(index, button));
+  return button;
+}
+function renderHero(animal, age){
+  el.heroVisual.innerHTML = '';
+  const visual = makeVisual(animal, age);
+  visual.style.maxWidth = '240px';
+  visual.style.width = '100%';
+  el.heroVisual.appendChild(visual);
+}
+function renderTopScreen(){
+  state.screen = 'top';
+  state.round = 0;
+  state.score = 0;
+  state.answered = false;
+  state.current = null;
+  el.roundNum.textContent = '1';
+  el.scoreNum.textContent = '0';
+  el.questionText.textContent = 'どうぶつの 親子を あてよう！';
+  el.heroBadge.textContent = 'TOP';
+  el.choices.classList.add('hidden');
+  el.heroVisual.innerHTML = '';
+
+  const topWrap = document.createElement('div');
+  topWrap.className = 'topScreen';
+
+  const help = document.createElement('div');
+  help.className = 'helpText';
+  help.innerHTML = 'あかちゃんをみて<br>ママをえらんでね！';
+  topWrap.appendChild(help);
+
+  const animals = document.createElement('div');
+  animals.className = 'topAnimals';
+
+  const mamaCard = document.createElement('div');
+  mamaCard.className = 'topAnimalCard';
+  const mamaVisual = makeVisual({ key:'lion', jp:'らいおん', emoji:'🦁' }, 'mama');
+  const mamaLabel = document.createElement('div');
+  mamaLabel.className = 'topAnimalLabel';
+  mamaLabel.textContent = 'ママ';
+  mamaCard.appendChild(mamaVisual);
+  mamaCard.appendChild(mamaLabel);
+
+  const babyCard = document.createElement('div');
+  babyCard.className = 'topAnimalCard';
+  const babyVisual = makeVisual({ key:'lion', jp:'らいおん', emoji:'🦁' }, 'baby');
+  const babyLabel = document.createElement('div');
+  babyLabel.className = 'topAnimalLabel';
+  babyLabel.textContent = 'あかちゃん';
+  babyCard.appendChild(babyVisual);
+  babyCard.appendChild(babyLabel);
+
+  animals.appendChild(mamaCard);
+  animals.appendChild(babyCard);
+  topWrap.appendChild(animals);
+
+  const start = document.createElement('button');
+  start.className = 'bigStart';
+  start.type = 'button';
+  start.textContent = '▶ スタート';
+  start.addEventListener('click', startGame);
+  topWrap.appendChild(start);
+
+  el.heroVisual.appendChild(topWrap);
+  el.messageBox.textContent = 'スタートをおしてね';
+  el.messageBox.style.color = '';
+  el.nextBtn.textContent = '▶ スタート';
+}
+function makeQuestion(){
+  state.screen = 'quiz';
+  const target = shuffle(ANIMALS)[0];
+  const mode = Math.random() < 0.5 ? 'findMama' : 'findBaby';
+  let prompt = '';
+  let heroAge = '';
+  let choiceAge = '';
+  let heroBadge = '';
+  if(mode === 'findMama'){
+    prompt = `${target.jp} の ママは どれ？`;
+    heroAge = 'baby';
+    choiceAge = 'mama';
+    heroBadge = 'あかちゃん';
+  } else {
+    prompt = `${target.jp} の あかちゃんは どれ？`;
+    heroAge = 'mama';
+    choiceAge = 'baby';
+    heroBadge = 'ママ';
+  }
+  const wrongs = sample(ANIMALS, 3, target.key);
+  const options = shuffle([target, ...wrongs]);
+  state.current = {
+    targetKey: target.key,
+    target,
+    mode,
+    heroAge,
+    choiceAge,
+    correctIndex: options.findIndex(x => x.key === target.key),
+    options
+  };
+  state.answered = false;
+  el.questionText.textContent = prompt;
+  el.heroBadge.textContent = heroBadge;
+  renderHero(target, heroAge);
+  el.choices.innerHTML = '';
+  el.choices.classList.remove('hidden');
+  options.forEach((animal, index) => {
+    el.choices.appendChild(createCard(animal, choiceAge, index));
+  });
+  el.messageBox.textContent = 'タップして こたえてね！';
+  el.messageBox.style.color = '';
+  el.nextBtn.textContent = state.round >= QUIZ_TOTAL ? '🏁 けっか' : '▶ つぎへ';
+  el.roundNum.textContent = String(state.round);
+  el.scoreNum.textContent = String(state.score);
+}
+function answer(index, button){
+  if(state.answered || state.screen !== 'quiz') return;
+  state.answered = true;
+  const buttons = [...document.querySelectorAll('.card')];
+  const correctBtn = buttons[state.current.correctIndex];
+  if(index === state.current.correctIndex){
+    state.score += 1;
+    button.classList.add('correct');
+    el.messageBox.textContent = '⭕ せいかい！';
+    el.messageBox.style.color = 'var(--ok)';
+  } else {
+    button.classList.add('wrong');
+    if(correctBtn) correctBtn.classList.add('correct');
+    el.messageBox.textContent = `❌ ちがう！ せいかいは「${state.current.target.jp}」`;
+    el.messageBox.style.color = 'var(--ng)';
+  }
+  el.scoreNum.textContent = String(state.score);
+  if(state.round >= QUIZ_TOTAL){
+    el.nextBtn.textContent = '🏁 けっか';
+  }
+}
+function showResult(){
+  state.screen = 'result';
+  el.questionText.textContent = 'おしまい！';
+  el.heroBadge.textContent = 'けっか';
+  el.heroVisual.innerHTML = '';
+  const big = document.createElement('div');
+  big.className = 'emoji';
+  big.style.fontSize = '78px';
+  big.textContent = state.score >= 8 ? '🎉' : state.score >= 5 ? '👏' : '😊';
+  el.heroVisual.appendChild(big);
+  el.choices.innerHTML = '';
+  el.choices.classList.add('hidden');
+  el.messageBox.style.color = '';
+  el.messageBox.textContent = `10もんちゅう ${state.score}もん せいかい！`;
+  el.nextBtn.textContent = '🔁 もういちど';
+}
+function startGame(){
+  state.round = 1;
+  makeQuestion();
+}
+function nextStep(){
+  if(state.screen === 'top'){
+    startGame();
+    return;
+  }
+  if(state.screen === 'result'){
+    renderTopScreen();
+    return;
+  }
+  if(!state.answered){
+    el.messageBox.textContent = 'まず こたえてね！';
+    return;
+  }
+  if(state.round >= QUIZ_TOTAL){
+    showResult();
+    return;
+  }
+  state.round += 1;
+  makeQuestion();
+}
+function resetGame(){
+  renderTopScreen();
+}
+el.nextBtn.addEventListener('click', nextStep);
+el.restartBtn.addEventListener('click', resetGame);
+renderTopScreen();
+</script>
+</body>
+</html>
