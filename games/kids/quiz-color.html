@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>つぎのいろはどれ？ 3秒クイズ</title>
+  <style>
+    :root{
+      --bg1:#fff7fb;
+      --bg2:#eef8ff;
+      --card:#ffffff;
+      --text:#1f2937;
+      --sub:#6b7280;
+      --accent:#ff6fb5;
+      --accent2:#6ecbff;
+      --ok:#22c55e;
+      --ng:#ef4444;
+      --shadow:0 10px 30px rgba(0,0,0,.10);
+      --radius:22px;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{
+      margin:0;padding:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,var(--bg1),var(--bg2));
+      min-height:100%;
+      overflow-x:hidden;
+    }
+    body{display:flex;justify-content:center;}
+    .app{
+      width:min(100vw,560px);
+      min-height:100vh;
+      padding:14px 14px calc(22px + env(safe-area-inset-bottom));
+    }
+    .card{
+      background:rgba(255,255,255,.95);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+      margin-bottom:14px;
+    }
+    .hero{
+      text-align:center;
+      background:linear-gradient(135deg,#fff,#fff7d9 40%,#edf7ff);
+      border:3px solid #fff;
+    }
+    .hero h1{
+      margin:4px 0 6px;
+      font-size:clamp(28px,7vw,40px);
+      line-height:1.1;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+    .hero .sub{
+      font-size:clamp(14px,3.8vw,18px);
+      color:var(--sub);
+      font-weight:700;
+    }
+    .big{
+      font-size:clamp(22px,6vw,32px);
+      font-weight:900;
+      text-align:center;
+      margin:6px 0 4px;
+    }
+    .small{
+      text-align:center;
+      color:var(--sub);
+      font-weight:700;
+      font-size:14px;
+    }
+    .button-row{
+      display:grid;
+      gap:12px;
+      margin-top:14px;
+    }
+    button{
+      border:none;
+      border-radius:999px;
+      padding:16px 18px;
+      font-size:clamp(18px,4.8vw,24px);
+      font-weight:900;
+      cursor:pointer;
+      box-shadow:var(--shadow);
+      transition:transform .08s ease, opacity .2s ease;
+    }
+    button:active{transform:scale(.98);}
+    .btn-main{
+      background:linear-gradient(135deg,var(--accent),#ffb347);
+      color:#fff;
+    }
+    .btn-sub{
+      background:#fff;
+      color:var(--text);
+    }
+    .top-animals{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      font-size:34px;
+      margin-top:8px;
+    }
+    .status-row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .badge{
+      background:#fff;
+      border-radius:999px;
+      padding:8px 14px;
+      font-weight:900;
+      box-shadow:0 4px 14px rgba(0,0,0,.08);
+      font-size:16px;
+    }
+    .question{
+      text-align:center;
+      margin:10px 0 8px;
+      font-size:clamp(22px,6vw,30px);
+      font-weight:900;
+    }
+    .pattern-wrap{
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin:10px 0 14px;
+    }
+    .tile{
+      width:72px;height:72px;
+      border-radius:20px;
+      border:4px solid #fff;
+      box-shadow:0 8px 18px rgba(0,0,0,.12);
+      position:relative;
+      overflow:hidden;
+    }
+    .tile::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.45),rgba(255,255,255,0));
+      pointer-events:none;
+    }
+    .tile.missing{
+      background:repeating-linear-gradient(
+        45deg,
+        #f1f5f9 0px,#f1f5f9 10px,
+        #e2e8f0 10px,#e2e8f0 20px
+      );
+      display:flex;align-items:center;justify-content:center;
+      color:#64748b;
+      font-size:34px;
+      font-weight:900;
+      border-style:dashed;
+    }
+    .countdown{
+      text-align:center;
+      margin:8px 0 12px;
+      font-weight:900;
+      font-size:clamp(30px,10vw,56px);
+      line-height:1;
+    }
+    .count-ring{
+      width:120px;height:120px;margin:0 auto 8px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      background:conic-gradient(#ff9ecf 0deg, #ffd36e 120deg, #7ed8ff 240deg, #ff9ecf 360deg);
+      padding:8px;
+      box-shadow:var(--shadow);
+    }
+    .count-inner{
+      width:100%;height:100%;border-radius:50%;
+      background:#fff;
+      display:flex;align-items:center;justify-content:center;
+      flex-direction:column;
+    }
+    .count-label{
+      font-size:12px;color:var(--sub);font-weight:800;margin-bottom:2px;
+    }
+    .options{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+    .option{
+      min-height:100px;
+      border-radius:24px;
+      border:4px solid #fff;
+      box-shadow:var(--shadow);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      font-weight:900;
+      color:#fff;
+      position:relative;
+      overflow:hidden;
+    }
+    .option span{
+      position:relative;
+      z-index:1;
+      text-shadow:0 2px 6px rgba(0,0,0,.18);
+    }
+    .option::after{
+      content:"";
+      position:absolute;inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.28),rgba(255,255,255,0));
+    }
+    .message{
+      text-align:center;
+      font-size:clamp(26px,7vw,38px);
+      font-weight:900;
+      min-height:48px;
+      margin:10px 0 4px;
+    }
+    .message.ok{color:var(--ok);}
+    .message.ng{color:var(--ng);}
+    .explain{
+      text-align:center;
+      font-size:clamp(18px,4.8vw,24px);
+      font-weight:800;
+      min-height:36px;
+    }
+    .stars{
+      text-align:center;
+      font-size:28px;
+      height:34px;
+      margin-top:4px;
+    }
+    .footer-note{
+      text-align:center;
+      color:var(--sub);
+      font-size:13px;
+      font-weight:700;
+      margin-top:2px;
+    }
+    .hidden{display:none !important;}
+    .pulse{animation:pulse .9s infinite;}
+    .pop{animation:pop .35s ease;}
+    .shake{animation:shake .35s ease;}
+    @keyframes pulse{
+      0%,100%{transform:scale(1)}
+      50%{transform:scale(1.06)}
+    }
+    @keyframes pop{
+      0%{transform:scale(.8);opacity:.5}
+      100%{transform:scale(1);opacity:1}
+    }
+    @keyframes shake{
+      0%,100%{transform:translateX(0)}
+      25%{transform:translateX(-8px)}
+      75%{transform:translateX(8px)}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section id="screen-top" class="card hero">
+      <div class="top-animals">🌈 🧩 🎈 ⭐</div>
+      <h1>つぎのいろは<br>どれ？</h1>
+      <div class="big">3びょうで こたえよう！</div>
+      <div class="sub">3さい・4さい・5さい むけ</div>
+      <div class="button-row">
+        <button id="startBtn" class="btn-main">スタート ▶</button>
+        <button id="howBtn" class="btn-sub">あそびかた</button>
+      </div>
+    </section>
+
+    <section id="screen-how" class="card hidden">
+      <div class="big">あそびかた</div>
+      <div class="small">ならんだいろをみて、つぎのいろをタップしてね</div>
+      <div class="pattern-wrap" style="margin-top:16px;">
+        <div class="tile" style="background:#ff5a5a"></div>
+        <div class="tile" style="background:#4dabff"></div>
+        <div class="tile" style="background:#ff5a5a"></div>
+        <div class="tile missing">？</div>
+      </div>
+      <div class="small">このばあいは… <strong>あお</strong> が せいかい！</div>
+      <div class="button-row">
+        <button id="playFromHow" class="btn-main">ゲームをはじめる ▶</button>
+        <button id="backTop" class="btn-sub">もどる</button>
+      </div>
+    </section>
+
+    <section id="screen-game" class="hidden">
+      <div class="card">
+        <div class="status-row">
+          <div class="badge">もんだい <span id="qNow">1</span> / <span id="qTotal">8</span></div>
+          <div class="badge">スコア <span id="score">0</span></div>
+        </div>
+        <div class="question">つぎは どのいろ？</div>
+        <div class="pattern-wrap" id="pattern"></div>
+
+        <div class="count-ring pulse">
+          <div class="count-inner">
+            <div class="count-label">のこり</div>
+            <div id="countdown" class="countdown">3</div>
+          </div>
+        </div>
+
+        <div id="ruleHint" class="small" style="margin-bottom:12px;"></div>
+        <div id="options" class="options"></div>
+
+        <div id="message" class="message"></div>
+        <div id="explain" class="explain"></div>
+        <div id="stars" class="stars"></div>
+      </div>
+
+      <div class="footer-note">コメントらんに あそべるURLあるよ ▼</div>
+    </section>
+
+    <section id="screen-result" class="card hidden">
+      <div class="top-animals">🏆 🌈 🎉 ⭐</div>
+      <div class="big">おしまい！</div>
+      <div id="resultText" class="question">8もん せいこう！</div>
+      <div id="resultSub" class="small">すごい！</div>
+      <div class="button-row">
+        <button id="retryBtn" class="btn-main">もういっかい</button>
+        <button id="toTopBtn" class="btn-sub">TOPにもどる</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const COLORS = [
+      { id:'red',    name:'あか',     hex:'#ff5a5a' },
+      { id:'blue',   name:'あお',     hex:'#4dabff' },
+      { id:'yellow', name:'きいろ',   hex:'#ffd43b' },
+      { id:'green',  name:'みどり',   hex:'#51cf66' },
+      { id:'purple', name:'むらさき', hex:'#b197fc' },
+      { id:'orange', name:'オレンジ', hex:'#ff922b' },
+      { id:'pink',   name:'ピンク',   hex:'#ff87c2' },
+      { id:'sky',    name:'みずいろ', hex:'#66d9e8' }
+    ];
+
+    const PATTERN_TEMPLATES = [
+      { type:'ABAB', map:[0,1,0], answerIndex:1, hint:'おなじ ならびかた' },
+      { type:'AABB', map:[0,0,1], answerIndex:1, hint:'2こずつ ならぶよ' },
+      { type:'ABCA', map:[0,1,2], answerIndex:0, hint:'さいしょに もどるよ' }
+    ];
+
+    const TOTAL_QUESTIONS = 8;
+    let questions = [];
+    let index = 0;
+    let score = 0;
+    let answerLocked = false;
+    let countdown = 3;
+    let timer = null;
+    let audioCtx = null;
+
+    const $ = (id) => document.getElementById(id);
+    const screens = {
+      top: $('screen-top'),
+      how: $('screen-how'),
+      game: $('screen-game'),
+      result: $('screen-result')
+    };
+
+    function showScreen(name){
+      Object.values(screens).forEach(el => el.classList.add('hidden'));
+      screens[name].classList.remove('hidden');
+      window.scrollTo({top:0, behavior:'instant'});
+    }
+
+    function shuffle(arr){
+      const a = [...arr];
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]] = [a[j],a[i]];
+      }
+      return a;
+    }
+
+    function pickDistinctColors(n){
+      return shuffle(COLORS).slice(0, n);
+    }
+
+    function buildQuestion(template){
+      const baseCount = Math.max(...template.map) + 1;
+      const baseColors = pickDistinctColors(baseCount);
+
+      const seq = template.map.map(idx => baseColors[idx]);
+      const answer = baseColors[template.answerIndex];
+
+      const wrongs = shuffle(COLORS.filter(c => c.id !== answer.id)).slice(0, 3);
+      const choices = shuffle([answer, ...wrongs]);
+
+      return {
+        type: template.type,
+        hint: template.hint,
+        seq,
+        answer,
+        choices
+      };
+    }
+
+    function makeQuestions(){
+      const qs = [];
+      const pool = [];
+      while (pool.length < TOTAL_QUESTIONS) {
+        pool.push(...shuffle(PATTERN_TEMPLATES));
+      }
+      shuffle(pool).slice(0, TOTAL_QUESTIONS).forEach(t => qs.push(buildQuestion(t)));
+      return qs;
+    }
+
+    function renderPattern(question){
+      const wrap = $('pattern');
+      wrap.innerHTML = '';
+      question.seq.forEach((color) => {
+        const tile = document.createElement('div');
+        tile.className = 'tile pop';
+        tile.style.background = color.hex;
+        wrap.appendChild(tile);
+      });
+      const missing = document.createElement('div');
+      missing.className = 'tile missing pop';
+      missing.textContent = '？';
+      wrap.appendChild(missing);
+    }
+
+    function renderOptions(question){
+      const box = $('options');
+      box.innerHTML = '';
+      question.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.style.background = choice.hex;
+        btn.innerHTML = '<span>' + choice.name + '</span>';
+        btn.addEventListener('click', () => choose(choice));
+        box.appendChild(btn);
+      });
+    }
+
+    function updateHeader(){
+      $('qNow').textContent = index + 1;
+      $('qTotal').textContent = TOTAL_QUESTIONS;
+      $('score').textContent = score;
+    }
+
+    function clearFeedback(){
+      $('message').textContent = '';
+      $('message').className = 'message';
+      $('explain').textContent = '';
+      $('stars').textContent = '';
+    }
+
+    function loadQuestion(){
+      answerLocked = false;
+      clearFeedback();
+      updateHeader();
+      const q = questions[index];
+      renderPattern(q);
+      renderOptions(q);
+      $('ruleHint').textContent = 'ヒント：' + q.hint;
+      startCountdown();
+    }
+
+    function startGame(){
+      questions = makeQuestions();
+      index = 0;
+      score = 0;
+      showScreen('game');
+      loadQuestion();
+    }
+
+    function startCountdown(){
+      clearInterval(timer);
+      countdown = 3;
+      $('countdown').textContent = countdown;
+      timer = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          $('countdown').textContent = countdown;
+          beep(740, 0.09, 0.03);
+        } else if (countdown === 0) {
+          $('countdown').textContent = '0';
+          beep(520, 0.18, 0.05);
+          clearInterval(timer);
+          setTimeout(() => {
+            if (!answerLocked) timeUp();
+          }, 250);
+        }
+      }, 1000);
+    }
+
+    function choose(choice){
+      if (answerLocked) return;
+      answerLocked = true;
+      clearInterval(timer);
+
+      const q = questions[index];
+      const correct = q.answer;
+
+      if (choice.id === correct.id) {
+        score++;
+        $('score').textContent = score;
+        $('message').textContent = 'せいかい！';
+        $('message').className = 'message ok pop';
+        $('explain').textContent = correct.name + ' だよ！';
+        $('stars').textContent = '✨✨✨';
+        beep(880, 0.12, 0.02);
+        setTimeout(() => beep(1175, 0.16, 0.02), 120);
+      } else {
+        $('message').textContent = 'ざんねん！';
+        $('message').className = 'message ng shake';
+        $('explain').textContent = 'こたえは ' + correct.name;
+        $('stars').textContent = '⭐';
+        beep(260, 0.18, 0.02);
+      }
+      setTimeout(nextQuestion, 1200);
+    }
+
+    function timeUp(){
+      answerLocked = true;
+      const q = questions[index];
+      $('message').textContent = 'じかんぎれ！';
+      $('message').className = 'message ng shake';
+      $('explain').textContent = 'こたえは ' + q.answer.name;
+      $('stars').textContent = '⏰';
+      beep(220, 0.22, 0.02);
+      setTimeout(nextQuestion, 1200);
+    }
+
+    function nextQuestion(){
+      index++;
+      if (index >= TOTAL_QUESTIONS) {
+        finishGame();
+      } else {
+        loadQuestion();
+      }
+    }
+
+    function finishGame(){
+      showScreen('result');
+      $('resultText').textContent = score + ' / ' + TOTAL_QUESTIONS + ' せいこう！';
+
+      let msg = 'またやってみよう！';
+      if (score === TOTAL_QUESTIONS) msg = 'すごい！パーフェクト！';
+      else if (score >= 6) msg = 'とってもじょうず！';
+      else if (score >= 4) msg = 'いいかんじ！';
+      $('resultSub').textContent = msg;
+    }
+
+    function ensureAudio(){
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function beep(freq=660, duration=0.12, volume=0.03){
+      ensureAudio();
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.value = volume;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    $('startBtn').addEventListener('click', startGame);
+    $('playFromHow').addEventListener('click', startGame);
+    $('howBtn').addEventListener('click', () => showScreen('how'));
+    $('backTop').addEventListener('click', () => showScreen('top'));
+    $('retryBtn').addEventListener('click', startGame);
+    $('toTopBtn').addEventListener('click', () => showScreen('top'));
+
+    document.addEventListener('pointerdown', ensureAudio, { once:false });
+    showScreen('top');
+  </script>
+</body>
+</html>
