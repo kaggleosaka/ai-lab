@@ -53,15 +53,21 @@
     }
     .topbar{
       padding:14px 16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:start;
+      gap:10px;
       min-height:76px;
     }
+    .topbar > div:first-child{
+      min-width:0;
+    }
     .title{
-      font-size:clamp(22px, 4.2vw, 30px);
+      font-size:clamp(20px, 4.2vw, 30px);
       font-weight:900;
       line-height:1.2;
+      overflow-wrap:anywhere;
+      word-break:keep-all;
     }
     .sub{
       font-size:13px;
@@ -94,13 +100,16 @@
     .home-card{
       justify-content:flex-start;
       overflow:auto;
-      padding-top:18px;
     }
     .lead{
       font-size:clamp(24px, 5.4vw, 34px);
       font-weight:900;
       text-align:center;
       line-height:1.25;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:8px;
     }
     .lead small{
       display:block;
@@ -116,48 +125,15 @@
       margin-top:8px;
     }
 
-    .hero-title-card{
-      position:relative;
-      padding:18px 18px 14px;
-      border-radius:28px;
-      background:linear-gradient(180deg,#fffdf7,#fff6fb);
-      box-shadow:var(--shadow);
-    }
-    .home-mini-btn{
-      position:absolute;
-      top:14px;
-      right:14px;
-      border:none;
-      border-radius:999px;
-      padding:10px 16px;
-      background:#fff;
-      color:var(--ink);
-      font-size:15px;
-      font-weight:900;
-      box-shadow:0 4px 12px rgba(0,0,0,.08);
-      pointer-events:none;
-    }
-    .hero-main-title{
-      margin:0 92px 10px 0;
-      font-size:clamp(28px, 6.3vw, 44px);
-      font-weight:900;
-      line-height:1.08;
-      letter-spacing:-0.02em;
-    }
-    .hero-subtitle{
-      margin:0;
-      font-size:clamp(18px, 4vw, 24px);
-      font-weight:800;
-      color:#555;
-      line-height:1.35;
-    }
-
     .top-animals{
-      text-align:center;
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
       font-size:clamp(44px, 10vw, 68px);
       line-height:1.1;
-      margin:8px 0 10px;
-      letter-spacing:.08em;
+      margin-bottom:4px;
+      letter-spacing:.02em;
       text-shadow:0 4px 0 rgba(0,0,0,.05);
     }
     .comment-note{
@@ -378,12 +354,26 @@
       30%{opacity:1}
       100%{opacity:0}
     }
-    @media (max-width:480px){
-      .hero-title-card{padding:16px 14px 12px;}
-      .home-mini-btn{top:12px;right:12px;padding:8px 14px;font-size:14px;}
-      .hero-main-title{margin-right:78px;}
+    @media (max-width:420px){
+      .topbar{
+        grid-template-columns:1fr;
+      }
+      .pill{
+        justify-self:end;
+      }
+      .title{
+        font-size:clamp(18px, 5.8vw, 24px);
+      }
+      .sub{
+        font-size:12px;
+      }
+      .mode-btn .mode-title{
+        font-size:clamp(20px, 5vw, 24px);
+      }
+      .comment-badge{
+        font-size:clamp(18px, 4.8vw, 24px);
+      }
     }
-
     @media (max-height:700px){
       .app{padding:10px;gap:10px}
       .topbar{min-height:66px;padding:12px 14px}
@@ -404,14 +394,8 @@
 
     <div id="homeScreen" class="screen active">
       <div class="panel home-card">
-        <div class="hero-title-card">
-          <button class="home-mini-btn" type="button" aria-label="ホーム">ホーム</button>
-          <h1 class="hero-main-title">3秒でできる！<br>どうぶつクイズ</h1>
-          <div class="top-animals" aria-hidden="true">🐶 🐱 🐵 🐘</div>
-          <p class="hero-subtitle">3つの あそびかたから えらべるよ</p>
-        </div>
-
         <div class="lead">
+          <div class="top-animals" aria-hidden="true">🐶 🐱 🐵 🐘</div>
           どうぶつクイズで あそぼう！
           <small>3びょうで こたえればOK。あわてなくて だいじょうぶ。</small>
         </div>
