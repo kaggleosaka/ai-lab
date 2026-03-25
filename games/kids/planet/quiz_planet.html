@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>惑星はどれ？</title>
+<style>
+  :root {
+    --bg1: #050816;
+    --bg2: #101935;
+    --panel: rgba(255,255,255,0.08);
+    --line: rgba(255,255,255,0.16);
+    --text: #ffffff;
+    --accent: #ffd54a;
+    --good: #61ffa8;
+    --bad: #ff7b7b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,255,255,0.08) 0 2px, transparent 3px),
+      radial-gradient(circle at 70% 35%, rgba(255,255,255,0.06) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 40% 70%, rgba(255,255,255,0.06) 0 1.5px, transparent 2.5px),
+      linear-gradient(180deg, var(--bg2), var(--bg1));
+    background-size: 240px 240px, 320px 320px, 280px 280px, auto;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  .screen {
+    width: min(100vw, 760px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .hidden { display: none !important; }
+  .card {
+    width: 100%;
+    background: rgba(8, 15, 35, 0.72);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    backdrop-filter: blur(6px);
+  }
+  .top-card {
+    padding: 18px 16px 20px;
+    text-align: center;
+  }
+  .title {
+    font-size: clamp(28px, 6vw, 46px);
+    font-weight: 900;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    color: #fff;
+    text-shadow: 0 3px 12px rgba(0,0,0,0.5);
+  }
+  .subtitle {
+    font-size: clamp(15px, 3.4vw, 21px);
+    color: #e6f0ff;
+    margin: 0 0 14px;
+  }
+  .hero {
+    width: min(66vw, 320px);
+    aspect-ratio: 1 / 1;
+    display: block;
+    margin: 0 auto 14px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));
+  }
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffe78f, #ffcb2e);
+    color: #2e2500;
+    font-weight: 900;
+    font-size: clamp(22px, 5vw, 30px);
+    padding: 14px 34px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 205, 56, 0.28);
+  }
+  .hud {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 900;
+  }
+  .pill {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: clamp(16px, 3.7vw, 23px);
+    min-width: 118px;
+    text-align: center;
+  }
+  .question-wrap {
+    width: 100%;
+    padding: 12px 12px 14px;
+    margin-bottom: 10px;
+  }
+  .question-title {
+    text-align: center;
+    font-size: clamp(22px, 5vw, 34px);
+    font-weight: 900;
+    margin: 0 0 8px;
+  }
+  .grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .tile {
+    position: relative;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.18);
+  }
+  .tile:active { transform: scale(0.98); }
+  .tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
+  }
+  .tile.correct {
+    border-color: var(--good);
+    box-shadow: 0 0 0 4px rgba(97,255,168,0.18), 0 5px 16px rgba(97,255,168,0.2);
+  }
+  .tile.wrong {
+    border-color: var(--bad);
+    box-shadow: 0 0 0 4px rgba(255,123,123,0.18), 0 5px 16px rgba(255,123,123,0.15);
+  }
+  .message {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(24px, 6vw, 42px);
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 0.03em;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.45);
+  }
+  .message.good { color: #fff59a; }
+  .message.bad { color: #ffc1c1; }
+  .result-wrap {
+    text-align: center;
+    padding: 24px 16px 28px;
+  }
+  .result-big {
+    font-size: clamp(34px, 8vw, 56px);
+    font-weight: 900;
+    margin: 8px 0 18px;
+  }
+  .stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .spark {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff8b0;
+    box-shadow: 0 0 10px rgba(255,248,176,0.9);
+    animation: pop 650ms ease-out forwards;
+  }
+  @keyframes pop {
+    0% { transform: translate(0,0) scale(0.2); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; }
+  }
+  @media (max-width: 560px) {
+    .screen { padding: 10px; }
+    .grid { gap: 8px; }
+    .tile { border-radius: 16px; }
+    .message { height: 56px; }
+  }
+</style>
+</head>
+<body>
+  <div id="startScreen" class="screen">
+    <div class="card top-card">
+      <h1 class="title">惑星はどれ？</h1>
+      <p class="subtitle">惑星の名前を見て 9マス から えらぼう！</p>
+      <img id="startHero" class="hero" alt="planet" src="planet_all.png">
+      <button id="startBtn" class="btn">スタート</button>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen hidden">
+    <div class="hud">
+      <div class="pill" id="progress">1 / 10</div>
+      <div class="pill" id="timer">3</div>
+    </div>
+
+    <div class="card question-wrap">
+      <div id="questionText" class="question-title">土星はどれ？</div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="message" class="message"></div>
+    <div id="stars" class="stars"></div>
+  </div>
+
+  <div id="resultScreen" class="screen hidden">
+    <div class="card result-wrap">
+      <div class="title">おしまい</div>
+      <div id="finalScore" class="result-big">0もん せいかい</div>
+      <button id="restartBtn" class="btn">もういちど</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const planets = [
+    { file: 'Mercury.png', jp: '水星' },
+    { file: 'Venus.png', jp: '金星' },
+    { file: 'Earth.png', jp: '地球' },
+    { file: 'Mars.png', jp: '火星' },
+    { file: 'Jupiter.png', jp: '木星' },
+    { file: 'Saturn.png', jp: '土星' },
+    { file: 'Uranus.png', jp: '天王星' },
+    { file: 'Neptune.png', jp: '海王星' },
+    { file: 'Moon.png', jp: '月' }
+  ];
+
+  const TOTAL_QUESTIONS = 10;
+  const TIME_LIMIT = 3;
+
+  const startScreen = document.getElementById('startScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const startHero = document.getElementById('startHero');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const progressEl = document.getElementById('progress');
+  const timerEl = document.getElementById('timer');
+  const questionText = document.getElementById('questionText');
+  const grid = document.getElementById('grid');
+  const messageEl = document.getElementById('message');
+  const finalScoreEl = document.getElementById('finalScore');
+  const stars = document.getElementById('stars');
+
+  let score = 0;
+  let questionIndex = 0;
+  let answerLocked = false;
+  let timer = TIME_LIMIT;
+  let timerId = null;
+  let currentAnswerFile = '';
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function beep(freq, duration, type='sine', gain=0.03) {
+    try {
+      const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
+      const osc = ctx.createOscillator();
+      const amp = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      amp.gain.value = gain;
+      osc.connect(amp);
+      amp.connect(ctx.destination);
+      const now = ctx.currentTime;
+      amp.gain.setValueAtTime(gain, now);
+      amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {}
+  }
+
+  function playCorrect() {
+    beep(660, 0.10, 'triangle', 0.05);
+    setTimeout(() => beep(990, 0.16, 'triangle', 0.05), 90);
+  }
+
+  function playWrong() {
+    beep(240, 0.14, 'sawtooth', 0.04);
+    setTimeout(() => beep(180, 0.18, 'sawtooth', 0.04), 80);
+  }
+
+  function burstStars() {
+    const rect = stars.getBoundingClientRect();
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      const x = rect.width * (0.2 + Math.random() * 0.6);
+      const y = rect.height * (0.25 + Math.random() * 0.28);
+      s.style.left = x + 'px';
+      s.style.top = y + 'px';
+      s.style.setProperty('--dx', (Math.random() * 220 - 110) + 'px');
+      s.style.setProperty('--dy', (Math.random() * 160 - 80) + 'px');
+      stars.appendChild(s);
+      setTimeout(() => s.remove(), 680);
+    }
+  }
+
+  function setScreen(name) {
+    startScreen.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    if (name === 'start') startScreen.classList.remove('hidden');
+    if (name === 'game') gameScreen.classList.remove('hidden');
+    if (name === 'result') resultScreen.classList.remove('hidden');
+  }
+
+  function clearTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function startTimer() {
+    timer = TIME_LIMIT;
+    timerEl.textContent = timer;
+    clearTimer();
+    timerId = setInterval(() => {
+      timer--;
+      timerEl.textContent = timer;
+      if (timer <= 0) {
+        clearTimer();
+        if (!answerLocked) timeUp();
+      }
+    }, 1000);
+  }
+
+  function timeUp() {
+    answerLocked = true;
+    messageEl.textContent = 'ざんねん';
+    messageEl.className = 'message bad';
+    [...grid.children].forEach(tile => {
+      if (tile.dataset.file === currentAnswerFile) tile.classList.add('correct');
+    });
+    playWrong();
+    setTimeout(nextQuestion, 900);
+  }
+
+  function handleAnswer(tile) {
+    if (answerLocked) return;
+    answerLocked = true;
+    clearTimer();
+    const isCorrect = tile.dataset.file === currentAnswerFile;
+    if (isCorrect) {
+      score++;
+      tile.classList.add('correct');
+      messageEl.textContent = 'せいかい！';
+      messageEl.className = 'message good';
+      playCorrect();
+      burstStars();
+    } else {
+      tile.classList.add('wrong');
+      [...grid.children].forEach(t => {
+        if (t.dataset.file === currentAnswerFile) t.classList.add('correct');
+      });
+      messageEl.textContent = 'ちがう！';
+      messageEl.className = 'message bad';
+      playWrong();
+    }
+    setTimeout(nextQuestion, 900);
+  }
+
+  function buildQuestion() {
+    answerLocked = false;
+    messageEl.textContent = '';
+    messageEl.className = 'message';
+    progressEl.textContent = `${questionIndex + 1} / ${TOTAL_QUESTIONS}`;
+
+    const options = shuffle(planets);
+    const answer = options[Math.floor(Math.random() * options.length)];
+    currentAnswerFile = answer.file;
+    questionText.textContent = `${answer.jp}はどれ？`;
+
+    grid.innerHTML = '';
+    options.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'tile';
+      btn.dataset.file = p.file;
+      btn.setAttribute('aria-label', p.jp);
+      btn.innerHTML = `<img src="${p.file}" alt="${p.jp}">`;
+      btn.addEventListener('click', () => handleAnswer(btn));
+      grid.appendChild(btn);
+    });
+
+    startTimer();
+  }
+
+  function nextQuestion() {
+    questionIndex++;
+    if (questionIndex >= TOTAL_QUESTIONS) {
+      clearTimer();
+      finalScoreEl.textContent = `${score}もん せいかい`;
+      setScreen('result');
+      return;
+    }
+    buildQuestion();
+  }
+
+  function startGame() {
+    score = 0;
+    questionIndex = 0;
+    setScreen('game');
+    buildQuestion();
+  }
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', () => {
+    startHero.src = "planet_all.png";
+    setScreen('start');
+  });
+
+  startHero.src = "planet_all.png";
+})();
+</script>
+</body>
+</html>
