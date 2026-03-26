@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>花はどれ？</title>
+<style>
+  :root {
+    --bg1: #fff3f7;
+    --bg2: #ffe7ef;
+    --bg3: #f7fff5;
+    --panel: rgba(255,255,255,0.72);
+    --line: rgba(255,255,255,0.9);
+    --text: #4b2240;
+    --accent: #ff8db5;
+    --accent2: #ffc857;
+    --good: #5cd88a;
+    --bad: #ff7d7d;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.9) 0 5px, transparent 6px),
+      radial-gradient(circle at 78% 18%, rgba(255,255,255,0.7) 0 4px, transparent 5px),
+      radial-gradient(circle at 25% 70%, rgba(255,255,255,0.7) 0 4px, transparent 5px),
+      radial-gradient(circle at 82% 80%, rgba(255,255,255,0.8) 0 5px, transparent 6px),
+      linear-gradient(180deg, var(--bg3), var(--bg2) 45%, var(--bg1));
+    background-size: 260px 260px, 320px 320px, 300px 300px, 280px 280px, auto;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  .screen {
+    width: min(100vw, 760px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .hidden { display: none !important; }
+  .card {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 12px 32px rgba(124, 57, 96, 0.16);
+    backdrop-filter: blur(8px);
+  }
+  .top-card {
+    padding: 18px 16px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .top-card::before {
+    content: "🌸 🌼 🌷 🌺 🌻";
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(22px, 5vw, 34px);
+    opacity: 0.9;
+  }
+  .title {
+    font-size: clamp(30px, 6.6vw, 50px);
+    font-weight: 900;
+    line-height: 1.05;
+    margin: 44px 0 10px;
+    color: #7d2f59;
+    text-shadow: 0 3px 0 rgba(255,255,255,0.65), 0 8px 18px rgba(255,255,255,0.35);
+    letter-spacing: 0.03em;
+  }
+  .subtitle {
+    font-size: clamp(16px, 3.8vw, 24px);
+    color: #77425e;
+    margin: 0 0 12px;
+    font-weight: 800;
+  }
+  .start-mini {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fff3a7, #ffd97c);
+    color: #5f4500;
+    font-size: clamp(14px, 3.3vw, 19px);
+    font-weight: 900;
+    box-shadow: 0 6px 18px rgba(255, 213, 74, 0.25);
+  }
+  .hero-wrap {
+    position: relative;
+    width: min(76vw, 370px);
+    margin: 0 auto 14px;
+    aspect-ratio: 1 / 1;
+    border-radius: 28px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.8);
+    background:
+      radial-gradient(circle at 30% 25%, rgba(255,255,255,0.95), rgba(255,255,255,0.4) 34%, rgba(255,255,255,0.1) 60%),
+      linear-gradient(180deg, #fff8fb, #ffe8f0);
+    box-shadow: inset 0 0 30px rgba(255,255,255,0.45), 0 14px 28px rgba(124, 57, 96, 0.16);
+    display: grid;
+    place-items: center;
+  }
+  .hero-grid {
+    width: 90%;
+    height: 90%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .hero-cell {
+    border-radius: 18px;
+    background: rgba(255,255,255,0.7);
+    display: grid;
+    place-items: center;
+    color: #a65078;
+    font-size: clamp(26px, 6vw, 36px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.75);
+  }
+  .hero-badge {
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(180,90,130,0.15);
+    font-size: clamp(13px, 3vw, 17px);
+    font-weight: 900;
+    color: #8f3d68;
+  }
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffbdd4, #ff8db5);
+    color: white;
+    font-weight: 900;
+    font-size: clamp(24px, 5.4vw, 32px);
+    padding: 14px 36px;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(255, 141, 181, 0.3);
+  }
+  .btn:active { transform: scale(0.98); }
+  .hud {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 900;
+  }
+  .pill {
+    background: rgba(255,255,255,0.78);
+    border: 1px solid rgba(255,255,255,0.92);
+    border-radius: 999px;
+    padding: 9px 14px;
+    font-size: clamp(16px, 3.9vw, 24px);
+    min-width: 118px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(124, 57, 96, 0.12);
+  }
+  .pill.timer-hot {
+    background: rgba(255, 107, 107, 0.16);
+    border-color: rgba(255, 140, 140, 0.45);
+    animation: pulseHot 0.6s infinite alternate;
+  }
+  @keyframes pulseHot {
+    from { transform: scale(1); }
+    to { transform: scale(1.06); }
+  }
+  .question-wrap {
+    width: 100%;
+    padding: 12px 12px 14px;
+    margin-bottom: 10px;
+    background: rgba(255,255,255,0.82);
+  }
+  .question-title {
+    text-align: center;
+    font-size: clamp(25px, 5.8vw, 38px);
+    font-weight: 900;
+    margin: 0;
+    color: #873a64;
+    text-shadow: 0 2px 8px rgba(255,255,255,0.55);
+  }
+  .grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .tile {
+    position: relative;
+    background: rgba(255,255,255,0.72);
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 20px;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    box-shadow: 0 5px 12px rgba(124, 57, 96, 0.14);
+    animation: tileIn 0.25s ease both;
+  }
+  .tile:active { transform: scale(0.98); }
+  .tile[disabled] { cursor: default; }
+  @keyframes tileIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.18));
+    background: linear-gradient(180deg, rgba(255,255,255,0.38), rgba(255,240,246,0.18));
+  }
+  .tile.correct {
+    border-color: var(--good);
+    box-shadow: 0 0 0 4px rgba(104,255,177,0.18), 0 5px 16px rgba(104,255,177,0.2);
+    transform: scale(1.02);
+  }
+  .tile.wrong {
+    border-color: var(--bad);
+    box-shadow: 0 0 0 4px rgba(255,125,125,0.18), 0 5px 16px rgba(255,125,125,0.15);
+  }
+  .tile.dim { opacity: 0.58; }
+  .message {
+    height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(28px, 7vw, 50px);
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 0.04em;
+    color: #7d2f59;
+  }
+  .message.good { color: #ad6c00; animation: bounceIn 0.24s ease; }
+  .message.bad { color: #c95858; animation: shakeIn 0.20s ease; }
+  @keyframes bounceIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    70% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes shakeIn {
+    0% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    70% { transform: translateX(-4px); }
+    100% { transform: translateX(0); }
+  }
+  .result-wrap {
+    text-align: center;
+    padding: 24px 16px 28px;
+  }
+  .result-big {
+    font-size: clamp(38px, 8.5vw, 58px);
+    font-weight: 900;
+    margin: 10px 0 12px;
+    color: #8a3a64;
+  }
+  .result-sub {
+    font-size: clamp(18px, 4vw, 24px);
+    font-weight: 800;
+    color: #77425e;
+    margin-bottom: 18px;
+  }
+  .stars, .flash-layer, .impact-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .flash-layer {
+    background: radial-gradient(circle, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%);
+    opacity: 0;
+  }
+  .flash-layer.show { animation: flashPop 300ms ease; }
+  @keyframes flashPop {
+    0% { opacity: 0; }
+    18% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .impact-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    opacity: 0;
+  }
+  .impact-overlay.show { animation: impactShow 850ms ease forwards; }
+  @keyframes impactShow {
+    0% { opacity: 0; transform: scale(1.10); }
+    18% { opacity: 1; transform: scale(1); }
+    72% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.96); }
+  }
+  .impact-card {
+    width: min(94vw, 700px);
+    padding: 18px 14px;
+    border-radius: 28px;
+    text-align: center;
+    border: 2px solid rgba(255,255,255,0.9);
+    background: linear-gradient(180deg, rgba(255,241,166,0.98), rgba(255,180,204,0.95));
+    color: #7d2f59;
+    box-shadow: 0 18px 36px rgba(124, 57, 96, 0.22);
+  }
+  .impact-mini {
+    font-size: clamp(14px, 3.1vw, 19px);
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+  .impact-main {
+    font-size: clamp(34px, 8.6vw, 64px);
+    line-height: 1.05;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+  }
+  .spark {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff8b0;
+    box-shadow: 0 0 10px rgba(255,248,176,0.9);
+    animation: pop 650ms ease-out forwards;
+  }
+  @keyframes pop {
+    0% { transform: translate(0,0) scale(0.2); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; }
+  }
+  @media (max-width: 560px) {
+    .screen { padding: 10px; }
+    .grid { gap: 8px; }
+    .tile { border-radius: 16px; }
+    .message { height: 66px; }
+    .impact-card { padding: 16px 10px; border-radius: 22px; }
+  }
+
+  #startScreen {
+    width: min(100vw, 760px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    background:
+      radial-gradient(circle at center, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 70%),
+      linear-gradient(180deg, #edf7ea 0%, #f8e9f0 100%);
+  }
+  .start-full {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .start-thumb-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #edf7ea 0%, #f8e9f0 100%);
+  }
+  .start-thumb-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url('flower_thumbnail.png') center center / cover no-repeat;
+    filter: blur(24px) brightness(0.95);
+    transform: scale(1.08);
+    opacity: 0.45;
+  }
+  .start-thumb-wrap {
+    position: relative;
+    width: min(100vw, 760px);
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  .start-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center center;
+    display: block;
+    border-radius: 18px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.10);
+  }
+  #startBtn {
+    position: absolute;
+    left: 50%;
+    bottom: max(34px, env(safe-area-inset-bottom, 0px) + 22px);
+    transform: translateX(-50%);
+    z-index: 5;
+    min-width: 210px;
+  }
+  @media (max-width: 560px) {
+    .start-thumb-wrap { padding: 8px; }
+    .start-thumb { border-radius: 14px; }
+    #startBtn {
+      min-width: 180px;
+      padding: 14px 32px;
+      font-size: 22px;
+      bottom: max(28px, env(safe-area-inset-bottom, 0px) + 18px);
+    }
+  }
+
+</style>
+</head>
+<body>
+  <div id="startScreen" class="screen">
+    <div class="start-full">
+      <div class="start-thumb-bg"></div>
+      <div class="start-thumb-wrap">
+        <img class="start-thumb" src="flower_thumbnail.png" alt="花クイズサムネ">
+        <button id="startBtn" class="btn">スタート</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen hidden">
+    <div class="hud">
+      <div class="pill" id="progress">1 / 10</div>
+      <div class="pill" id="timer">3</div>
+    </div>
+
+    <div class="card question-wrap">
+      <div id="questionText" class="question-title">さくらはどれ？</div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="message" class="message"></div>
+    <div id="stars" class="stars"></div>
+    <div id="flashLayer" class="flash-layer"></div>
+
+    <div id="impactOverlay" class="impact-overlay hidden">
+      <div class="impact-card">
+        <div class="impact-mini">3びょうで こたえて！</div>
+        <div id="impactText" class="impact-main">さくらはどれ？</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultScreen" class="screen hidden">
+    <div class="card result-wrap">
+      <div class="title">できた！</div>
+      <div id="finalScore" class="result-big">0もん せいかい</div>
+      <div class="result-sub">もういっかい やってみよう！</div>
+      <button id="restartBtn" class="btn">もういちど</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const flowers = [
+    { file: 'sakura.png', jp: 'さくら' },
+    { file: 'sunflower.png', jp: 'ひまわり' },
+    { file: 'tulip.png', jp: 'チューリップ' },
+    { file: 'dandelion.png', jp: 'たんぽぽ' },
+    { file: 'morning_glory.png', jp: 'あさがお' },
+    { file: 'cosmos.png', jp: 'コスモス' },
+    { file: 'rose.png', jp: 'ばら' },
+    { file: 'lily.png', jp: 'ゆり' },
+    { file: 'pansy.png', jp: 'パンジー' },
+    { file: 'violet.png', jp: 'すみれ' },
+    { file: 'rapeseed.png', jp: 'なのはな' },
+    { file: 'spider_lily.png', jp: 'ひがんばな' },
+    { file: 'daffodil.png', jp: 'すいせん' },
+    { file: 'hydrangea.png', jp: 'あじさい' },
+    { file: 'azalea.png', jp: 'つつじ' },
+    { file: 'peony.png', jp: 'しゃくやく' },
+    { file: 'dahlia.png', jp: 'ダリア' },
+    { file: 'carnation.png', jp: 'カーネーション' },
+    { file: 'poppy.png', jp: 'ポピー' },
+    { file: 'bellflower.png', jp: 'ききょう' },
+    { file: 'freesia.png', jp: 'フリージア' },
+    { file: 'lotus.png', jp: 'れんげ' },
+    { file: 'four_oclock.png', jp: 'オシロイバナ' },
+    { file: 'physalis.png', jp: 'ほおずき' },
+    { file: 'osmanthus.png', jp: 'きんもくせい' },
+    { file: 'sasanqua.png', jp: 'さざんか' },
+    { file: 'wisteria.png', jp: 'ふじ' }
+  ];
+
+  const TOTAL_QUESTIONS = 10;
+  const TIME_LIMIT = 3;
+  const IMPACT_MS = 900;
+  const ANSWER_DELAY_MS = 750;
+
+  const startScreen = document.getElementById('startScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const progressEl = document.getElementById('progress');
+  const timerEl = document.getElementById('timer');
+  const questionText = document.getElementById('questionText');
+  const grid = document.getElementById('grid');
+  const messageEl = document.getElementById('message');
+  const finalScoreEl = document.getElementById('finalScore');
+  const stars = document.getElementById('stars');
+  const impactOverlay = document.getElementById('impactOverlay');
+  const impactText = document.getElementById('impactText');
+  const flashLayer = document.getElementById('flashLayer');
+
+  let score = 0;
+  let questionIndex = 0;
+  let answerLocked = false;
+  let timer = TIME_LIMIT;
+  let timerId = null;
+  let currentAnswerFile = '';
+  let impactTimerId = null;
+  let speechEnabled = 'speechSynthesis' in window;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function getAudioContext() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!getAudioContext.ctx) getAudioContext.ctx = new AC();
+    return getAudioContext.ctx;
+  }
+
+  async function unlockAudio() {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      try { await ctx.resume(); } catch (e) {}
+    }
+    if (speechEnabled) {
+      try { speechSynthesis.cancel(); } catch (e) {}
+    }
+  }
+
+  function tone(freq, start, duration, type='sine', gain=0.05) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.linearRampToValueAtTime(gain, start + 0.01);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    osc.connect(amp);
+    amp.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
+  }
+
+  function playCorrect() {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    tone(784, now, 0.10, 'triangle', 0.06);
+    tone(1046, now + 0.12, 0.10, 'triangle', 0.06);
+    tone(1318, now + 0.24, 0.16, 'triangle', 0.065);
+  }
+
+  function playWrong() {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    tone(240, now, 0.10, 'sawtooth', 0.05);
+    tone(180, now + 0.09, 0.16, 'sawtooth', 0.05);
+  }
+
+  function speak(text) {
+    if (!speechEnabled) return;
+    try {
+      speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ja-JP';
+      utter.rate = 1.0;
+      utter.pitch = 1.2;
+      const voices = speechSynthesis.getVoices();
+      const jaVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+      if (jaVoice) utter.voice = jaVoice;
+      speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  function showFlash() {
+    flashLayer.classList.remove('show');
+    void flashLayer.offsetWidth;
+    flashLayer.classList.add('show');
+  }
+
+  function burstStars() {
+    const rect = stars.getBoundingClientRect();
+    for (let i = 0; i < 20; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      const x = rect.width * (0.2 + Math.random() * 0.6);
+      const y = rect.height * (0.20 + Math.random() * 0.32);
+      s.style.left = x + 'px';
+      s.style.top = y + 'px';
+      s.style.setProperty('--dx', (Math.random() * 220 - 110) + 'px');
+      s.style.setProperty('--dy', (Math.random() * 160 - 80) + 'px');
+      stars.appendChild(s);
+      setTimeout(() => s.remove(), 680);
+    }
+  }
+
+  function setScreen(name) {
+    startScreen.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    if (name === 'start') startScreen.classList.remove('hidden');
+    if (name === 'game') gameScreen.classList.remove('hidden');
+    if (name === 'result') resultScreen.classList.remove('hidden');
+  }
+
+  function clearTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+    if (impactTimerId) {
+      clearTimeout(impactTimerId);
+      impactTimerId = null;
+    }
+  }
+
+  function setTilesEnabled(enabled) {
+    [...grid.children].forEach(btn => { btn.disabled = !enabled; });
+  }
+
+  function startTimer() {
+    timer = TIME_LIMIT;
+    timerEl.textContent = timer;
+    timerEl.classList.remove('timer-hot');
+    clearInterval(timerId);
+    timerId = setInterval(() => {
+      timer--;
+      timerEl.textContent = timer;
+      if (timer <= 1) timerEl.classList.add('timer-hot');
+      if (timer <= 0) {
+        clearInterval(timerId);
+        timerId = null;
+        if (!answerLocked) timeUp();
+      }
+    }, 1000);
+  }
+
+  function showImpact(text, done) {
+    impactText.textContent = text;
+    impactOverlay.classList.remove('hidden');
+    impactOverlay.classList.remove('show');
+    void impactOverlay.offsetWidth;
+    impactOverlay.classList.add('show');
+    speak('3秒で答えて');
+    impactTimerId = setTimeout(() => {
+      impactOverlay.classList.add('hidden');
+      if (done) done();
+    }, IMPACT_MS);
+  }
+
+  function timeUp() {
+    answerLocked = true;
+    setTilesEnabled(false);
+    messageEl.textContent = 'ざんねん！';
+    messageEl.className = 'message bad';
+    [...grid.children].forEach(tile => {
+      if (tile.dataset.file === currentAnswerFile) tile.classList.add('correct');
+      else tile.classList.add('dim');
+    });
+    playWrong();
+    setTimeout(nextQuestion, ANSWER_DELAY_MS);
+  }
+
+  function handleAnswer(tile) {
+    if (answerLocked) return;
+    answerLocked = true;
+    setTilesEnabled(false);
+    clearInterval(timerId);
+    timerId = null;
+
+    const isCorrect = tile.dataset.file === currentAnswerFile;
+    if (isCorrect) {
+      score++;
+      tile.classList.add('correct');
+      [...grid.children].forEach(t => {
+        if (t !== tile) t.classList.add('dim');
+      });
+      messageEl.textContent = 'せいかい！';
+      messageEl.className = 'message good';
+      playCorrect();
+      burstStars();
+      showFlash();
+    } else {
+      tile.classList.add('wrong');
+      [...grid.children].forEach(t => {
+        if (t.dataset.file === currentAnswerFile) t.classList.add('correct');
+        else if (t !== tile) t.classList.add('dim');
+      });
+      messageEl.textContent = 'ちがう！';
+      messageEl.className = 'message bad';
+      playWrong();
+    }
+    setTimeout(nextQuestion, ANSWER_DELAY_MS);
+  }
+
+  function imageExists(file) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = file + '?v=' + Date.now();
+    });
+  }
+
+  async function validateImages() {
+    const checks = await Promise.all(flowers.map(f => imageExists(f.file)));
+    const missing = flowers.filter((_, i) => !checks[i]);
+    if (missing.length) {
+      const names = missing.slice(0, 6).map(m => m.file).join(', ');
+      alert('画像が見つからないファイルがあります。HTMLと同じフォルダに置いてください。\n' + names + (missing.length > 6 ? ' ほか' : ''));
+      return false;
+    }
+    return true;
+  }
+
+  function buildQuestion() {
+    answerLocked = true;
+    messageEl.textContent = '';
+    messageEl.className = 'message';
+    progressEl.textContent = `${questionIndex + 1} / ${TOTAL_QUESTIONS}`;
+
+    const options = shuffle(flowers).slice(0, 9);
+    const answer = options[Math.floor(Math.random() * options.length)];
+    currentAnswerFile = answer.file;
+    questionText.textContent = `${answer.jp}はどれ？`;
+
+    grid.innerHTML = '';
+    options.forEach((f, index) => {
+      const btn = document.createElement('button');
+      btn.className = 'tile';
+      btn.dataset.file = f.file;
+      btn.setAttribute('aria-label', f.jp);
+      btn.disabled = true;
+      btn.style.animationDelay = (index * 25) + 'ms';
+      btn.innerHTML = `<img src="${f.file}" alt="${f.jp}">`;
+      btn.addEventListener('click', () => handleAnswer(btn));
+      grid.appendChild(btn);
+    });
+
+    timerEl.textContent = TIME_LIMIT;
+    timerEl.classList.remove('timer-hot');
+    showImpact(`${answer.jp}はどれ？`, () => {
+      answerLocked = false;
+      setTilesEnabled(true);
+      startTimer();
+    });
+  }
+
+  function nextQuestion() {
+    questionIndex++;
+    if (questionIndex >= TOTAL_QUESTIONS) {
+      clearTimer();
+      finalScoreEl.textContent = `${score}もん せいかい`;
+      setScreen('result');
+      return;
+    }
+    buildQuestion();
+  }
+
+  async function startGame() {
+    await unlockAudio();
+    const ok = await validateImages();
+    if (!ok) return;
+    clearTimer();
+    score = 0;
+    questionIndex = 0;
+    setScreen('game');
+    buildQuestion();
+  }
+
+  function backToStart() {
+    clearTimer();
+    setScreen('start');
+  }
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', backToStart);
+
+  if (speechEnabled) {
+    speechSynthesis.onvoiceschanged = () => { speechSynthesis.getVoices(); };
+    speechSynthesis.getVoices();
+  }
+})();
+</script>
+</body>
+</html>
