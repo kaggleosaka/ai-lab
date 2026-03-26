@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>のりものはどれ？ パワーアップ版</title>
+<style>
+  :root {
+    --bg1: #0a2916;
+    --bg2: #1d5c35;
+    --panel: rgba(255,255,255,0.08);
+    --line: rgba(255,255,255,0.16);
+    --text: #ffffff;
+    --accent: #ffd54a;
+    --good: #61ffa8;
+    --bad: #ff7b7b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08) 0 2px, transparent 3px),
+      radial-gradient(circle at 74% 28%, rgba(255,255,255,0.05) 0 1.5px, transparent 2.5px),
+      radial-gradient(circle at 35% 70%, rgba(255,255,255,0.05) 0 1.5px, transparent 2.5px),
+      linear-gradient(180deg, var(--bg2), var(--bg1));
+    background-size: 240px 240px, 320px 320px, 280px 280px, auto;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  .screen {
+    width: min(100vw, 760px);
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .hidden { display: none !important; }
+  .card {
+    width: 100%;
+    background: rgba(8, 22, 14, 0.72);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+    backdrop-filter: blur(6px);
+  }
+  .top-card {
+    padding: 18px 16px 20px;
+    text-align: center;
+  }
+  .title {
+    font-size: clamp(28px, 6vw, 46px);
+    font-weight: 900;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    color: #fff;
+    text-shadow: 0 3px 12px rgba(0,0,0,0.5);
+  }
+  .subtitle {
+    font-size: clamp(15px, 3.4vw, 21px);
+    color: #e6f0ff;
+    margin: 0 0 14px;
+  }
+  .hero {
+    width: min(72vw, 360px);
+    aspect-ratio: 1 / 1;
+    display: block;
+    margin: 0 auto 14px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));
+  }
+  .btn {
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #ffe78f, #ffcb2e);
+    color: #2e2500;
+    font-weight: 900;
+    font-size: clamp(22px, 5vw, 30px);
+    padding: 14px 34px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 205, 56, 0.28);
+  }
+  .hud {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-weight: 900;
+  }
+  .pill {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: clamp(16px, 3.7vw, 23px);
+    min-width: 118px;
+    text-align: center;
+  }
+  .question-wrap {
+    width: 100%;
+    padding: 12px 12px 14px;
+    margin-bottom: 10px;
+  }
+  .question-title {
+    text-align: center;
+    font-size: clamp(22px, 5vw, 34px);
+    font-weight: 900;
+    margin: 0 0 8px;
+  }
+  .question-sub {
+    text-align: center;
+    font-size: clamp(12px, 2.8vw, 17px);
+    color: #d8f4e2;
+    opacity: 0.95;
+  }
+  .grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .tile {
+    position: relative;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    aspect-ratio: 1 / 1;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    box-shadow: 0 5px 12px rgba(0,0,0,0.18);
+  }
+  .tile:active { transform: scale(0.98); }
+  .tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 8px;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
+  }
+  .tile.correct {
+    border-color: var(--good);
+    box-shadow: 0 0 0 4px rgba(97,255,168,0.18), 0 5px 16px rgba(97,255,168,0.2);
+    animation: correctPulse 0.6s ease 2;
+  }
+  .tile.wrong {
+    border-color: var(--bad);
+    box-shadow: 0 0 0 4px rgba(255,123,123,0.18), 0 5px 16px rgba(255,123,123,0.15);
+    animation: shake 0.38s ease;
+  }
+  .tile.disabled {
+    pointer-events: none;
+    filter: saturate(0.85);
+  }
+  .message {
+    height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(24px, 6vw, 42px);
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 0.03em;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    position: relative;
+  }
+  .message.good {
+    color: #fff59a;
+    animation: winner 0.85s ease;
+  }
+  .message.bad { color: #ffc1c1; }
+  .message small {
+    display: block;
+    font-size: 0.48em;
+    margin-top: 4px;
+    color: #fff;
+  }
+  .result-wrap {
+    text-align: center;
+    padding: 24px 16px 28px;
+  }
+  .result-big {
+    font-size: clamp(34px, 8vw, 56px);
+    font-weight: 900;
+    margin: 8px 0 10px;
+  }
+  .result-sub {
+    font-size: clamp(16px, 4vw, 24px);
+    margin: 0 0 18px;
+    color: #fff7bf;
+  }
+  .stars, .confetti, .countdown-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .spark {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff8b0;
+    box-shadow: 0 0 10px rgba(255,248,176,0.9);
+    animation: pop 650ms ease-out forwards;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 12px;
+    height: 18px;
+    border-radius: 4px;
+    animation: fall 900ms ease-out forwards;
+  }
+  .countdown {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.2);
+    backdrop-filter: blur(2px);
+    font-size: clamp(80px, 22vw, 170px);
+    font-weight: 900;
+    text-shadow: 0 8px 20px rgba(0,0,0,0.45);
+    animation: zoomPop 0.7s ease;
+  }
+  @keyframes pop {
+    0% { transform: translate(0,0) scale(0.2); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; }
+  }
+  @keyframes fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(180px) rotate(260deg); opacity: 0; }
+  }
+  @keyframes zoomPop {
+    0% { transform: scale(0.25); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  @keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  @keyframes winner {
+    0% { transform: scale(0.75); opacity: 0; }
+    50% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @media (max-width: 560px) {
+    .screen { padding: 10px; }
+    .grid { gap: 8px; }
+    .tile { border-radius: 16px; }
+    .message { height: 66px; }
+  }
+</style>
+</head>
+<body>
+  <div id="startScreen" class="screen">
+    <div class="card top-card">
+      <h1 class="title">のりものはどれ？</h1>
+      <p class="subtitle">3びょうで さがそう！ 10もん れんぞく クイズ！</p>
+      <img id="startHero" class="hero" alt="vehicle" src="vehicle_all.png">
+      <button id="startBtn" class="btn">スタート</button>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="screen hidden">
+    <div class="hud">
+      <div class="pill" id="progress">1 / 10</div>
+      <div class="pill" id="timer">3</div>
+    </div>
+
+    <div class="card question-wrap">
+      <div id="questionText" class="question-title">くるまはどれ？</div>
+      <div class="question-sub">3びょうで えらんでね</div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+    <div id="message" class="message"></div>
+    <div id="stars" class="stars"></div>
+    <div id="confetti" class="confetti"></div>
+    <div id="countdownLayer" class="countdown-layer hidden"></div>
+  </div>
+
+  <div id="resultScreen" class="screen hidden">
+    <div class="card result-wrap">
+      <div class="title">けっか</div>
+      <div id="finalScore" class="result-big">0もん せいかい</div>
+      <div id="resultSub" class="result-sub">がんばったね！</div>
+      <button id="restartBtn" class="btn">もういちど</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const vehicles = [
+    { file: 'car.png', jp: 'くるま' },
+    { file: 'bus.png', jp: 'バス' },
+    { file: 'truck.png', jp: 'トラック' },
+    { file: 'police_car.png', jp: 'パトカー' },
+    { file: 'fire_engine.png', jp: 'しょうぼうしゃ' },
+    { file: 'ambulance.png', jp: 'きゅうきゅうしゃ' },
+    { file: 'taxi.png', jp: 'タクシー' },
+    { file: 'motorcycle.png', jp: 'バイク' },
+    { file: 'bicycle.png', jp: 'じてんしゃ' },
+    { file: 'airplane.png', jp: 'ひこうき' },
+    { file: 'helicopter.png', jp: 'ヘリコプター' },
+    { file: 'hot_air_balloon.png', jp: 'ききゅう' },
+    { file: 'glider.png', jp: 'グライダー' },
+    { file: 'cruise_ship.png', jp: 'きゃくせん' },
+    { file: 'ferry.png', jp: 'フェリー' },
+    { file: 'yacht.png', jp: 'ヨット' },
+    { file: 'fishing_boat.png', jp: 'ぎょせん' },
+    { file: 'motorboat.png', jp: 'ボート' },
+    { file: 'train.png', jp: 'でんしゃ' },
+    { file: 'bullet_train.png', jp: 'しんかんせん' },
+    { file: 'subway.png', jp: 'ちかてつ' },
+    { file: 'monorail.png', jp: 'モノレール' },
+    { file: 'tram.png', jp: 'ろめんでんしゃ' },
+    { file: 'freight_train.png', jp: 'かもつれっしゃ' },
+    { file: 'express_train.png', jp: 'とっきゅうれっしゃ' },
+    { file: 'tourist_train.png', jp: 'かんこうれっしゃ' },
+    { file: 'maglev.png', jp: 'リニアモーターカー' }
+  ];
+
+  const TOTAL_QUESTIONS = 10;
+  const TIME_LIMIT = 3;
+  const OPTIONS_COUNT = 9;
+
+  const startScreen = document.getElementById('startScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const startHero = document.getElementById('startHero');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const progressEl = document.getElementById('progress');
+  const timerEl = document.getElementById('timer');
+  const questionText = document.getElementById('questionText');
+  const grid = document.getElementById('grid');
+  const messageEl = document.getElementById('message');
+  const finalScoreEl = document.getElementById('finalScore');
+  const resultSub = document.getElementById('resultSub');
+  const stars = document.getElementById('stars');
+  const confetti = document.getElementById('confetti');
+  const countdownLayer = document.getElementById('countdownLayer');
+
+  let score = 0;
+  let questionIndex = 0;
+  let answerLocked = false;
+  let timer = TIME_LIMIT;
+  let timerId = null;
+  let currentAnswerFile = '';
+  let currentAnswerName = '';
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function getRoundVehicles() {
+    return shuffle(vehicles).slice(0, OPTIONS_COUNT);
+  }
+
+  function beep(freq, duration, type='sine', gain=0.03) {
+    try {
+      const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const amp = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      amp.gain.value = gain;
+      osc.connect(amp);
+      amp.connect(ctx.destination);
+      const now = ctx.currentTime;
+      amp.gain.setValueAtTime(gain, now);
+      amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {}
+  }
+
+  function playCountdownBeep() {
+    beep(520, 0.08, 'square', 0.035);
+  }
+
+  function playGoBeep() {
+    beep(700, 0.08, 'triangle', 0.04);
+    setTimeout(() => beep(980, 0.12, 'triangle', 0.04), 70);
+  }
+
+  function playCorrect() {
+    beep(660, 0.10, 'triangle', 0.05);
+    setTimeout(() => beep(990, 0.16, 'triangle', 0.05), 90);
+  }
+
+  function playWrong() {
+    beep(240, 0.14, 'sawtooth', 0.04);
+    setTimeout(() => beep(180, 0.18, 'sawtooth', 0.04), 80);
+  }
+
+
+
+  function speak(text) {
+    try {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ja-JP';
+      utter.rate = 0.95;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+      window.speechSynthesis.speak(utter);
+    } catch (e) {}
+  }
+
+  function setScreen(name) {
+    startScreen.classList.add('hidden');
+    gameScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    if (name === 'start') startScreen.classList.remove('hidden');
+    if (name === 'game') gameScreen.classList.remove('hidden');
+    if (name === 'result') resultScreen.classList.remove('hidden');
+  }
+
+  function clearTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function disableTiles(disabled) {
+    [...grid.children].forEach(tile => tile.classList.toggle('disabled', disabled));
+  }
+
+  function burstStars() {
+    const rect = stars.getBoundingClientRect();
+    for (let i = 0; i < 20; i++) {
+      const s = document.createElement('div');
+      s.className = 'spark';
+      const x = rect.width * (0.2 + Math.random() * 0.6);
+      const y = rect.height * (0.2 + Math.random() * 0.32);
+      s.style.left = x + 'px';
+      s.style.top = y + 'px';
+      s.style.setProperty('--dx', (Math.random() * 240 - 120) + 'px');
+      s.style.setProperty('--dy', (Math.random() * 180 - 90) + 'px');
+      stars.appendChild(s);
+      setTimeout(() => s.remove(), 680);
+    }
+  }
+
+  function burstConfetti() {
+    const colors = ['#ffe96e', '#7bffb3', '#7fd4ff', '#ff9ac5', '#ffffff'];
+    for (let i = 0; i < 22; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      c.style.left = (10 + Math.random() * 80) + '%';
+      c.style.top = (22 + Math.random() * 14) + '%';
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      confetti.appendChild(c);
+      setTimeout(() => c.remove(), 950);
+    }
+  }
+
+  function startRoundTimer() {
+    timer = TIME_LIMIT;
+    timerEl.textContent = timer;
+    clearTimer();
+    timerId = setInterval(() => {
+      timer--;
+      timerEl.textContent = timer;
+      if (timer <= 0) {
+        clearTimer();
+        if (!answerLocked) timeUp();
+      }
+    }, 1000);
+  }
+
+  function showCountdownThenStart() {
+    disableTiles(true);
+    countdownLayer.classList.remove('hidden');
+    const seq = ['3', '2', '1', 'GO!'];
+    let i = 0;
+
+    function showNext() {
+      const div = document.createElement('div');
+      div.className = 'countdown';
+      div.textContent = seq[i];
+      countdownLayer.innerHTML = '';
+      countdownLayer.appendChild(div);
+      if (seq[i] === 'GO!') {
+        playGoBeep();
+      } else {
+        playCountdownBeep();
+      }
+      i++;
+      if (i < seq.length) {
+        setTimeout(showNext, seq[i - 1] === 'GO!' ? 420 : 620);
+      } else {
+        setTimeout(() => {
+          countdownLayer.classList.add('hidden');
+          countdownLayer.innerHTML = '';
+          disableTiles(false);
+          speak(currentAnswerName + 'はどれ？');
+          startRoundTimer();
+        }, 360);
+      }
+    }
+
+    showNext();
+  }
+
+  function timeUp() {
+    answerLocked = true;
+    disableTiles(true);
+    messageEl.innerHTML = 'ざんねん<small>' + currentAnswerName + '</small>';
+    messageEl.className = 'message bad';
+    [...grid.children].forEach(tile => {
+      if (tile.dataset.file === currentAnswerFile) tile.classList.add('correct');
+    });
+    playWrong();
+    setTimeout(nextQuestion, 1100);
+  }
+
+  function handleAnswer(tile) {
+    if (answerLocked || tile.classList.contains('disabled')) return;
+    answerLocked = true;
+    clearTimer();
+    disableTiles(true);
+    const isCorrect = tile.dataset.file === currentAnswerFile;
+    if (isCorrect) {
+      score++;
+      tile.classList.add('correct');
+      messageEl.innerHTML = 'せいかい！<small>' + currentAnswerName + '</small>';
+      messageEl.className = 'message good';
+      playCorrect();
+      burstStars();
+      burstConfetti();
+    } else {
+      tile.classList.add('wrong');
+      [...grid.children].forEach(t => {
+        if (t.dataset.file === currentAnswerFile) t.classList.add('correct');
+      });
+      messageEl.innerHTML = 'ちがう！<small>' + currentAnswerName + '</small>';
+      messageEl.className = 'message bad';
+      playWrong();
+    }
+    setTimeout(nextQuestion, 1100);
+  }
+
+  function buildQuestion() {
+    answerLocked = false;
+    messageEl.textContent = '';
+    messageEl.className = 'message';
+    progressEl.textContent = `${questionIndex + 1} / ${TOTAL_QUESTIONS}`;
+    timerEl.textContent = TIME_LIMIT;
+
+    const options = getRoundVehicles();
+    const answer = options[Math.floor(Math.random() * options.length)];
+    currentAnswerFile = answer.file;
+    currentAnswerName = answer.jp;
+    questionText.textContent = `${answer.jp}はどれ？`;
+
+    grid.innerHTML = '';
+    options.forEach(vehicle => {
+      const btn = document.createElement('button');
+      btn.className = 'tile disabled';
+      btn.dataset.file = vehicle.file;
+      btn.setAttribute('aria-label', vehicle.jp);
+      btn.innerHTML = `<img src="${vehicle.file}" alt="${vehicle.jp}">`;
+      btn.addEventListener('click', () => handleAnswer(btn));
+      grid.appendChild(btn);
+    });
+
+    showCountdownThenStart();
+  }
+
+  function nextQuestion() {
+    questionIndex++;
+    if (questionIndex >= TOTAL_QUESTIONS) {
+      clearTimer();
+      finalScoreEl.textContent = `${score}もん せいかい`;
+      if (score === TOTAL_QUESTIONS) {
+        resultSub.textContent = 'すごい！ ぜんもん せいかい！';
+      } else if (score >= 7) {
+        resultSub.textContent = 'すごい！ とっても じょうず！';
+      } else if (score >= 4) {
+        resultSub.textContent = 'いいね！ つぎは もっといける！';
+      } else {
+        resultSub.textContent = 'だいじょうぶ！ もういちど ちょうせん！';
+      }
+      setScreen('result');
+      return;
+    }
+    buildQuestion();
+  }
+
+  function setStartImage() {
+    startHero.onerror = () => {
+      startHero.onerror = null;
+      startHero.src = vehicles[0].file;
+    };
+    startHero.src = 'vehicle_all.png';
+  }
+
+  function startGame() {
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    score = 0;
+    questionIndex = 0;
+    setScreen('game');
+    buildQuestion();
+  }
+
+  startBtn.addEventListener('click', startGame);
+  restartBtn.addEventListener('click', () => {
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+    setStartImage();
+    setScreen('start');
+  });
+
+  setStartImage();
+})();
+</script>
+</body>
+</html>
