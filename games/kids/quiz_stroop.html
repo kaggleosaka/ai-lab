@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>3秒脳テスト｜ストループテスト</title>
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#101935;
+      --panel:rgba(255,255,255,.08);
+      --panelBorder:rgba(255,255,255,.14);
+      --text:#f8fafc;
+      --sub:#cbd5e1;
+      --cyan:#22d3ee;
+      --green:#22c55e;
+      --red:#ef4444;
+      --yellow:#f59e0b;
+      --shadow:0 16px 40px rgba(0,0,0,.35);
+      --radius:26px;
+    }
+
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body{
+      margin:0;
+      padding:0;
+      width:100%;
+      min-height:100%;
+      overflow:hidden;
+      color:var(--text);
+      font-family:"Hiragino Sans","Yu Gothic","Meiryo",Arial,sans-serif;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(59,130,246,.35), transparent 28%),
+        radial-gradient(circle at 100% 100%, rgba(34,211,238,.22), transparent 28%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+    }
+
+    .app{
+      width:100%;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:stretch;
+      padding:10px;
+    }
+
+    .phone{
+      width:min(100%, 500px);
+      min-height:calc(100vh - 20px);
+      position:relative;
+      overflow:hidden;
+      border-radius:32px;
+      border:1px solid rgba(255,255,255,.12);
+      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+      backdrop-filter:blur(14px);
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      padding:14px;
+      gap:12px;
+    }
+
+    .topbar{
+      background:var(--panel);
+      border:1px solid var(--panelBorder);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow:var(--shadow);
+    }
+
+    .topline{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+    }
+
+    .title{
+      font-size:26px;
+      font-weight:900;
+      letter-spacing:.02em;
+    }
+
+    .badge{
+      font-size:12px;
+      font-weight:800;
+      color:#082f49;
+      background:linear-gradient(180deg,#a5f3fc,#22d3ee);
+      padding:8px 12px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      gap:10px;
+    }
+
+    .stat{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:10px;
+      text-align:center;
+    }
+
+    .stat-label{
+      font-size:11px;
+      color:var(--sub);
+      margin-bottom:4px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    .stat-value{
+      font-size:22px;
+      font-weight:900;
+    }
+
+    .timer-wrap{
+      margin-top:10px;
+      height:12px;
+      border-radius:999px;
+      overflow:hidden;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .timer-bar{
+      height:100%;
+      width:100%;
+      transform-origin:left center;
+      transform:scaleX(1);
+      background:linear-gradient(90deg,#22c55e,#f59e0b,#ef4444);
+      transition:transform .05s linear;
+    }
+
+    .main{
+      flex:1;
+      background:var(--panel);
+      border:1px solid var(--panelBorder);
+      border-radius:30px;
+      box-shadow:var(--shadow);
+      padding:18px 16px 16px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:14px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .instruction{
+      text-align:center;
+      line-height:1.4;
+      font-weight:900;
+      font-size:20px;
+      color:#e5edf8;
+    }
+
+    .instruction .accent{
+      color:#fde68a;
+      font-size:24px;
+      display:block;
+      margin-bottom:4px;
+    }
+
+    .word-area{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:280px;
+      position:relative;
+    }
+
+    .word-box{
+      width:100%;
+      max-width:360px;
+      aspect-ratio:1/1;
+      border-radius:34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:
+        radial-gradient(circle at top, rgba(255,255,255,.17), rgba(255,255,255,.05)),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12), var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .word-box::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), transparent 42%),
+        radial-gradient(circle at 75% 22%, rgba(255,255,255,.08), transparent 22%);
+      pointer-events:none;
+    }
+
+    #word{
+      white-space:nowrap;
+      position:relative;
+      z-index:2;
+      font-size:clamp(48px, 11vw, 80px);
+      font-weight:900;
+      letter-spacing:.08em;
+      text-shadow:0 8px 22px rgba(0,0,0,.35);
+      user-select:none;
+      transition:transform .15s ease;
+    }
+
+    .choices{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+    }
+
+    .choice{
+      border:none;
+      min-height:74px;
+      border-radius:22px;
+      font-size:26px;
+      font-weight:900;
+      color:#fff;
+      box-shadow:0 12px 20px rgba(0,0,0,.22), inset 0 -4px 0 rgba(0,0,0,.15);
+      cursor:pointer;
+      transition:transform .08s ease, filter .12s ease;
+    }
+
+    .choice:active{
+      transform:scale(.97);
+      filter:brightness(.96);
+    }
+
+    .red{background:linear-gradient(180deg,#fb7185,#dc2626);}
+    .blue{background:linear-gradient(180deg,#60a5fa,#2563eb);}
+    .green{background:linear-gradient(180deg,#4ade80,#16a34a);}
+    .yellow{background:linear-gradient(180deg,#fde047,#f59e0b); color:#111827;}
+    
+
+    .hint{
+      text-align:center;
+      color:var(--sub);
+      font-size:12px;
+      line-height:1.5;
+      padding:0 6px;
+    }
+
+    .overlay, .result-screen, .start-screen{
+      position:absolute;
+      inset:0;
+      z-index:20;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+
+    .start-screen{
+      display:flex;
+      background:
+        radial-gradient(circle at top, rgba(34,211,238,.22), transparent 35%),
+        linear-gradient(180deg, rgba(2,6,23,.94), rgba(15,23,42,.98));
+    }
+
+    .card{
+      width:100%;
+      border-radius:28px;
+      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.16);
+      box-shadow:var(--shadow);
+      padding:24px 18px;
+      text-align:center;
+    }
+
+    .hero{
+      font-size:34px;
+      font-weight:900;
+      line-height:1.1;
+      margin-bottom:10px;
+    }
+
+    .subhero{
+      color:#cfe7ff;
+      font-size:16px;
+      line-height:1.6;
+      margin-bottom:18px;
+    }
+.mode-line{
+      margin-top:8px;
+      text-align:center;
+      font-size:12px;
+      color:var(--sub);
+    }
+
+    .start-btn, .restart-btn{
+      width:100%;
+      min-height:60px;
+      border:none;
+      border-radius:18px;
+      font-size:22px;
+      font-weight:900;
+      cursor:pointer;
+      color:#082f49;
+      background:linear-gradient(180deg,#a5f3fc,#22d3ee);
+      box-shadow:0 12px 20px rgba(0,0,0,.24);
+    }
+
+    .micro{
+      font-size:12px;
+      color:var(--sub);
+      line-height:1.6;
+      margin-top:12px;
+    }
+
+    .result-screen{
+      background:
+        radial-gradient(circle at top, rgba(34,211,238,.18), transparent 30%),
+        linear-gradient(180deg, rgba(2,6,23,.93), rgba(15,23,42,.98));
+    }
+
+    .result-title{
+      font-size:18px;
+      color:#bae6fd;
+      font-weight:900;
+      margin-bottom:8px;
+    }
+
+    .age{
+      font-size:clamp(36px, 10vw, 60px);
+      font-weight:900;
+      line-height:1.08;
+      margin:8px 0 14px;
+    }
+
+    .score-line{
+      font-size:20px;
+      font-weight:800;
+      color:#e5edf8;
+      margin-bottom:14px;
+    }
+
+    .desc{
+      white-space:pre-line;
+      font-size:15px;
+      line-height:1.7;
+      color:#e5edf8;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    .flash-good, .flash-bad{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:0;
+      transition:opacity .18s ease;
+      z-index:4;
+    }
+
+    .flash-good{ background:rgba(34,197,94,.18); }
+    .flash-bad{ background:rgba(239,68,68,.18); }
+
+    .particles{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:5;
+    }
+
+    .particle{
+      position:absolute;
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      opacity:.95;
+      animation:burst .6s ease-out forwards;
+    }
+
+    @keyframes burst{
+      0%{ transform:translate(0,0) scale(1); opacity:1; }
+      100%{ transform:translate(var(--tx), var(--ty)) scale(.2); opacity:0; }
+    }
+
+    .shake{ animation:shake .28s ease; }
+    .pop{ animation:pop .18s ease; }
+
+    @keyframes shake{
+      0%{ transform:translateX(0); }
+      25%{ transform:translateX(-7px); }
+      50%{ transform:translateX(7px); }
+      75%{ transform:translateX(-4px); }
+      100%{ transform:translateX(0); }
+    }
+
+    @keyframes pop{
+      0%{ transform:scale(1); }
+      50%{ transform:scale(1.04); }
+      100%{ transform:scale(1); }
+    }
+
+    @media (max-width:380px){
+      .title{ font-size:20px; }
+      .stat-value{ font-size:20px; }
+      .instruction{ font-size:16px; }
+      .instruction .accent{ font-size:21px; }
+      .choice{ min-height:68px; font-size:22px; }
+      .hero{ font-size:30px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="phone">
+      <div class="topbar">
+        <div class="topline">
+          <div class="title">3秒脳テスト</div>
+          <div class="badge">ストループテスト</div>
+        </div>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">ラウンド</div>
+            <div class="stat-value"><span id="roundNow">1</span>/<span id="roundMax">6</span></div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">スコア</div>
+            <div class="stat-value" id="score">0</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">時間</div>
+            <div class="stat-value"><span id="timeText">3.0</span>s</div>
+          </div>
+        </div>
+
+        <div class="mode-line" id="modeLine">難易度：上級</div>
+
+        <div class="timer-wrap">
+          <div class="timer-bar" id="timerBar"></div>
+        </div>
+      </div>
+
+      <div class="main" id="main">
+        <div class="flash-good" id="flashGood"></div>
+        <div class="flash-bad" id="flashBad"></div>
+        <div class="particles" id="particles"></div>
+
+        <div class="instruction">
+          <span class="accent">文字は無視</span>
+          色だけをタップ！
+        </div>
+
+        <div class="word-area">
+          <div class="word-box" id="wordBox">
+            <div id="word">あお</div>
+          </div>
+        </div>
+
+        <div class="choices">
+          <button class="choice red" onclick="submitAnswer('red')">あか</button>
+          <button class="choice blue" onclick="submitAnswer('blue')">あお</button>
+          <button class="choice green" onclick="submitAnswer('green')">みどり</button>
+          <button class="choice yellow" onclick="submitAnswer('yellow')">きいろ</button>
+          
+        </div>
+
+        <div class="hint">
+          はやく正しく答えると高得点！
+        </div>
+      </div>
+
+      
+<div class="start-screen" id="startScreen">
+        <div class="card">
+          <div class="hero">3秒でできる？</div>
+          <div class="subhero">
+            文字ではなく<b>色</b>を見てタップ！<br>
+            上級モードにチャレンジ！
+          </div>
+<button class="start-btn" id="startBtn">スタート</button>
+          <div class="micro">
+            ストループテスト風ゲーム<br>
+            ※医療診断ではありません
+          </div>
+        </div>
+      </div>
+
+      <div class="result-screen" id="resultScreen">
+        <div class="card">
+          <div class="result-title">けっか</div>
+          <div class="age" id="ageText">脳年齢：30代</div>
+          <div class="score-line" id="scoreLine">スコア：8</div>
+          <div class="desc" id="descText"></div>
+          <button class="restart-btn" id="restartBtn" style="margin-top:16px;">もういちど</button>
+          <div class="micro">
+            ストループテスト風ゲーム<br>
+            ※医療診断ではありません
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    
+    const questionSets = {
+      easy: [
+        { text: "あか",       color: "red",    limit: 3.6 },
+        { text: "あお",       color: "blue",   limit: 3.5 },
+        { text: "みどり",     color: "green",  limit: 3.4 },
+        { text: "きいろ",     color: "yellow", limit: 3.3 },
+        { text: "あお",       color: "red",    limit: 3.3 },
+        { text: "きいろ",     color: "green",  limit: 3.2 }
+      ],
+      normal: [
+        { text: "あお",       color: "red",    limit: 3.0 },
+        { text: "みどり",     color: "yellow", limit: 2.8 },
+        { text: "あか",       color: "red",    limit: 2.6 },
+        { text: "きいろ",     color: "blue",   limit: 2.7 },
+                { text: "あお",       color: "blue", limit: 2.4 }
+      ],
+      hard: [
+        { text: "あお",       color: "yellow", limit: 2.4 },
+        { text: "みどり",     color: "blue", limit: 2.3 },
+        { text: "あか",       color: "blue",   limit: 2.2 },
+        { text: "きいろ",     color: "green",  limit: 2.2 },
+                { text: "あお",       color: "green",  limit: 2.1 },
+        { text: "きいろ",     color: "blue", limit: 2.0 },
+        { text: "みどり",     color: "red",    limit: 2.0 }
+      ]
+    };
+
+    const difficultyLabels = {
+      easy: "初級",
+      normal: "中級",
+      hard: "上級"
+    };
+
+    let selectedDifficulty = "hard";
+    let questions = questionSets.hard;
+
+    const colorMap = {
+      red:    "#ef4444",
+      blue:   "#3b82f6",
+      green:  "#22c55e",
+      yellow: "#facc15"
+    };
+
+    let current = 0;
+    let score = 0;
+    let answered = false;
+    let questionStart = 0;
+    let timerInterval = null;
+    let currentLimit = 3.0;
+    let audioUnlocked = false;
+
+    const roundNow = document.getElementById("roundNow");
+    const roundMax = document.getElementById("roundMax");
+    const scoreEl = document.getElementById("score");
+    const timeText = document.getElementById("timeText");
+    const timerBar = document.getElementById("timerBar");
+    const word = document.getElementById("word");
+    const wordBox = document.getElementById("wordBox");
+    const main = document.getElementById("main");
+    const flashGood = document.getElementById("flashGood");
+    const flashBad = document.getElementById("flashBad");
+    const particles = document.getElementById("particles");
+    const startScreen = document.getElementById("startScreen");
+    const resultScreen = document.getElementById("resultScreen");
+    const ageText = document.getElementById("ageText");
+    const scoreLine = document.getElementById("scoreLine");
+    const descText = document.getElementById("descText");
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const modeLine = document.getElementById("modeLine");
+    modeLine.textContent = `難易度：${difficultyLabels[selectedDifficulty]}`;
+    roundMax.textContent = questions.length;
+
+    startBtn.addEventListener("click", () => {
+      unlockAudio();
+      startScreen.style.display = "none";
+      startGame();
+    });
+
+    restartBtn.addEventListener("click", () => {
+      resultScreen.style.display = "none";
+      startGame();
+    });
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        src.start(0);
+        audioUnlocked = true;
+      } catch (e) {}
+    }
+
+    function shuffleArray(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function startGame() {
+      current = 0;
+      score = 0;
+      questions = shuffleArray(questionSets[selectedDifficulty]);
+      roundMax.textContent = questions.length;
+      scoreEl.textContent = score;
+      showQuestion();
+    }
+
+    function showQuestion() {
+      if (current >= questions.length) {
+        endGame();
+        return;
+      }
+
+      clearInterval(timerInterval);
+      answered = false;
+
+      const q = questions[current];
+      currentLimit = q.limit;
+
+      roundNow.textContent = current + 1;
+      word.textContent = q.text;
+      word.style.color = colorMap[q.color];
+      word.style.fontSize = (70 + Math.random() * 18) + "px";
+
+      wordBox.classList.remove("pop");
+      void wordBox.offsetWidth;
+      wordBox.classList.add("pop");
+
+      timeText.textContent = currentLimit.toFixed(1);
+      timerBar.style.transform = "scaleX(1)";
+      questionStart = performance.now();
+
+      timerInterval = setInterval(() => {
+        const elapsed = (performance.now() - questionStart) / 1000;
+        const remain = Math.max(0, currentLimit - elapsed);
+        const ratio = remain / currentLimit;
+
+        timeText.textContent = remain.toFixed(1);
+        timerBar.style.transform = `scaleX(${ratio})`;
+
+        if (remain <= 0) {
+          clearInterval(timerInterval);
+          if (!answered) {
+            answered = true;
+            score -= 1;
+            scoreEl.textContent = score;
+            playWrong();
+            badEffect();
+            setTimeout(() => {
+              current++;
+              showQuestion();
+            }, 430);
+          }
+        }
+      }, 50);
+    }
+
+    function submitAnswer(selected) {
+      if (answered) return;
+      answered = true;
+      clearInterval(timerInterval);
+
+      const q = questions[current];
+      const elapsed = (performance.now() - questionStart) / 1000;
+
+      if (selected === q.color) {
+        if (elapsed <= currentLimit * 0.72) {
+          score += 3; // fast
+        } else {
+          score += 2; // normal correct
+        }
+        scoreEl.textContent = score;
+        playCorrect();
+        goodEffect();
+      } else {
+        score -= 1;
+        scoreEl.textContent = score;
+        playWrong();
+        badEffect();
+      }
+
+      setTimeout(() => {
+        current++;
+        showQuestion();
+      }, 430);
+    }
+
+    function goodEffect() {
+      flashGood.style.opacity = "1";
+      setTimeout(() => flashGood.style.opacity = "0", 180);
+      spawnParticles();
+    }
+
+    function badEffect() {
+      flashBad.style.opacity = "1";
+      main.classList.remove("shake");
+      void main.offsetWidth;
+      main.classList.add("shake");
+      setTimeout(() => flashBad.style.opacity = "0", 180);
+    }
+
+    function spawnParticles() {
+      particles.innerHTML = "";
+      const colors = ["#22c55e", "#22d3ee", "#facc15", "#ffffff"];
+      for (let i = 0; i < 14; i++) {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.left = (42 + Math.random() * 16) + "%";
+        p.style.top = (36 + Math.random() * 18) + "%";
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.setProperty("--tx", (Math.random() * 180 - 90) + "px");
+        p.style.setProperty("--ty", (Math.random() * 180 - 90) + "px");
+        particles.appendChild(p);
+      }
+      setTimeout(() => particles.innerHTML = "", 650);
+    }
+
+    function getBrainAge(score) {
+      if (score >= 15) return "20代";
+      if (score >= 11) return "30代";
+      if (score >= 7)  return "40代";
+      if (score >= 3)  return "50代";
+      return "60代以上";
+    }
+
+    function getDesc(score) {
+      if (score >= 15) {
+        return "注意のコントロールがかなり鋭いです。文字にまどわされず、色をしっかり見られています。";
+      }
+      if (score >= 11) {
+        return "かなり良い結果です。プレッシャーがあっても、すばやく意識を切り替えられています。";
+      }
+      if (score >= 7) {
+        return "平均的な結果です。文字の意味に少し引っぱられたかもしれません。";
+      }
+      if (score >= 3) {
+        return "文字に反応しすぎているかもしれません。色だけを見る意識で再挑戦してみてください。";
+      }
+      return "かなりひっかけられたかも。文字は無視して、色だけを信じて答えてみてください。";
+      }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      const age = getBrainAge(score);
+      ageText.textContent = `脳年齢：${age}`;
+      scoreLine.textContent = `スコア：${score}`;
+      descText.textContent = `${difficultyLabels[selectedDifficulty]}の結果です。` + "\n\n" + getDesc(score);
+      resultScreen.style.display = "flex";
+    }
+
+    function playCorrect() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+
+      const g = ctx.createGain();
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.18, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      const o3 = ctx.createOscillator();
+
+      o1.type = "sine";
+      o2.type = "sine";
+      o3.type = "triangle";
+
+      o1.frequency.setValueAtTime(880, now);
+      o2.frequency.setValueAtTime(1174, now + 0.08);
+      o3.frequency.setValueAtTime(1568, now + 0.16);
+
+      o1.connect(g);
+      o2.connect(g);
+      o3.connect(g);
+
+      o1.start(now);
+      o2.start(now + 0.08);
+      o3.start(now + 0.16);
+
+      o1.stop(now + 0.22);
+      o2.stop(now + 0.32);
+      o3.stop(now + 0.55);
+    }
+
+    function playWrong() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+
+      const g = ctx.createGain();
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.16, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+      const o = ctx.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(260, now);
+      o.frequency.exponentialRampToValueAtTime(120, now + 0.36);
+      o.connect(g);
+      o.start(now);
+      o.stop(now + 0.5);
+    }
+  </script>
+</body>
+</html>
