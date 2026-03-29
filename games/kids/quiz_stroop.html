@@ -66,6 +66,7 @@
       border-radius:var(--radius);
       padding:14px;
       box-shadow:var(--shadow);
+      flex-shrink:0;
     }
 
     .topline{
@@ -139,25 +140,27 @@
 
     .main{
       flex:1;
+      min-height:0;
       background:var(--panel);
       border:1px solid var(--panelBorder);
       border-radius:30px;
       box-shadow:var(--shadow);
-      padding:18px 16px 16px;
+      padding:16px 14px 14px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
-      gap:14px;
+      gap:12px;
       position:relative;
       overflow:hidden;
     }
 
     .instruction{
       text-align:center;
-      line-height:1.4;
+      line-height:1.35;
       font-weight:900;
       font-size:20px;
       color:#e5edf8;
+      flex-shrink:0;
     }
 
     .instruction .accent{
@@ -169,18 +172,17 @@
 
     .word-area{
       flex:1;
+      min-height:160px;
       display:flex;
       align-items:center;
       justify-content:center;
-      min-height:280px;
       position:relative;
     }
 
     .word-box{
-      width:100%;
-      max-width:360px;
+      width:min(80%, 260px);
       aspect-ratio:1/1;
-      border-radius:34px;
+      border-radius:28px;
       display:flex;
       align-items:center;
       justify-content:center;
@@ -207,25 +209,27 @@
       white-space:nowrap;
       position:relative;
       z-index:2;
-      font-size:clamp(48px, 11vw, 80px);
+      font-size:clamp(36px, 10vw, 64px);
       font-weight:900;
       letter-spacing:.08em;
       text-shadow:0 8px 22px rgba(0,0,0,.35);
       user-select:none;
       transition:transform .15s ease;
+      line-height:1;
     }
 
     .choices{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
+      gap:10px;
+      flex-shrink:0;
     }
 
     .choice{
       border:none;
-      min-height:74px;
-      border-radius:22px;
-      font-size:26px;
+      min-height:64px;
+      border-radius:20px;
+      font-size:22px;
       font-weight:900;
       color:#fff;
       box-shadow:0 12px 20px rgba(0,0,0,.22), inset 0 -4px 0 rgba(0,0,0,.15);
@@ -242,14 +246,14 @@
     .blue{background:linear-gradient(180deg,#60a5fa,#2563eb);}
     .green{background:linear-gradient(180deg,#4ade80,#16a34a);}
     .yellow{background:linear-gradient(180deg,#fde047,#f59e0b); color:#111827;}
-    
 
     .hint{
       text-align:center;
       color:var(--sub);
       font-size:12px;
-      line-height:1.5;
+      line-height:1.4;
       padding:0 6px;
+      flex-shrink:0;
     }
 
     .overlay, .result-screen, .start-screen{
@@ -292,7 +296,8 @@
       line-height:1.6;
       margin-bottom:18px;
     }
-.mode-line{
+
+    .mode-line{
       margin-top:8px;
       text-align:center;
       font-size:12px;
@@ -409,12 +414,47 @@
     }
 
     @media (max-width:380px){
+      .phone{ padding:10px; gap:10px; }
+      .topbar{ padding:12px; }
       .title{ font-size:20px; }
-      .stat-value{ font-size:20px; }
+      .badge{ font-size:11px; padding:7px 10px; }
+      .stats{ gap:8px; }
+      .stat{ padding:8px; border-radius:16px; }
+      .stat-value{ font-size:18px; }
       .instruction{ font-size:16px; }
-      .instruction .accent{ font-size:21px; }
-      .choice{ min-height:68px; font-size:22px; }
+      .instruction .accent{ font-size:20px; }
+      .word-area{ min-height:120px; }
+      .word-box{ width:min(76%, 210px); border-radius:24px; }
+      #word{ font-size:clamp(32px, 9vw, 52px); }
+      .choice{ min-height:58px; font-size:20px; border-radius:18px; }
       .hero{ font-size:30px; }
+    }
+
+    @media (max-height:800px){
+      .phone{ padding:10px; gap:10px; }
+      .topbar{ padding:12px; }
+      .main{ padding:14px 12px 12px; gap:10px; }
+      .word-area{ min-height:130px; }
+      .word-box{ width:min(74%, 220px); }
+      .choice{ min-height:58px; font-size:20px; }
+      .hint{ font-size:11px; }
+    }
+
+    @media (max-height:700px){
+      .topbar{ padding:10px; }
+      .title{ font-size:20px; }
+      .badge{ font-size:11px; padding:6px 9px; }
+      .stat{ padding:7px; }
+      .stat-label{ font-size:10px; }
+      .stat-value{ font-size:17px; }
+      .instruction{ font-size:15px; }
+      .instruction .accent{ font-size:18px; margin-bottom:2px; }
+      .word-area{ min-height:100px; }
+      .word-box{ width:min(70%, 180px); border-radius:20px; }
+      #word{ font-size:clamp(28px, 8vw, 44px); }
+      .choices{ gap:8px; }
+      .choice{ min-height:52px; font-size:18px; border-radius:16px; }
+      .hint{ font-size:10px; }
     }
   </style>
 </head>
@@ -470,7 +510,6 @@
           <button class="choice blue" onclick="submitAnswer('blue')">あお</button>
           <button class="choice green" onclick="submitAnswer('green')">みどり</button>
           <button class="choice yellow" onclick="submitAnswer('yellow')">きいろ</button>
-          
         </div>
 
         <div class="hint">
@@ -478,15 +517,14 @@
         </div>
       </div>
 
-      
-<div class="start-screen" id="startScreen">
+      <div class="start-screen" id="startScreen">
         <div class="card">
           <div class="hero">3秒でできる？</div>
           <div class="subhero">
             文字ではなく<b>色</b>を見てタップ！<br>
             上級モードにチャレンジ！
           </div>
-<button class="start-btn" id="startBtn">スタート</button>
+          <button class="start-btn" id="startBtn">スタート</button>
           <div class="micro">
             ストループテスト風ゲーム<br>
             ※医療診断ではありません
@@ -511,31 +549,30 @@
   </div>
 
   <script>
-    
     const questionSets = {
       easy: [
-        { text: "あか",       color: "red",    limit: 3.6 },
-        { text: "あお",       color: "blue",   limit: 3.5 },
-        { text: "みどり",     color: "green",  limit: 3.4 },
-        { text: "きいろ",     color: "yellow", limit: 3.3 },
-        { text: "あお",       color: "red",    limit: 3.3 },
-        { text: "きいろ",     color: "green",  limit: 3.2 }
+        { text: "あか", color: "red", limit: 3.6 },
+        { text: "あお", color: "blue", limit: 3.5 },
+        { text: "みどり", color: "green", limit: 3.4 },
+        { text: "きいろ", color: "yellow", limit: 3.3 },
+        { text: "あお", color: "red", limit: 3.3 },
+        { text: "きいろ", color: "green", limit: 3.2 }
       ],
       normal: [
-        { text: "あお",       color: "red",    limit: 3.0 },
-        { text: "みどり",     color: "yellow", limit: 2.8 },
-        { text: "あか",       color: "red",    limit: 2.6 },
-        { text: "きいろ",     color: "blue",   limit: 2.7 },
-                { text: "あお",       color: "blue", limit: 2.4 }
+        { text: "あお", color: "red", limit: 3.0 },
+        { text: "みどり", color: "yellow", limit: 2.8 },
+        { text: "あか", color: "red", limit: 2.6 },
+        { text: "きいろ", color: "blue", limit: 2.7 },
+        { text: "あお", color: "blue", limit: 2.4 }
       ],
       hard: [
-        { text: "あお",       color: "yellow", limit: 2.4 },
-        { text: "みどり",     color: "blue", limit: 2.3 },
-        { text: "あか",       color: "blue",   limit: 2.2 },
-        { text: "きいろ",     color: "green",  limit: 2.2 },
-                { text: "あお",       color: "green",  limit: 2.1 },
-        { text: "きいろ",     color: "blue", limit: 2.0 },
-        { text: "みどり",     color: "red",    limit: 2.0 }
+        { text: "あお", color: "yellow", limit: 2.4 },
+        { text: "みどり", color: "blue", limit: 2.3 },
+        { text: "あか", color: "blue", limit: 2.2 },
+        { text: "きいろ", color: "green", limit: 2.2 },
+        { text: "あお", color: "green", limit: 2.1 },
+        { text: "きいろ", color: "blue", limit: 2.0 },
+        { text: "みどり", color: "red", limit: 2.0 }
       ]
     };
 
@@ -549,9 +586,9 @@
     let questions = questionSets.hard;
 
     const colorMap = {
-      red:    "#ef4444",
-      blue:   "#3b82f6",
-      green:  "#22c55e",
+      red: "#ef4444",
+      blue: "#3b82f6",
+      green: "#22c55e",
       yellow: "#facc15"
     };
 
@@ -582,6 +619,7 @@
     const startBtn = document.getElementById("startBtn");
     const restartBtn = document.getElementById("restartBtn");
     const modeLine = document.getElementById("modeLine");
+
     modeLine.textContent = `難易度：${difficultyLabels[selectedDifficulty]}`;
     roundMax.textContent = questions.length;
 
@@ -642,7 +680,13 @@
       roundNow.textContent = current + 1;
       word.textContent = q.text;
       word.style.color = colorMap[q.color];
-      word.style.fontSize = (70 + Math.random() * 18) + "px";
+
+      const sizes = window.innerHeight <= 700
+        ? [32, 36, 40, 44]
+        : window.innerHeight <= 800
+          ? [40, 44, 48, 52]
+          : [48, 54, 60, 64];
+      word.style.fontSize = sizes[Math.floor(Math.random() * sizes.length)] + "px";
 
       wordBox.classList.remove("pop");
       void wordBox.offsetWidth;
@@ -686,11 +730,7 @@
       const elapsed = (performance.now() - questionStart) / 1000;
 
       if (selected === q.color) {
-        if (elapsed <= currentLimit * 0.72) {
-          score += 3; // fast
-        } else {
-          score += 2; // normal correct
-        }
+        score += elapsed <= currentLimit * 0.72 ? 3 : 2;
         scoreEl.textContent = score;
         playCorrect();
         goodEffect();
@@ -740,8 +780,8 @@
     function getBrainAge(score) {
       if (score >= 15) return "20代";
       if (score >= 11) return "30代";
-      if (score >= 7)  return "40代";
-      if (score >= 3)  return "50代";
+      if (score >= 7) return "40代";
+      if (score >= 3) return "50代";
       return "60代以上";
     }
 
@@ -759,14 +799,14 @@
         return "文字に反応しすぎているかもしれません。色だけを見る意識で再挑戦してみてください。";
       }
       return "かなりひっかけられたかも。文字は無視して、色だけを信じて答えてみてください。";
-      }
+    }
 
     function endGame() {
       clearInterval(timerInterval);
       const age = getBrainAge(score);
       ageText.textContent = `脳年齢：${age}`;
       scoreLine.textContent = `スコア：${score}`;
-      descText.textContent = `${difficultyLabels[selectedDifficulty]}の結果です。` + "\n\n" + getDesc(score);
+      descText.textContent = `${difficultyLabels[selectedDifficulty]}の結果です。\n\n${getDesc(score)}`;
       resultScreen.style.display = "flex";
     }
 
