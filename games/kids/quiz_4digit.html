@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>3秒で覚えられる？ 4桁順番記憶ゲーム</title>
+  <style>
+    :root{
+      --bg1:#fff7d6;
+      --bg2:#dff4ff;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#64748b;
+      --accent:#f97316;
+      --accent2:#2563eb;
+      --ok:#22c55e;
+      --ng:#ef4444;
+      --shadow:0 14px 34px rgba(0,0,0,.12);
+      --radius:24px;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    html,body{
+      margin:0;padding:0;width:100%;min-height:100%;
+      font-family:"Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.8), transparent 30%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      overflow:hidden;
+      touch-action:manipulation;
+      user-select:none;
+    }
+    body{display:flex;align-items:center;justify-content:center;}
+    .app{
+      width:100%;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+    }
+    .phone{
+      width:min(100%,430px);
+      aspect-ratio:9/16;
+      background:rgba(255,255,255,.28);
+      border-radius:30px;
+      border:2px solid rgba(255,255,255,.7);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+    .screen{
+      width:100%;
+      height:100%;
+      background:linear-gradient(180deg,#fffef9,#f2fbff);
+      border-radius:24px;
+      padding:14px 12px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      position:relative;
+      overflow:hidden;
+    }
+    .topbar{
+      width:100%;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      flex:0 0 auto;
+    }
+    .badge{
+      flex:1 1 0;
+      text-align:center;
+      background:#fff;
+      border-radius:999px;
+      padding:8px 10px;
+      font-weight:800;
+      font-size:14px;
+      box-shadow:0 6px 16px rgba(0,0,0,.08);
+      white-space:nowrap;
+    }
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+    .title-card{
+      padding:14px 12px 12px;
+      text-align:center;
+      flex:0 0 auto;
+    }
+    .title-top{
+      font-size:14px;
+      font-weight:800;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+    h1{
+      margin:0;
+      font-size:clamp(24px,6.2vw,34px);
+      line-height:1.08;
+      color:var(--accent);
+      font-weight:900;
+    }
+    .sub{
+      margin-top:6px;
+      font-size:14px;
+      font-weight:800;
+      color:var(--accent2);
+    }
+    .memory-area{
+      flex:1 1 auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      min-height:0;
+      gap:12px;
+    }
+    .memory-card{
+      width:100%;
+      max-width:360px;
+      min-height:210px;
+      padding:18px 14px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .phase-label{
+      font-size:15px;
+      font-weight:800;
+      color:var(--muted);
+      margin-bottom:10px;
+      text-align:center;
+    }
+    .digits{
+      display:flex;
+      gap:10px;
+      flex-wrap:nowrap;
+      justify-content:center;
+      align-items:center;
+    }
+    .digit-box{
+      width:min(18vw,72px);
+      height:min(18vw,72px);
+      max-width:72px;
+      max-height:72px;
+      min-width:58px;
+      min-height:58px;
+      border-radius:18px;
+      background:linear-gradient(180deg,#fff,#eef7ff);
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:clamp(34px,9vw,48px);
+      font-weight:900;
+      color:#111827;
+      text-shadow:0 2px 6px rgba(0,0,0,.08);
+      transition:transform .2s ease, opacity .2s ease, filter .2s ease;
+    }
+    .masked .digit-box{
+      color:transparent;
+      background:linear-gradient(180deg,#f8fafc,#e8f1f7);
+      text-shadow:none;
+    }
+    .masked .digit-box::after{
+      content:"?";
+      color:#7c8aa0;
+      font-size:clamp(28px,8vw,40px);
+      font-weight:900;
+    }
+    .countdown{
+      position:absolute;
+      top:14px;
+      right:14px;
+      width:60px;
+      height:60px;
+      border-radius:50%;
+      background:rgba(255,255,255,.96);
+      box-shadow:0 8px 20px rgba(0,0,0,.12);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:32px;
+      font-weight:900;
+      color:var(--accent2);
+    }
+    .question-text{
+      margin-top:12px;
+      text-align:center;
+      font-size:21px;
+      font-weight:900;
+      min-height:34px;
+      line-height:1.25;
+    }
+    .input-preview{
+      display:flex;
+      gap:8px;
+      justify-content:center;
+      align-items:center;
+      margin-top:10px;
+      flex-wrap:nowrap;
+    }
+    .preview-box{
+      width:min(14vw,54px);
+      height:min(14vw,54px);
+      max-width:54px;
+      max-height:54px;
+      min-width:44px;
+      min-height:44px;
+      border-radius:14px;
+      background:linear-gradient(180deg,#fff,#eef7ff);
+      box-shadow:0 6px 14px rgba(0,0,0,.08);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:clamp(24px,6.8vw,34px);
+      font-weight:900;
+      color:#111827;
+      border:2px solid transparent;
+    }
+    .preview-box.active{
+      border-color:#60a5fa;
+      box-shadow:0 0 0 4px rgba(96,165,250,.16), 0 6px 14px rgba(0,0,0,.08);
+    }
+    .preview-box.empty{
+      color:#94a3b8;
+      background:linear-gradient(180deg,#f8fafc,#eef2f7);
+    }
+    .choices{
+      width:100%;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .choice-btn,.main-btn,.sub-btn{
+      border:none;
+      cursor:pointer;
+      border-radius:18px;
+      font-weight:900;
+      transition:transform .08s ease, opacity .15s ease, box-shadow .15s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
+    }
+    .choice-btn:active,.main-btn:active,.sub-btn:active{transform:scale(.98);}
+    .choice-btn{
+      min-height:56px;
+      font-size:28px;
+      background:linear-gradient(180deg,#fff,#eef6ff);
+      color:#1f2937;
+    }
+    .choice-btn:disabled{
+      opacity:.55;
+      cursor:default;
+    }
+    .choices.hidden-choices{display:none;}
+    .choice-btn.correct{
+      background:linear-gradient(180deg,#dcfce7,#b8f1cb);
+    }
+    .choice-btn.wrong{
+      background:linear-gradient(180deg,#fee2e2,#fecaca);
+    }
+    .bottom{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      flex:0 0 auto;
+    }
+    .message{
+      min-height:58px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:10px 12px;
+      font-size:19px;
+      font-weight:900;
+      line-height:1.3;
+      background:rgba(255,255,255,.82);
+      border-radius:18px;
+    }
+    .message.ok{color:var(--ok);}
+    .message.ng{color:var(--ng);}
+    .message.info{color:#1f2937;}
+    .button-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .main-btn,.sub-btn{
+      min-height:56px;
+      font-size:20px;
+      color:#fff;
+    }
+    .main-btn{
+      background:linear-gradient(135deg,var(--accent2),var(--accent));
+    }
+    .sub-btn{
+      background:linear-gradient(135deg,#64748b,#334155);
+    }
+    .sub-btn:disabled{
+      opacity:.5;
+      cursor:default;
+    }
+    .thumb-screen{
+      position:absolute;
+      inset:0;
+      z-index:20;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,.6), transparent 28%),
+        linear-gradient(180deg,#fff2b5,#bfe8ff);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      padding:18px;
+    }
+    .thumb-badge{
+      background:#2563eb;
+      color:#fff;
+      font-size:clamp(18px,4.8vw,24px);
+      font-weight:900;
+      padding:10px 18px;
+      border-radius:999px;
+      margin-bottom:18px;
+    }
+    .thumb-title{
+      font-size:clamp(40px,10vw,58px);
+      line-height:1.08;
+      font-weight:900;
+      color:#f97316;
+      margin:0;
+    }
+    .thumb-sub{
+      margin-top:12px;
+      font-size:clamp(22px,6vw,34px);
+      font-weight:900;
+      color:#111827;
+    }
+    .thumb-note{
+      margin-top:16px;
+      background:rgba(255,255,255,.88);
+      padding:10px 16px;
+      border-radius:16px;
+      font-size:clamp(16px,4.5vw,22px);
+      font-weight:800;
+      color:#111827;
+    }
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none;
+      opacity:0;
+      z-index:15;
+    }
+    .overlay.show{animation:fadeFlash .75s ease;}
+    .overlay-badge{
+      background:rgba(255,255,255,.96);
+      border-radius:999px;
+      padding:18px 26px;
+      font-size:clamp(28px,8vw,44px);
+      font-weight:900;
+      box-shadow:0 0 0 10px rgba(255,255,255,.25), 0 10px 34px rgba(0,0,0,.18);
+      transform:scale(.72);
+    }
+    .overlay.ok .overlay-badge{
+      color:#2563eb;
+      border:6px solid #facc15;
+    }
+    .overlay.ng .overlay-badge{
+      color:#b91c1c;
+      border:6px solid #fca5a5;
+    }
+    .overlay.show .overlay-badge{animation:pop .75s ease;}
+    .hidden{display:none !important;}
+    .burst{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:14;
+    }
+    .star{
+      position:absolute;
+      width:12px;
+      height:12px;
+      border-radius:4px;
+      opacity:0;
+      animation:burstAnim .95s ease forwards;
+    }
+    .shake{animation:shake .32s ease;}
+    @keyframes pop{
+      0%{transform:scale(.62);}
+      35%{transform:scale(1.08);}
+      100%{transform:scale(1);}
+    }
+    @keyframes fadeFlash{
+      0%{opacity:0;}
+      15%{opacity:1;}
+      85%{opacity:1;}
+      100%{opacity:0;}
+    }
+    @keyframes burstAnim{
+      0%{opacity:0;transform:translate(0,0) scale(.2) rotate(0deg);}
+      15%{opacity:1;}
+      100%{opacity:0;transform:translate(var(--tx),var(--ty)) scale(1.35) rotate(230deg);}
+    }
+    @keyframes shake{
+      0%,100%{transform:translateX(0);}
+      20%{transform:translateX(-6px);}
+      40%{transform:translateX(6px);}
+      60%{transform:translateX(-4px);}
+      80%{transform:translateX(4px);}
+    }
+    @media (max-width:430px){
+      .phone{
+        width:100%;
+        aspect-ratio:auto;
+        min-height:100vh;
+        border-radius:0;
+        padding:0;
+        border:none;
+        box-shadow:none;
+        background:transparent;
+      }
+      .screen{
+        border-radius:0;
+        padding:10px 10px 14px;
+      }
+      .memory-card{min-height:190px;}
+      .digit-box{
+        min-width:54px; min-height:54px;
+        width:18.5vw;height:18.5vw;
+      }
+      .preview-box{
+        min-width:42px; min-height:42px;
+        width:13.5vw;height:13.5vw;
+      }
+      .message{font-size:17px;min-height:54px;}
+      .choice-btn{min-height:52px;font-size:25px;}
+      .main-btn,.sub-btn{font-size:18px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="phone">
+      <div class="screen" id="screen">
+        <div class="thumb-screen" id="thumbScreen">
+          <div class="thumb-badge">のうトレ！ 3秒クイズ</div>
+          <h2 class="thumb-title">3秒で<br>覚えられる？</h2>
+          <div class="thumb-sub">4つの数字を 順番どおりにおしてね！</div>
+          <div class="thumb-note">全部で 3問</div>
+          <button class="main-btn" id="startBtn" style="margin-top:18px;min-width:180px;">スタート</button>
+        </div>
+
+        <div class="overlay ok" id="okOverlay">
+          <div class="overlay-badge">ピンポーン！</div>
+        </div>
+        <div class="overlay ng" id="ngOverlay">
+          <div class="overlay-badge">ざんねん！</div>
+        </div>
+        <div class="burst" id="burst"></div>
+
+        <div class="topbar">
+          <div class="badge" id="roundBadge">もんだい 1 / 3</div>
+          <div class="badge" id="scoreBadge">せいかい 0</div>
+        </div>
+
+        <div class="card title-card">
+          <div class="title-top">4けた きおく ゲーム</div>
+          <h1>3秒で覚えられる？</h1>
+          <div class="sub">4つの数字を 順番どおりに入力！</div>
+        </div>
+
+        <div class="memory-area">
+          <div class="card memory-card" id="memoryCard">
+            <div class="phase-label" id="phaseLabel">スタートを おしてね！</div>
+            <div class="countdown" id="countdown">3</div>
+            <div class="digits" id="digitsRow"></div>
+            <div class="question-text" id="questionText"></div>
+            <div class="input-preview" id="inputPreview"></div>
+          </div>
+        </div>
+
+        <div class="bottom">
+          <div class="choices" id="choices"></div>
+          <div class="message info" id="message">4つの数字を順番で覚えるゲームだよ</div>
+          <div class="button-row">
+            <button class="sub-btn" id="clearBtn">1文字けす</button>
+            <button class="main-btn" id="mainBtn">スタート</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_ROUNDS = 3;
+    const MEMORY_MS = 3000;
+    const FEEDBACK_MS = 1200;
+    const PAD_VALUES = [1,2,3,4,5,6,7,8,9];
+
+    const thumbScreen = document.getElementById('thumbScreen');
+    const startBtn = document.getElementById('startBtn');
+    const mainBtn = document.getElementById('mainBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const roundBadge = document.getElementById('roundBadge');
+    const scoreBadge = document.getElementById('scoreBadge');
+    const phaseLabel = document.getElementById('phaseLabel');
+    const countdown = document.getElementById('countdown');
+    const digitsRow = document.getElementById('digitsRow');
+    const questionText = document.getElementById('questionText');
+    const inputPreview = document.getElementById('inputPreview');
+    const choicesEl = document.getElementById('choices');
+    const messageEl = document.getElementById('message');
+    const okOverlay = document.getElementById('okOverlay');
+    const ngOverlay = document.getElementById('ngOverlay');
+    const burst = document.getElementById('burst');
+    const memoryCard = document.getElementById('memoryCard');
+
+    let roundIndex = 0;
+    let score = 0;
+    let state = 'idle';
+    let currentDigits = [];
+    let userAnswer = [];
+    let countdownTimer = null;
+    let phaseTimer = null;
+
+    function shuffle(arr){
+      const a = [...arr];
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random() * (i+1));
+        [a[i],a[j]] = [a[j],a[i]];
+      }
+      return a;
+    }
+
+    function sampleUniqueDigits(count){
+      const digits = shuffle([1,2,3,4,5,6,7,8,9]);
+      return digits.slice(0, count);
+    }
+
+    function setMessage(text, type='info'){
+      messageEl.textContent = text;
+      messageEl.className = `message ${type}`;
+    }
+
+    function updateBadges(){
+      roundBadge.textContent = `もんだい ${Math.min(roundIndex + 1, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
+      scoreBadge.textContent = `せいかい ${score}`;
+    }
+
+    function clearTimers(){
+      if(countdownTimer){
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      if(phaseTimer){
+        clearTimeout(phaseTimer);
+        phaseTimer = null;
+      }
+    }
+
+    function renderDigits(values, masked=false){
+      digitsRow.innerHTML = '';
+      digitsRow.className = masked ? 'digits masked' : 'digits';
+      values.forEach(v => {
+        const box = document.createElement('div');
+        box.className = 'digit-box';
+        box.textContent = v;
+        digitsRow.appendChild(box);
+      });
+    }
+
+    function buildNumberPad(){
+      choicesEl.innerHTML = '';
+      PAD_VALUES.forEach(value => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-btn';
+        btn.textContent = value;
+        btn.disabled = true;
+        btn.addEventListener('click', () => handleNumberInput(value));
+        choicesEl.appendChild(btn);
+      });
+    }
+
+    function setChoicesEnabled(enabled){
+      [...choicesEl.querySelectorAll('.choice-btn')].forEach(btn => {
+        btn.disabled = !enabled;
+      });
+    }
+
+    function resetVisualState(){
+      [...choicesEl.querySelectorAll('.choice-btn')].forEach(btn => {
+        btn.classList.remove('correct', 'wrong');
+      });
+      memoryCard.classList.remove('shake');
+    }
+
+    function renderPadFeedback(correct=false){
+      [...choicesEl.querySelectorAll('.choice-btn')].forEach(btn => {
+        const val = Number(btn.textContent);
+        if(correct){
+          if(currentDigits.includes(val)) btn.classList.add('correct');
+        }else{
+          if(userAnswer.includes(val) && !currentDigits.includes(val)){
+            btn.classList.add('wrong');
+          }else if(currentDigits.includes(val)){
+            btn.classList.add('correct');
+          }
+        }
+      });
+    }
+
+    function showOverlay(el){
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 760);
+    }
+
+    function launchBurst(){
+      burst.innerHTML = '';
+      const colors = ['#ffd84d', '#ff9f5a', '#4fb3ff', '#7ee787', '#ff79b0'];
+      for(let i=0;i<22;i++){
+        const s = document.createElement('div');
+        s.className = 'star';
+        s.style.left = `${48 + (Math.random()*6-3)}%`;
+        s.style.top = `${45 + (Math.random()*10-5)}%`;
+        s.style.background = colors[Math.floor(Math.random()*colors.length)];
+        s.style.setProperty('--tx', `${Math.random()*260-130}px`);
+        s.style.setProperty('--ty', `${Math.random()*220-110}px`);
+        s.style.animationDelay = `${Math.random()*70}ms`;
+        burst.appendChild(s);
+      }
+      setTimeout(() => burst.innerHTML = '', 1000);
+    }
+
+    function playCorrectSound(){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = new Ctx();
+        let t = ctx.currentTime;
+        [740, 880, 988].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = i === 2 ? 'triangle' : 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(0.08, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.18);
+          t += 0.10;
+        });
+      }catch(e){}
+    }
+
+    function playWrongSound(){
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        const ctx = new Ctx();
+        let t = ctx.currentTime;
+        [320, 240].forEach(freq => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.start(t); osc.stop(t + 0.14);
+          t += 0.12;
+        });
+      }catch(e){}
+    }
+
+    function updateInputPreview(){
+      inputPreview.innerHTML = '';
+      for(let i=0;i<4;i++){
+        const box = document.createElement('div');
+        const hasValue = i < userAnswer.length;
+        box.className = 'preview-box';
+        if(!hasValue) box.classList.add('empty');
+        if(i === userAnswer.length && userAnswer.length < 4 && state === 'answering'){
+          box.classList.add('active');
+        }
+        box.textContent = hasValue ? userAnswer[i] : '_';
+        inputPreview.appendChild(box);
+      }
+    }
+
+    function showAnswerPreview(values, isCorrect){
+      inputPreview.innerHTML = '';
+      values.forEach(v => {
+        const box = document.createElement('div');
+        box.className = 'preview-box';
+        box.textContent = v;
+        box.style.borderColor = isCorrect ? '#22c55e' : '#ef4444';
+        inputPreview.appendChild(box);
+      });
+    }
+
+    function revealQuestion(){
+      state = 'answering';
+      userAnswer = [];
+      phaseLabel.textContent = 'おぼえた じゅんばんで おしてね！';
+      renderDigits(currentDigits, true);
+      questionText.textContent = '4けたを 左から順番に入力！';
+      countdown.textContent = '→';
+      choicesEl.classList.remove('hidden-choices');
+      resetVisualState();
+      setChoicesEnabled(true);
+      updateInputPreview();
+      clearBtn.disabled = false;
+      setMessage('1 → 2 → 3 → 4 のように じゅんばんでおしてね！', 'info');
+      mainBtn.disabled = true;
+      mainBtn.textContent = '入力中';
+    }
+
+    function startMemoryPhase(){
+      clearTimers();
+      currentDigits = sampleUniqueDigits(4);
+      userAnswer = [];
+      buildNumberPad();
+      choicesEl.classList.add('hidden-choices');
+      resetVisualState();
+      renderDigits(currentDigits, false);
+      updateInputPreview();
+      questionText.textContent = '';
+      phaseLabel.textContent = '4つの数字を 覚えてね！';
+      setChoicesEnabled(false);
+      clearBtn.disabled = true;
+      mainBtn.disabled = true;
+      mainBtn.textContent = '出題中...';
+      setMessage('3秒だけ 表示されるよ！', 'info');
+
+      state = 'memorizing';
+      let remain = 3;
+      countdown.textContent = remain;
+
+      countdownTimer = setInterval(() => {
+        remain -= 1;
+        if(remain >= 0){
+          countdown.textContent = remain;
+        }
+        if(remain <= 0){
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+      }, 1000);
+
+      phaseTimer = setTimeout(revealQuestion, MEMORY_MS);
+    }
+
+    function handleNumberInput(value){
+      if(state !== 'answering') return;
+      if(userAnswer.length >= 4) return;
+
+      userAnswer.push(value);
+      updateInputPreview();
+
+      if(userAnswer.length === 4){
+        judgeSequenceAnswer();
+      }
+    }
+
+    function removeLastInput(){
+      if(state !== 'answering') return;
+      if(userAnswer.length === 0) return;
+      userAnswer.pop();
+      updateInputPreview();
+    }
+
+    function judgeSequenceAnswer(){
+      state = 'feedback';
+      setChoicesEnabled(false);
+      clearBtn.disabled = true;
+
+      const isCorrect = userAnswer.every((v, i) => v === currentDigits[i]);
+
+      if(isCorrect){
+        score += 1;
+        updateBadges();
+        renderPadFeedback(true);
+        showAnswerPreview(userAnswer, true);
+        setMessage('せいかい！', 'ok');
+        showOverlay(okOverlay);
+        launchBurst();
+        playCorrectSound();
+      }else{
+        renderPadFeedback(false);
+        showAnswerPreview(userAnswer, false);
+        questionText.textContent = `正解: ${currentDigits.join(' ')}`;
+        setMessage(`ざんねん！ 正解は ${currentDigits.join(' ')}`, 'ng');
+        memoryCard.classList.remove('shake');
+        void memoryCard.offsetWidth;
+        memoryCard.classList.add('shake');
+        showOverlay(ngOverlay);
+        playWrongSound();
+      }
+
+      phaseTimer = setTimeout(() => {
+        roundIndex += 1;
+        if(roundIndex >= TOTAL_ROUNDS){
+          showFinal();
+        }else{
+          updateBadges();
+          state = 'idle';
+          phaseLabel.textContent = '次の問題へ いこう！';
+          questionText.textContent = '';
+          choicesEl.classList.add('hidden-choices');
+          renderDigits([0,0,0,0], true);
+          userAnswer = [];
+          updateInputPreview();
+          countdown.textContent = '3';
+          setMessage('スタートで 次の問題が出るよ', 'info');
+          clearBtn.disabled = true;
+          mainBtn.disabled = false;
+          mainBtn.textContent = 'スタート';
+        }
+      }, FEEDBACK_MS);
+    }
+
+    function showFinal(){
+      clearTimers();
+      state = 'final';
+      phaseLabel.textContent = '3問 おわり！';
+      questionText.textContent = '';
+      renderDigits([score, score, score, score], false);
+      countdown.textContent = '★';
+      showAnswerPreview([score, score, score, score], true);
+
+      let comment = 'もういちど 挑戦！';
+      if(score === 3) comment = 'すごい！ 記憶力ばつぐん！';
+      else if(score === 2) comment = 'いい感じ！';
+      else if(score === 1) comment = 'あと少し！';
+
+      choicesEl.classList.add('hidden-choices');
+      setChoicesEnabled(false);
+      clearBtn.disabled = true;
+      setMessage(`${score}もん せいかい！ ${comment} 
+※これは心理学でも使われる『数字スパンテスト（Digit Span Test）』をもとにしています`, 'info');
+      mainBtn.disabled = false;
+      mainBtn.textContent = 'もういちど';
+    }
+
+    function resetGame(){
+      clearTimers();
+      roundIndex = 0;
+      score = 0;
+      state = 'idle';
+      currentDigits = [1,2,3,4];
+      userAnswer = [];
+      updateBadges();
+      phaseLabel.textContent = 'スタートを おしてね！';
+      questionText.textContent = '4けたを 順番どおりに 入力しよう！';
+      countdown.textContent = '3';
+      renderDigits(currentDigits, false);
+      buildNumberPad();
+      choicesEl.classList.add('hidden-choices');
+      setChoicesEnabled(false);
+      updateInputPreview();
+      clearBtn.disabled = true;
+      setMessage('4つの数字を順番で覚えるゲームだよ', 'info');
+      mainBtn.disabled = false;
+      mainBtn.textContent = 'スタート';
+      resetVisualState();
+    }
+
+    function startGame(){
+      thumbScreen.style.display = 'none';
+      thumbScreen.classList.add('hidden');
+      if(state === 'final'){
+        roundIndex = 0;
+        score = 0;
+        updateBadges();
+      }
+      startMemoryPhase();
+    }
+
+    startBtn.addEventListener('click', () => {
+      thumbScreen.style.display = 'none';
+      startGame();
+    });
+
+    mainBtn.addEventListener('click', () => {
+      if(state === 'idle' || state === 'final'){
+        if(state === 'final'){
+          roundIndex = 0;
+          score = 0;
+          updateBadges();
+        }
+        startMemoryPhase();
+      }
+    });
+
+    clearBtn.addEventListener('click', removeLastInput);
+
+    resetGame();
+  </script>
+</body>
+</html>
