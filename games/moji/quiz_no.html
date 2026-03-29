@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>同じのはどれ？ かんたん知育クイズ</title>
+  <style>
+    :root {
+      --bg1: #fff7b2;
+      --bg2: #ffe38a;
+      --card: #ffffff;
+      --text: #1f2937;
+      --accent: #ef4444;
+      --accent2: #2563eb;
+      --shadow: 0 10px 30px rgba(0,0,0,0.12);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; min-height: 100%;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+      color: var(--text); overflow: hidden; touch-action: manipulation; user-select: none;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+    .app {
+      width: 100%; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 12px;
+    }
+    .phone-frame {
+      width: min(100%, 420px); aspect-ratio: 9 / 16; background: rgba(255,255,255,0.25);
+      border-radius: 28px; box-shadow: var(--shadow); padding: 14px; display: flex;
+      border: 2px solid rgba(255,255,255,0.65);
+    }
+    .screen {
+      width: 100%; height: 100%; background: linear-gradient(180deg, #fffdf2, #fff8cf);
+      border-radius: 22px; padding: 12px 12px 16px; display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between; position: relative; overflow: hidden;
+    }
+    .topbar {
+      width: 100%; display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; flex: 0 0 auto;
+    }
+    .badge {
+      background: #fff; border-radius: 999px; padding: 8px 12px; font-size: 14px; font-weight: 700;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08); white-space: nowrap;
+    }
+    .title-card {
+      width: 100%; background: var(--card); border-radius: 24px; padding: 12px 10px 10px;
+      text-align: center; box-shadow: var(--shadow); margin-bottom: 8px; flex: 0 0 auto;
+    }
+    .title-small { font-size: 14px; font-weight: 800; color: #6b7280; margin-bottom: 4px; }
+    .title-main {
+      font-size: clamp(24px, 6vw, 36px); font-weight: 900; color: var(--accent); line-height: 1.08; margin: 0;
+    }
+    .sub { font-size: 14px; font-weight: 800; color: var(--accent2); margin-top: 4px; }
+    .question-wrap {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4px 0 8px; flex: 0 0 auto;
+    }
+    .countdown {
+      width: 62px; height: 62px; border-radius: 50%; background: #fff; box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 900; color: var(--accent2);
+      flex: 0 0 auto;
+    }
+    .grid {
+      width: 100%; max-width: 336px; display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 9px; margin: 0 auto; padding: 2px 0; flex: 1 1 auto; align-content: center;
+    }
+    .cell {
+      aspect-ratio: 1 / 1; background: #fff; border-radius: 20px; border: none;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.10); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0; transition: transform 0.12s ease, background 0.2s ease;
+    }
+    .cell:active { transform: scale(0.96); }
+    .cell.correct { background: #dcfce7; }
+    .cell.wrong { background: #fee2e2; }
+    .digit {
+      font-size: clamp(34px, 9vw, 52px); font-weight: 900; line-height: 1; display: inline-block;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .footer {
+      width: 100%; margin-top: 8px; display: flex; justify-content: center; flex: 0 0 auto;
+    }
+    .message {
+      min-height: 40px; width: 100%; text-align: center; font-size: 20px; font-weight: 900; color: #111827;
+      padding: 8px 10px; background: rgba(255,255,255,0.78); border-radius: 16px;
+    }
+    .controls {
+      position: absolute; bottom: 12px; right: 12px; display: flex; gap: 8px;
+    }
+    .ctrl-btn {
+      border: none; border-radius: 999px; padding: 10px 14px; background: #ffffff;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.10); font-weight: 800; cursor: pointer;
+    }
+    .hidden { display: none !important; }
+    .thumb-screen {
+      position: absolute; inset: 0; z-index: 30; background: linear-gradient(180deg, #fff6a8, #ffd96f);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 18px;
+    }
+    .thumb-label {
+      background: #2563eb; color: #fff; font-weight: 900; font-size: clamp(20px, 5vw, 28px);
+      padding: 10px 18px; border-radius: 999px; margin-bottom: 18px;
+    }
+    .thumb-main {
+      font-size: clamp(84px, 21vw, 132px); line-height: 1; font-weight: 900; color: #ef4444; margin: 0;
+    }
+    .thumb-sub {
+      margin-top: 10px; font-size: clamp(26px, 6.6vw, 40px); line-height: 1.1; font-weight: 900; color: #111827;
+    }
+    .thumb-bottom {
+      margin-top: 18px; font-size: clamp(18px, 4.8vw, 26px); color: #111827; font-weight: 800;
+      background: rgba(255,255,255,0.85); padding: 10px 16px; border-radius: 16px;
+    }
+    .start-btn {
+      margin-top: 18px; border: none; border-radius: 999px; background: #ef4444; color: #fff;
+      padding: 14px 26px; font-size: 24px; font-weight: 900; cursor: pointer;
+    }
+    .ping-overlay {
+      position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+      pointer-events: none; opacity: 0;
+    }
+    .ping-overlay.show { animation: flashIn 0.7s ease; }
+    .ping-badge {
+      background: rgba(255,255,255,0.95); border: 6px solid #facc15; color: #2563eb; border-radius: 999px;
+      padding: 18px 26px; font-size: clamp(28px, 8vw, 44px); font-weight: 900;
+      box-shadow: 0 0 0 10px rgba(250,204,21,0.25), 0 8px 30px rgba(0,0,0,0.18); transform: scale(0.7);
+    }
+    .ping-overlay.show .ping-badge { animation: popBadge 0.7s ease; }
+    @keyframes flashIn {
+      0% { opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; }
+    }
+    @keyframes popBadge {
+      0% { transform: scale(0.6); } 35% { transform: scale(1.08); } 100% { transform: scale(1); }
+    }
+    @media (max-width: 430px) {
+      .phone-frame {
+        width: 100%; aspect-ratio: auto; min-height: 100vh; border-radius: 0; padding: 0;
+        border: none; box-shadow: none; background: transparent;
+      }
+      .screen { border-radius: 0; padding: 10px 10px 14px; }
+      .title-main { font-size: clamp(22px, 6vw, 30px); }
+      .question-wrap { gap: 10px; margin-bottom: 6px; }
+      .countdown { width: 58px; height: 58px; font-size: 30px; }
+      .grid { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="phone-frame">
+      <div class="screen">
+        <div class="thumb-screen" id="thumbScreen">
+          <div class="thumb-label">のうトレ！ 3秒クイズ</div>
+          <div class="thumb-main">の</div>
+          <div class="thumb-sub">は どれ？</div>
+          <div class="thumb-bottom">3びょうで みつけてね！</div>
+          <button class="start-btn" id="startBtn">スタート</button>
+        </div>
+
+        <div class="ping-overlay" id="pingOverlay">
+          <div class="ping-badge">ピンポーン！</div>
+        </div>
+
+        <div class="topbar">
+          <div class="badge" id="qBadge">もんだい 1 / 10</div>
+          <div class="badge" id="scoreBadge">せいかい 0</div>
+        </div>
+
+        <div class="title-card">
+          <div class="title-small">かんたん ちいくクイズ</div>
+          <h1 class="title-main">同じ のは どれ？</h1>
+          <div class="sub">の と ぬ と め を みてね！</div>
+        </div>
+
+        <div class="question-wrap">
+          <div class="countdown" id="countdown">3</div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="footer">
+          <div class="message" id="message">スタートを おしてね！</div>
+        </div>
+
+        <div class="controls">
+          <button class="ctrl-btn hidden" id="retryBtn">もういちど</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TOTAL_QUESTIONS = 10;
+    const TARGET = "の";
+    const DISTRACTORS = ["ぬ", "め"];
+    const GRID_SIZE = 9;
+    const COLORS = ["#111111", "#222222", "#333333", "#1f2937"];
+    const ANGLES = [-8, -5, -3, 0, 3, 5, 8];
+    const SCALES = [0.92, 0.96, 1.0, 1.04, 1.08];
+
+    const gridEl = document.getElementById("grid");
+    const countdownEl = document.getElementById("countdown");
+    const messageEl = document.getElementById("message");
+    const qBadgeEl = document.getElementById("qBadge");
+    const scoreBadgeEl = document.getElementById("scoreBadge");
+    const retryBtn = document.getElementById("retryBtn");
+    const thumbScreenEl = document.getElementById("thumbScreen");
+    const startBtn = document.getElementById("startBtn");
+    const pingOverlayEl = document.getElementById("pingOverlay");
+
+    let questionIndex = 0;
+    let score = 0;
+    let answerIndex = 0;
+    let currentCountdown = 3;
+    let countdownTimer = null;
+    let canTap = false;
+    let currentQuestionStyle = null;
+
+    function choice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function updateBadges() {
+      qBadgeEl.textContent = `もんだい ${Math.min(questionIndex + 1, TOTAL_QUESTIONS)} / ${TOTAL_QUESTIONS}`;
+      scoreBadgeEl.textContent = `せいかい ${score}`;
+    }
+
+    function makeStyle(excludeKeys = new Set()) {
+      let style;
+      do {
+        style = { color: choice(COLORS), angle: choice(ANGLES), scale: choice(SCALES) };
+        style.key = style.color + "|" + style.angle + "|" + style.scale;
+      } while (excludeKeys.has(style.key));
+      return style;
+    }
+
+    function applyStyle(el, style) {
+      el.style.color = style.color;
+      el.style.transform = `rotate(${style.angle}deg) scale(${style.scale})`;
+    }
+
+    function renderGrid(styles) {
+      gridEl.innerHTML = "";
+      styles.forEach((style, index) => {
+        const btn = document.createElement("button");
+        btn.className = "cell";
+
+        const span = document.createElement("span");
+        span.className = "digit";
+        span.textContent = (index === answerIndex) ? TARGET : choice(DISTRACTORS);
+        applyStyle(span, style);
+
+        btn.appendChild(span);
+        btn.addEventListener("click", () => handleTap(index, btn));
+        gridEl.appendChild(btn);
+      });
+    }
+
+    function buildQuestion() {
+      clearInterval(countdownTimer);
+      currentCountdown = 3;
+      countdownEl.textContent = currentCountdown;
+
+      answerIndex = Math.floor(Math.random() * GRID_SIZE);
+      currentQuestionStyle = makeStyle();
+
+      const styles = new Array(GRID_SIZE);
+      styles[answerIndex] = currentQuestionStyle;
+
+      const used = new Set([currentQuestionStyle.key]);
+      for (let i = 0; i < GRID_SIZE; i++) {
+        if (i === answerIndex) continue;
+        const style = makeStyle(used);
+        styles[i] = style;
+        used.add(style.key);
+      }
+
+      renderGrid(styles);
+      messageEl.textContent = "おなじ のを さがしてね！";
+      canTap = true;
+      startCountdown();
+    }
+
+    function startCountdown() {
+      countdownTimer = setInterval(() => {
+        currentCountdown--;
+        countdownEl.textContent = currentCountdown > 0 ? currentCountdown : "0";
+        if (currentCountdown <= 0) {
+          clearInterval(countdownTimer);
+          revealCorrect(false);
+        }
+      }, 1000);
+    }
+
+    function playPingEffect() {
+      pingOverlayEl.classList.remove("show");
+      void pingOverlayEl.offsetWidth;
+      pingOverlayEl.classList.add("show");
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        const o1 = ctx.createOscillator();
+        const g1 = ctx.createGain();
+        o1.type = "sine";
+        o1.frequency.setValueAtTime(784, now);
+        o1.frequency.exponentialRampToValueAtTime(988, now + 0.16);
+        g1.gain.setValueAtTime(0.0001, now);
+        g1.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        g1.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+        o1.connect(g1);
+        g1.connect(ctx.destination);
+        o1.start(now);
+        o1.stop(now + 0.22);
+
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.type = "triangle";
+        o2.frequency.setValueAtTime(1175, now + 0.08);
+        g2.gain.setValueAtTime(0.0001, now + 0.08);
+        g2.gain.exponentialRampToValueAtTime(0.14, now + 0.11);
+        g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+        o2.connect(g2);
+        g2.connect(ctx.destination);
+        o2.start(now + 0.08);
+        o2.stop(now + 0.30);
+      } catch (e) {}
+      setTimeout(() => pingOverlayEl.classList.remove("show"), 720);
+    }
+
+    function handleTap(index, btn) {
+      if (!canTap) return;
+      canTap = false;
+      clearInterval(countdownTimer);
+
+      if (index === answerIndex) {
+        score++;
+        updateBadges();
+        btn.classList.add("correct");
+        messageEl.textContent = "せいかい！";
+        playPingEffect();
+        setTimeout(nextQuestion, 950);
+      } else {
+        btn.classList.add("wrong");
+        messageEl.textContent = "おしい！";
+        setTimeout(() => revealCorrect(true), 400);
+      }
+    }
+
+    function revealCorrect(fromWrong) {
+      canTap = false;
+      const buttons = [...gridEl.querySelectorAll(".cell")];
+      const correctBtn = buttons[answerIndex];
+      if (correctBtn) correctBtn.classList.add("correct");
+      messageEl.textContent = fromWrong ? "これが おなじ の！" : "じかんぎれ！ これが おなじ の！";
+      setTimeout(nextQuestion, 1200);
+    }
+
+    function nextQuestion() {
+      questionIndex++;
+      if (questionIndex >= TOTAL_QUESTIONS) {
+        endGame();
+        return;
+      }
+      updateBadges();
+      buildQuestion();
+    }
+
+    function endGame() {
+      clearInterval(countdownTimer);
+      canTap = false;
+      countdownEl.textContent = "★";
+      messageEl.textContent = `${score}もん せいかい`;
+      retryBtn.classList.remove("hidden");
+    }
+
+    function resetGame() {
+      questionIndex = 0;
+      score = 0;
+      updateBadges();
+      retryBtn.classList.add("hidden");
+      buildQuestion();
+    }
+
+    startBtn.addEventListener("click", () => {
+      thumbScreenEl.classList.add("hidden");
+      resetGame();
+    });
+
+    retryBtn.addEventListener("click", resetGame);
+
+    updateBadges();
+  </script>
+</body>
+</html>
