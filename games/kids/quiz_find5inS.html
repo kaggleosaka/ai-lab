@@ -276,6 +276,46 @@
 
     .countdown.show{ opacity:1; }
 
+    .thanks-screen{
+      position:absolute;
+      inset:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      flex-direction:column;
+      text-align:center;
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.96));
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transition: opacity .25s ease, visibility .25s ease;
+      z-index: 20;
+    }
+
+    .thanks-screen.show{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+    }
+
+    .thanks-screen .thanks-text{
+      font-size: clamp(40px, 11vw, 72px);
+      line-height: 1.05;
+      font-weight: 900;
+      color: #ff5a7a;
+      text-shadow: 0 2px 14px rgba(255, 90, 122, 0.25);
+      letter-spacing: .02em;
+      margin: 0;
+    }
+
+    .thanks-screen .thanks-sub{
+      font-size: clamp(28px, 7vw, 46px);
+      margin-top: 14px;
+      color: #1e2c44;
+      font-weight: 900;
+    }
+
     @media (max-width:430px){
       .screen{ padding: 14px 12px; gap: 10px; }
       .top-badge{ font-size: 13px; padding: 7px 12px; }
@@ -308,6 +348,11 @@
         </div>
       </section>
 
+      <div id="thanksScreen" class="thanks-screen" aria-hidden="true">
+        <p class="thanks-text">いいね <span class="thumb-icon">👆</span></p>
+        <p class="thanks-sub">お願いします</p>
+      </div>
+
       <div class="bottom">
         <div class="answers">
           <button class="answer-btn" data-value="1" disabled>1</button>
@@ -329,6 +374,7 @@
     const subText = document.getElementById('subText');
     const burst = document.getElementById('burst');
     const countdown = document.getElementById('countdown');
+    const thanksScreen = document.getElementById('thanksScreen');
     const answerButtons = [...document.querySelectorAll('.answer-btn')];
 
     const TOTAL_CELLS = 30;
@@ -522,15 +568,18 @@
       }
     }
 
-    function showFinalResult(){
+    async function showFinalResult(){
       state = 'final';
       clearBoard();
+      hideThanksScreen();
       subText.textContent = '3問おわり！';
       const ageText = getBrainAgeText(score);
       const comment = getResultComment(score);
       setMessage(`${ageText}\n${comment}\n※これは心理学でも使われる『視覚探索テスト』をもとにしています`, 'info');
       actionBtn.disabled = false;
       actionBtn.textContent = 'もう1回';
+      await sleep(2000);
+      showThanksScreen();
     }
 
     function resetForNextRound(){
@@ -542,12 +591,23 @@
       actionBtn.textContent = 'スタート';
     }
 
+    function hideThanksScreen(){
+      thanksScreen.classList.remove('show');
+      thanksScreen.setAttribute('aria-hidden', 'true');
+    }
+
+    function showThanksScreen(){
+      thanksScreen.classList.add('show');
+      thanksScreen.setAttribute('aria-hidden', 'false');
+    }
+
     function resetToStart(){
       state = 'idle';
       roundIndex = 0;
       score = 0;
       clearBoard();
       hideCountdown();
+      hideThanksScreen();
       setButtonsEnabled(false);
       subText.textContent = '3問で脳年齢チェック！';
       setMessage('スタートで1問目が出るよ', 'info');
