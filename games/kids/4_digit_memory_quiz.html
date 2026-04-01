@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>4桁記憶ワーキングメモリ脳トレ</title>
+  <style>
+    :root {
+      --safe-width: min(100vw, 56.25vh);
+      --card-w: 18.8%;
+      --card-h: 20.5%;
+      --card-top: 45.1%;
+      --digit-size: clamp(48px, 9vw, 84px);
+      --message-size: clamp(22px, 4.8vw, 38px);
+      --count-size: clamp(42px, 10vw, 92px);
+      --title-shadow: 0 4px 10px rgba(0,0,0,.25);
+      --digit-shadow: 0 4px 10px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+      background: #e9eefc;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    .app {
+      position: relative;
+      width: min(100vw, 56.25vh);
+      height: min(177.78vw, 100vh);
+      aspect-ratio: 9 / 16;
+      overflow: hidden;
+      background: #dfe8ff;
+      border-radius: 0;
+    }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      user-select: none;
+      -webkit-user-drag: none;
+      pointer-events: none;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.08), rgba(255,255,255,0.06));
+      pointer-events: none;
+    }
+
+    .digits-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .digit {
+      position: absolute;
+      top: var(--card-top);
+      width: var(--card-w);
+      height: var(--card-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--digit-size);
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow:
+        0 0 2px rgba(33, 53, 120, 0.55),
+        0 2px 0 rgba(33, 53, 120, 0.55),
+        0 4px 10px rgba(0,0,0,0.25);
+      -webkit-text-stroke: 2px rgba(40, 57, 126, 0.82);
+      opacity: 1;
+      transform: scale(1);
+      transition: opacity .45s ease, transform .45s ease;
+    }
+
+    .digit.hidden {
+      opacity: 0;
+      transform: scale(.8);
+    }
+
+    .d1 { left: 3.7%; }
+    .d2 { left: 28.7%; }
+    .d3 { left: 53.7%; }
+    .d4 { left: 78.7%; }
+
+    .message-box {
+      position: absolute;
+      left: 50%;
+      bottom: 12.2%;
+      transform: translateX(-50%);
+      width: 90%;
+      text-align: center;
+      padding: 12px 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.22);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 20px rgba(0,0,0,.12);
+    }
+
+    .message {
+      margin: 0;
+      color: #25378f;
+      font-size: var(--message-size);
+      font-weight: 900;
+      line-height: 1.25;
+      text-shadow: 0 2px 6px rgba(255,255,255,0.7);
+    }
+
+    .action-btn {
+      margin-top: 14px;
+      width: min(240px, 100%);
+      padding: 14px 18px;
+      border: none;
+      border-radius: 999px;
+      background: #4a5af3;
+      color: #ffffff;
+      font-size: clamp(18px, 3.5vw, 24px);
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 16px 28px rgba(74, 90, 243, 0.26);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(74, 90, 243, 0.32);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.56;
+      cursor: not-allowed;
+    }
+
+    .countdown {
+      position: absolute;
+      left: 50%;
+      top: 73%;
+      transform: translate(-50%, -50%);
+      min-width: 96px;
+      min-height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: var(--count-size);
+      font-weight: 900;
+      line-height: 1;
+      background: rgba(88, 93, 214, .78);
+      box-shadow: 0 12px 24px rgba(45, 50, 128, .25);
+      text-shadow: 0 4px 10px rgba(0,0,0,.25);
+      opacity: 0;
+      transform-origin: center;
+      transition: opacity .25s ease, transform .25s ease;
+    }
+
+    .countdown.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      animation: pop .7s ease;
+    }
+
+    @keyframes pop {
+      0%   { transform: translate(-50%, -50%) scale(.55); }
+      60%  { transform: translate(-50%, -50%) scale(1.12); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .flash {
+      animation: answerPop .6s ease;
+    }
+
+    @keyframes answerPop {
+      0% { transform: scale(.85); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="4桁記憶ワーキングメモリ脳トレ">
+    <img class="bg" src="4digit.png" alt="4桁記憶ワーキングメモリ脳トレ背景" />
+    <div class="overlay"></div>
+
+    <section class="digits-layer" aria-label="4桁の数字表示エリア">
+      <div class="digit d1" id="digit1"></div>
+      <div class="digit d2" id="digit2"></div>
+      <div class="digit d3" id="digit3"></div>
+      <div class="digit d4" id="digit4"></div>
+    </section>
+
+    <div class="countdown" id="countdown" aria-live="polite"></div>
+
+    <div class="message-box">
+      <p class="message" id="message">覚えてね！</p>
+      <button class="action-btn" id="actionButton" type="button">スタート</button>
+    </div>
+  </main>
+
+  <script>
+    // =========================
+    // スタート時に4桁の数字をランダム決定します
+    // 4つの数字は重複しません
+    // =========================
+    const initialQuizNumber = "7469";
+
+    // 秒数設定
+    const countdownSeconds = 3;
+    const hiddenDuration = 2500;
+
+    let quizNumber = initialQuizNumber;
+    let digits = quizNumber.split("");
+    const digitEls = [
+      document.getElementById("digit1"),
+      document.getElementById("digit2"),
+      document.getElementById("digit3"),
+      document.getElementById("digit4")
+    ];
+    const messageEl = document.getElementById("message");
+    const countdownEl = document.getElementById("countdown");
+    const actionButton = document.getElementById("actionButton");
+    let quizState = "idle";
+
+    function validateQuizNumber(value) {
+      if (!/^\d{4}$/.test(value)) {
+        throw new Error("quizNumber は4桁の数字で指定してください。例: \"3218\"");
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function shuffleArray(array) {
+      return array
+        .map(value => ({ value, sort: Math.random() }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(item => item.value);
+    }
+
+    function generateRandomUniqueDigits() {
+      const digits = [];
+      const available = ["0","1","2","3","4","5","6","7","8","9"];
+      while (digits.length < 4) {
+        const index = Math.floor(Math.random() * available.length);
+        digits.push(available.splice(index, 1)[0]);
+      }
+      return digits;
+    }
+
+    function hideAllDigits() {
+      digitEls.forEach(el => {
+        el.textContent = "";
+        el.classList.add("hidden");
+      });
+    }
+
+    function showSingleDigit(index) {
+      hideAllDigits();
+      const el = digitEls[index];
+      el.textContent = digits[index];
+      el.classList.remove("hidden");
+      el.classList.remove("flash");
+    }
+
+    function showAnswerDigits() {
+      digits.forEach((digit, i) => {
+        digitEls[i].textContent = digit;
+        digitEls[i].classList.remove("hidden");
+        digitEls[i].classList.add("flash");
+      });
+    }
+
+    async function showDigitsOneByOne() {
+      const order = shuffleArray([0, 1, 2, 3]);
+      for (const index of order) {
+        showSingleDigit(index);
+        await sleep(1200);
+        hideAllDigits();
+        await sleep(400);
+      }
+    }
+
+    async function startQuiz() {
+      digits = generateRandomUniqueDigits();
+      quizNumber = digits.join("");
+      validateQuizNumber(quizNumber);
+      quizState = "running";
+      actionButton.disabled = true;
+      hideAllDigits();
+      messageEl.textContent = "いくよ";
+      await sleep(800);
+
+      await showDigitsOneByOne();
+
+      hideAllDigits();
+      messageEl.textContent = "数字を覚えたら、次は回答を見るボタンを押してね";
+      actionButton.textContent = "回答を見る";
+      actionButton.disabled = false;
+      quizState = "readyToReveal";
+    }
+
+    function revealAnswer() {
+      showAnswerDigits();
+      messageEl.textContent = "答えはこの4桁です";
+      actionButton.textContent = "もう一度スタート";
+      quizState = "revealed";
+      actionButton.disabled = false;
+    }
+
+    actionButton.addEventListener("click", async () => {
+      if (quizState === "idle" || quizState === "revealed") {
+        actionButton.textContent = "準備中...";
+        actionButton.disabled = true;
+        await startQuiz();
+      } else if (quizState === "readyToReveal") {
+        actionButton.disabled = true;
+        revealAnswer();
+      }
+    });
+  </script>
+</body>
+</html>
