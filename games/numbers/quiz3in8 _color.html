@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>8の中に3はいくつ？</title>
+  <style>
+    :root{
+      --bg1:#fffdf5;
+      --bg2:#f6fbff;
+      --card:#ffffff;
+      --text:#20242b;
+      --muted:#5d6675;
+      --accent:#ff8a3d;
+      --accent2:#4fb3ff;
+      --ok:#22a35a;
+      --ng:#e25a5a;
+      --shadow:0 14px 35px rgba(0,0,0,0.10);
+      --radius:24px;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: "Arial Rounded MT Bold","Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #fff6db 0%, transparent 35%),
+        radial-gradient(circle at top right, #dff3ff 0%, transparent 32%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    body{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding: 12px;
+    }
+
+    .phone {
+      width: min(100vw, 430px);
+      aspect-ratio: 9 / 16;
+      max-height: min(96vh, 860px);
+      min-height: 680px;
+      background: rgba(255,255,255,0.72);
+      backdrop-filter: blur(8px);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.65);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .screen {
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      padding: 18px 16px 18px;
+      gap: 12px;
+      position: relative;
+    }
+
+    .top-badge{
+      align-self:center;
+      background: linear-gradient(135deg, #ffd26a, #ff9f5a);
+      color:#fff;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      letter-spacing: .03em;
+      box-shadow: 0 8px 18px rgba(255,157,88,.30);
+    }
+
+    h1{
+      margin:0;
+      text-align:center;
+      font-size: clamp(28px, 5vw, 34px);
+      line-height:1.15;
+      letter-spacing:.02em;
+    }
+
+    .sub{
+      margin:0;
+      text-align:center;
+      font-size: 16px;
+      color: var(--muted);
+      font-weight:700;
+      min-height: 24px;
+    }
+
+    .board-wrap{
+      flex: 1 1 auto;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height: 0;
+    }
+
+    .board-card{
+      width:100%;
+      max-height: 490px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04), 0 10px 30px rgba(0,0,0,0.07);
+      padding: 12px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .board {
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      width:100%;
+      margin: 0 auto;
+      user-select:none;
+    }
+
+    .cell {
+      aspect-ratio: 1 / 1;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #f5f9ff);
+      border: 1px solid #ecf1f8;
+      font-weight: 900;
+      font-size: clamp(24px, 7.2vw, 34px);
+      color: var(--cell-color, #1d2530);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.9);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.03);
+    }
+
+    .hidden-board .cell {
+      color: transparent;
+      text-shadow:none;
+      background: linear-gradient(180deg, #f9fafc, #eff4fa);
+    }
+
+    .mask-note{
+      position:absolute;
+      inset:0;
+      display:none;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      padding: 24px;
+      font-size: clamp(24px, 6vw, 30px);
+      font-weight: 900;
+      color:#324154;
+      background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(245,249,255,.92));
+    }
+
+    .hidden-board + .mask-note{
+      display:flex;
+    }
+
+    .answers{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .answer-btn, .action-btn{
+      border:none;
+      border-radius: 18px;
+      font-weight: 900;
+      cursor:pointer;
+      transition: transform .08s ease, box-shadow .15s ease, opacity .15s ease;
+      box-shadow: 0 8px 18px rgba(0,0,0,.08);
+    }
+
+    .answer-btn:active, .action-btn:active{
+      transform: scale(.98);
+    }
+
+    .answer-btn{
+      padding: 12px 6px;
+      font-size: 22px;
+      background: linear-gradient(180deg, #ffffff, #edf5ff);
+      color:#1f2c3b;
+      min-height: 56px;
+    }
+
+    .answer-btn:disabled{
+      opacity:.55;
+      cursor: default;
+    }
+
+    .bottom{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+
+    .message{
+      min-height: 56px;
+      border-radius: 18px;
+      padding: 10px 10px;
+      background: rgba(255,255,255,.82);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.04);
+      text-align:center;
+      white-space: pre-line;
+      font-size: 20px;
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      line-height:1.35;
+    }
+
+    .message.ok { color: var(--ok); }
+    .message.ng { color: var(--ng); }
+    .message.info { color: #344257; }
+
+    .action-btn{
+      padding: 13px 12px;
+      font-size: 19px;
+      color:#fff;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+    }
+
+    .footer-note{
+      text-align:center;
+      font-size: 12px;
+      color: #6b7481;
+      font-weight:700;
+    }
+
+    .burst{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+    }
+
+    .star{
+      position:absolute;
+      width:12px;
+      height:12px;
+      border-radius: 4px;
+      opacity: 0;
+      transform: scale(.4) rotate(0deg);
+      animation: pop 900ms ease forwards;
+    }
+
+    @keyframes pop{
+      0%{ opacity:0; transform: translate(0,0) scale(.2) rotate(0deg);}
+      15%{ opacity:1; }
+      100%{ opacity:0; transform: translate(var(--tx), var(--ty)) scale(1.4) rotate(220deg);}
+    }
+
+    .countdown{
+      position:absolute;
+      inset:0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      font-size: clamp(56px, 18vw, 84px);
+      font-weight: 900;
+      color: rgba(31,44,59,0.96);
+      background: transparent;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .15s ease;
+      text-shadow:
+        0 0 10px rgba(255,255,255,0.95),
+        0 0 24px rgba(255,255,255,0.95),
+        0 2px 0 rgba(255,255,255,0.8);
+    }
+
+    .countdown.show{ opacity:1; }
+
+    @media (max-width:430px){
+      .screen{ padding: 14px 12px; gap: 10px; }
+      .top-badge{ font-size: 13px; padding: 7px 12px; }
+      h1{ font-size: 28px; }
+      .sub{ font-size: 15px; min-height: 20px; }
+      .board-card{ padding: 10px; max-height: 460px; }
+      .board{ gap: 6px; }
+      .cell{ border-radius: 14px; font-size: 24px; }
+      .answers{ gap: 6px; }
+      .answer-btn{ font-size: 19px; min-height: 46px; padding: 8px 2px; border-radius: 14px; }
+      .message{ font-size: 16px; min-height: 48px; padding: 8px 8px; }
+      .action-btn{ font-size: 18px; padding: 12px 10px; border-radius: 16px; }
+      .footer-note{ font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone">
+    <div class="screen">
+      <div class="top-badge">スマホ脳トレ</div>
+      <h1>8の中に3はいくつ？</h1>
+      <p id="subText" class="sub">3問で脳年齢チェック！</p>
+
+      <section class="board-wrap">
+        <div class="board-card">
+          <div id="board" class="board" aria-label="問題グリッド"></div>
+          <div id="maskNote" class="mask-note">3は何個あった？</div>
+          <div id="countdown" class="countdown">3</div>
+          <div id="burst" class="burst"></div>
+        </div>
+      </section>
+
+      <div class="bottom">
+        <div class="answers">
+          <button class="answer-btn" data-value="1" disabled>1</button>
+          <button class="answer-btn" data-value="2" disabled>2</button>
+          <button class="answer-btn" data-value="3" disabled>3</button>
+          <button class="answer-btn" data-value="4" disabled>4</button>
+        </div>
+
+        <div id="message" class="message info">スタートで1問目が出るよ</div>
+        <button id="actionBtn" class="action-btn">スタート</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const board = document.getElementById('board');
+    const message = document.getElementById('message');
+    const actionBtn = document.getElementById('actionBtn');
+    const subText = document.getElementById('subText');
+    const burst = document.getElementById('burst');
+    const countdown = document.getElementById('countdown');
+    const answerButtons = [...document.querySelectorAll('.answer-btn')];
+
+    const TOTAL_CELLS = 30;
+    const COLS = 5;
+    const SHOW_MS = 500;
+    const TOTAL_ROUNDS = 3;
+    const CELL_COLORS = ['#1d2530', '#2f80ed', '#ff6b6b', '#f2994a', '#56cc9d', '#8b5cf6', '#fb7185'];
+
+    let correctCount = 0;
+    let state = 'idle'; // idle, prepare, showing, answering, feedback, final
+    let roundIndex = 0;
+    let score = 0;
+
+    function randInt(min, max){
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function shuffle(arr){
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function setMessage(text, type='info'){
+      message.textContent = text;
+      message.className = `message ${type}`;
+    }
+
+    function setButtonsEnabled(enabled){
+      answerButtons.forEach(btn => btn.disabled = !enabled);
+    }
+
+    function getBrainAgeText(scoreValue){
+      if(scoreValue === 3) return '脳年齢：20代';
+      if(scoreValue === 2) return '脳年齢：30〜40代';
+      if(scoreValue === 1) return '脳年齢：50〜60代';
+      return '脳年齢：チャレンジ中';
+    }
+
+    function getResultComment(scoreValue){
+      if(scoreValue === 3) return 'すごい！ 一瞬で見抜けています';
+      if(scoreValue === 2) return 'いい感じ！ かなり鋭いです';
+      if(scoreValue === 1) return 'あと少し！ もう一回ためしてみよう';
+      return 'ゆっくり見れば大丈夫！ もう一回挑戦しよう';
+    }
+
+    function buildQuestion(){
+      correctCount = randInt(1, 4);
+
+      const qPositions = shuffle([...Array(TOTAL_CELLS).keys()]).slice(0, correctCount);
+      const posSet = new Set(qPositions);
+
+      board.innerHTML = '';
+      board.classList.remove('hidden-board');
+
+      for(let i = 0; i < TOTAL_CELLS; i++){
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.textContent = posSet.has(i) ? '3' : '8';
+        cell.style.setProperty('--cell-color', CELL_COLORS[randInt(0, CELL_COLORS.length - 1)]);
+        board.appendChild(cell);
+      }
+    }
+
+    function clearBoard(){
+      board.innerHTML = '';
+      board.classList.remove('hidden-board');
+    }
+
+    function hideBoard(){
+      board.classList.add('hidden-board');
+    }
+
+    function showBoard(){
+      board.classList.remove('hidden-board');
+    }
+
+    function showCountdown(text){
+      countdown.textContent = text;
+      countdown.classList.add('show');
+    }
+
+    function hideCountdown(){
+      countdown.classList.remove('show');
+    }
+
+    function sleep(ms){
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function startRound(){
+      if(state !== 'idle') return;
+
+      state = 'prepare';
+      setButtonsEnabled(false);
+      actionBtn.disabled = true;
+      actionBtn.textContent = '出題中...';
+      subText.textContent = `第${roundIndex + 1}問 / ${TOTAL_ROUNDS}`;
+      setMessage('しっかり見てね！', 'info');
+
+      buildQuestion();
+      showBoard();
+
+      showCountdown('3');
+      await sleep(1000);
+      showCountdown('2');
+      await sleep(1000);
+      showCountdown('1');
+      await sleep(1000);
+      hideCountdown();
+
+      state = 'showing';
+      setMessage('今だ！', 'info');
+      await sleep(SHOW_MS);
+
+      hideBoard();
+      state = 'answering';
+      subText.textContent = '3は何個あった？';
+      setMessage(`第${roundIndex + 1}問：1〜4を押して答えてね`, 'info');
+      setButtonsEnabled(true);
+      actionBtn.disabled = true;
+      actionBtn.textContent = '回答中';
+    }
+
+    function launchBurst(){
+      burst.innerHTML = '';
+      const colors = ['#ffd84d', '#ff9f5a', '#4fb3ff', '#87e36b', '#ff79b0'];
+      for(let i = 0; i < 22; i++){
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = `${48 + (Math.random() * 4 - 2)}%`;
+        star.style.top = `${45 + (Math.random() * 10 - 5)}%`;
+        star.style.background = colors[Math.floor(Math.random() * colors.length)];
+        star.style.setProperty('--tx', `${Math.random() * 260 - 130}px`);
+        star.style.setProperty('--ty', `${Math.random() * 240 - 120}px`);
+        star.style.animationDelay = `${Math.random() * 80}ms`;
+        burst.appendChild(star);
+      }
+      setTimeout(() => { burst.innerHTML = ''; }, 1100);
+    }
+
+    function simpleBeep(isCorrect){
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = isCorrect ? [740, 880, 988] : [330, 260];
+        let t = audioCtx.currentTime;
+        notes.forEach((freq) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = isCorrect ? 'triangle' : 'sine';
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.exponentialRampToValueAtTime(0.08, t + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + (isCorrect ? 0.18 : 0.16));
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(t);
+          osc.stop(t + (isCorrect ? 0.18 : 0.16));
+          t += isCorrect ? 0.12 : 0.14;
+        });
+      } catch (e) {}
+    }
+
+    async function answer(value){
+      if(state !== 'answering') return;
+
+      state = 'feedback';
+      setButtonsEnabled(false);
+      showBoard();
+
+      const isCorrect = Number(value) === correctCount;
+      if(isCorrect){
+        score += 1;
+        setMessage(`せいかい！ 3は ${correctCount}個！`, 'ok');
+        subText.textContent = `第${roundIndex + 1}問 正解！`;
+        launchBurst();
+      } else {
+        setMessage(`ざんねん！ 正解は ${correctCount}個`, 'ng');
+        subText.textContent = `第${roundIndex + 1}問 終了`;
+      }
+
+      simpleBeep(isCorrect);
+      await sleep(1400);
+
+      roundIndex += 1;
+
+      if(roundIndex >= TOTAL_ROUNDS){
+        showFinalResult();
+      } else {
+        resetForNextRound();
+      }
+    }
+
+    function showFinalResult(){
+      state = 'final';
+      clearBoard();
+      subText.textContent = '3問おわり！';
+      const ageText = getBrainAgeText(score);
+      const comment = getResultComment(score);
+      setMessage(`${ageText}\n${comment}\n※これは心理学でも使われる『視覚探索テスト』をもとにしています`, 'info');
+      actionBtn.disabled = false;
+      actionBtn.textContent = 'もう1回';
+    }
+
+    function resetForNextRound(){
+      state = 'idle';
+      clearBoard();
+      subText.textContent = `${roundIndex + 1}問目に進もう！`;
+      setMessage('スタートで次の問題が出るよ', 'info');
+      actionBtn.disabled = false;
+      actionBtn.textContent = 'スタート';
+    }
+
+    function resetToStart(){
+      state = 'idle';
+      roundIndex = 0;
+      score = 0;
+      clearBoard();
+      hideCountdown();
+      setButtonsEnabled(false);
+      subText.textContent = '3問で脳年齢チェック！';
+      setMessage('スタートで1問目が出るよ', 'info');
+      actionBtn.textContent = 'スタート';
+      actionBtn.disabled = false;
+    }
+
+    answerButtons.forEach(btn => {
+      btn.addEventListener('click', () => answer(btn.dataset.value));
+    });
+
+    actionBtn.addEventListener('click', () => {
+      if(state === 'final'){
+        resetToStart();
+      } else if(state === 'idle'){
+        startRound();
+      }
+    });
+
+    board.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    resetToStart();
+  </script>
+</body>
+</html>
