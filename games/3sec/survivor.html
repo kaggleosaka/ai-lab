@@ -86,11 +86,80 @@
     }
     .title-screen, .result-screen {
       justify-content: flex-start;
-      overflow-y: auto;
+      overflow-y: scroll;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
+      scrollbar-gutter: stable;
       padding-top: max(16px, env(safe-area-inset-top));
       padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 20px));
+    }
+    .title-screen::-webkit-scrollbar,
+    .result-screen::-webkit-scrollbar {
+      width: 12px;
+    }
+    .title-screen::-webkit-scrollbar-track,
+    .result-screen::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+    }
+    .title-screen::-webkit-scrollbar-thumb,
+    .result-screen::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.45);
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,0.12);
+    }
+    .title-screen,
+    .result-screen {
+      scrollbar-width: auto;
+      scrollbar-color: rgba(255,255,255,0.55) rgba(255,255,255,0.10);
+    }
+    .scroll-hint {
+      position: absolute;
+      right: 8px;
+      top: 18px;
+      bottom: 18px;
+      width: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.10);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .scroll-hint.show {
+      opacity: 1;
+    }
+    .scroll-hint-thumb {
+      position: absolute;
+      left: 1px;
+      top: 1px;
+      width: 6px;
+      height: 56px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 0 10px rgba(255,255,255,0.18);
+      transform: translateY(0);
+    }
+    .scroll-down-tip {
+      position: absolute;
+      left: 50%;
+      bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px));
+      transform: translateX(-50%);
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(7, 10, 22, 0.72);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: #eef2ff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+    }
+    .scroll-down-tip.show {
+      opacity: 1;
     }
     .title-card, .result-card {
       margin: auto 0;
@@ -221,6 +290,8 @@
         </div>
 
         <div class="title-screen" id="titleScreen">
+          <div class="scroll-hint" id="titleScrollHint"><div class="scroll-hint-thumb" id="titleScrollThumb"></div></div>
+          <div class="scroll-down-tip" id="titleScrollTip">↓ スクロールできます ↓</div>
           <div class="title-card">
             <h1>武器を選べ！</h1>
             <p class="subtitle">攻撃は自動。移動だけ集中！<br>4種類の武器から1つ選んで、秒数も決めてスタート。</p>
@@ -268,6 +339,8 @@
         </div>
 
         <div class="result-screen hide" id="resultScreen">
+          <div class="scroll-hint" id="resultScrollHint"><div class="scroll-hint-thumb" id="resultScrollThumb"></div></div>
+          <div class="scroll-down-tip" id="resultScrollTip">↓ スクロールできます ↓</div>
           <div class="result-card">
             <div class="result-title" id="resultTitle">クリア！</div>
             <p class="subtitle" id="resultMessage">3秒生き残った！</p>
@@ -301,6 +374,13 @@
     const resultTime = document.getElementById('resultTime');
     const resultKills = document.getElementById('resultKills');
     const resultBest = document.getElementById('resultBest');
+
+    const titleScrollHint = document.getElementById('titleScrollHint');
+    const titleScrollThumb = document.getElementById('titleScrollThumb');
+    const titleScrollTip = document.getElementById('titleScrollTip');
+    const resultScrollHint = document.getElementById('resultScrollHint');
+    const resultScrollThumb = document.getElementById('resultScrollThumb');
+    const resultScrollTip = document.getElementById('resultScrollTip');
 
     const timeBadge = document.getElementById('timeBadge');
     const hpBadge = document.getElementById('hpBadge');
@@ -398,6 +478,28 @@
       return ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
     }
 
+    function updateScrollIndicator(panel, hint, thumb, tip) {
+      if (!panel || !hint || !thumb || !tip) return;
+      const scrollable = panel.scrollHeight - panel.clientHeight;
+      const canScroll = scrollable > 6;
+      hint.classList.toggle('show', canScroll);
+      tip.classList.toggle('show', canScroll && panel.scrollTop < scrollable - 6);
+
+      if (!canScroll) return;
+
+      const trackHeight = Math.max(0, hint.clientHeight - 2);
+      const thumbHeight = Math.max(42, Math.min(trackHeight * (panel.clientHeight / panel.scrollHeight), 90));
+      const maxTop = Math.max(0, trackHeight - thumbHeight);
+      const ratio = scrollable > 0 ? panel.scrollTop / scrollable : 0;
+      thumb.style.height = `${thumbHeight}px`;
+      thumb.style.transform = `translateY(${maxTop * ratio}px)`;
+    }
+
+    function refreshAllScrollIndicators() {
+      updateScrollIndicator(titleScreen, titleScrollHint, titleScrollThumb, titleScrollTip);
+      updateScrollIndicator(resultScreen, resultScrollHint, resultScrollThumb, resultScrollTip);
+    }
+
     function getGameTime() {
       return selectedDuration;
     }
@@ -476,6 +578,7 @@
       vignetteStrength = 0;
       resetTouch();
       updateHUD();
+      requestAnimationFrame(refreshAllScrollIndicators);
     }
 
     function announce(text, sec = 0.55) {
@@ -495,6 +598,7 @@
       resultScreen.classList.add('hide');
       countScreen.classList.remove('hide');
       updateCountdownText();
+      refreshAllScrollIndicators();
     }
 
     function startGame() {
@@ -535,6 +639,7 @@
       resultTime.textContent = surviveText;
       resultKills.textContent = killText;
       resultBest.textContent = shortText;
+      requestAnimationFrame(refreshAllScrollIndicators);
     }
 
     function backToTitle() {
@@ -1167,12 +1272,17 @@
     retryBtn.addEventListener('click', startCountdown);
     backBtn.addEventListener('click', backToTitle);
 
+    titleScreen.addEventListener('scroll', refreshAllScrollIndicators, { passive: true });
+    resultScreen.addEventListener('scroll', refreshAllScrollIndicators, { passive: true });
+    window.addEventListener('resize', refreshAllScrollIndicators);
+
     makeBackgroundStars();
     updateDurationUI();
     updateWeaponUI();
     resetGame();
     backToTitle();
     requestAnimationFrame(loop);
+    requestAnimationFrame(refreshAllScrollIndicators);
   </script>
 </body>
 </html>
