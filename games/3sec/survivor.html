@@ -2,20 +2,35 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <title>3秒サバイバー V2</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overscroll-behavior: none;
+  }
   body {
     background: #0a0a0a;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
     font-family: 'Segoe UI', sans-serif;
+    padding:
+      max(env(safe-area-inset-top), 0px)
+      max(env(safe-area-inset-right), 0px)
+      max(env(safe-area-inset-bottom), 0px)
+      max(env(safe-area-inset-left), 0px);
   }
-  canvas { display: block; }
+  canvas {
+    display: block;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
 </style>
 </head>
 <body>
@@ -148,8 +163,60 @@ let selectedWeapon = 'bullet';
 let selectedDur = 3;
 let activeConfig, activeWeapon;
 
-// タッチ仮想スティック
-let stick = { active: false, baseX: 0, baseY: 0, dx: 0, dy: 0, id: null };
+// タッチ仮想スティック（固定型）
+const STICK_CFG = {
+  zoneX: 88,
+  zoneY: CH - 102,
+  zoneR: 72,
+  knobR: 26,
+  maxR: 42,
+  deadZone: 0.18,
+};
+let stick = {
+  active: false,
+  baseX: STICK_CFG.zoneX,
+  baseY: STICK_CFG.zoneY,
+  dx: 0,
+  dy: 0,
+  id: null,
+};
+
+function vibrate(ms=20) {
+  try {
+    if (navigator.vibrate) navigator.vibrate(ms);
+  } catch (e) {}
+}
+
+function resetStick() {
+  stick.active = false;
+  stick.dx = 0;
+  stick.dy = 0;
+  stick.id = null;
+  stick.baseX = STICK_CFG.zoneX;
+  stick.baseY = STICK_CFG.zoneY;
+}
+
+function updateStickFromPoint(x, y) {
+  let dx = x - stick.baseX;
+  let dy = y - stick.baseY;
+  const len = Math.hypot(dx, dy);
+  if (len > STICK_CFG.maxR) {
+    dx = dx / len * STICK_CFG.maxR;
+    dy = dy / len * STICK_CFG.maxR;
+  }
+  stick.dx = dx / STICK_CFG.maxR;
+  stick.dy = dy / STICK_CFG.maxR;
+
+  const n = Math.hypot(stick.dx, stick.dy);
+  if (n < STICK_CFG.deadZone) {
+    stick.dx = 0;
+    stick.dy = 0;
+  }
+}
+
+function inStickZone(x, y) {
+  return Math.hypot(x - STICK_CFG.zoneX, y - STICK_CFG.zoneY) <= STICK_CFG.zoneR + 22;
+}
 
 // ============================================================
 // 入力
@@ -175,10 +242,10 @@ canvas.addEventListener('pointerdown', e => {
   }
 
   if (state === S.PLAY) {
+    if (!inStickZone(x, y) && x > CW * 0.45) return;
     stick.active = true;
-    stick.baseX = x; stick.baseY = y;
-    stick.dx = 0; stick.dy = 0;
     stick.id = e.pointerId;
+    updateStickFromPoint(x, y);
     canvas.setPointerCapture(e.pointerId);
   }
 });
@@ -188,15 +255,14 @@ canvas.addEventListener('pointermove', e => {
   const r = canvas.getBoundingClientRect();
   const x = (e.clientX - r.left) / scale;
   const y = (e.clientY - r.top) / scale;
-  const maxR = 50;
-  let dx = x - stick.baseX, dy = y - stick.baseY;
-  const len = Math.hypot(dx, dy);
-  if (len > maxR) { dx = dx/len*maxR; dy = dy/len*maxR; }
-  stick.dx = dx / maxR; stick.dy = dy / maxR;
+  updateStickFromPoint(x, y);
 });
 
 canvas.addEventListener('pointerup', e => {
-  if (e.pointerId === stick.id) { stick.active = false; stick.dx = 0; stick.dy = 0; }
+  if (e.pointerId === stick.id) resetStick();
+});
+canvas.addEventListener('pointercancel', e => {
+  if (e.pointerId === stick.id) resetStick();
 });
 
 // ============================================================
@@ -206,18 +272,18 @@ const WEAPON_KEYS = Object.keys(WEAPONS);
 const DUR_KEYS = [3, 5, 10];
 
 function handleWeaponClick(x, y) {
-  // 武器ボタン（描画: bx=20+col*165, by=100+row*100, w=150, h=88）
+  // 武器ボタン
   WEAPON_KEYS.forEach((k, i) => {
     const col = i % 2, row = Math.floor(i / 2);
-    const bx = 20 + col * 165, by = 100 + row * 100;
-    if (x >= bx && x <= bx+150 && y >= by && y <= by+88) { selectedWeapon = k; }
+    const bx = 14 + col * 166, by = 96 + row * 104;
+    if (x >= bx && x <= bx+156 && y >= by && y <= by+92) { selectedWeapon = k; }
   });
-  // 時間ボタン（描画: bx=20+i*108, by=345, w=96, h=40）
+  // 時間ボタン
   DUR_KEYS.forEach((d, i) => {
     const bx = 20 + i * 108, by = 345;
     if (x >= bx && x <= bx+96 && y >= by && y <= by+40) { selectedDur = d; }
   });
-  // スタートボタン（描画: x=60, y=405, w=240, h=54）
+  // スタートボタン
   if (x >= 60 && x <= 300 && y >= 405 && y <= 459) { startCountdown(); }
 }
 
@@ -436,6 +502,7 @@ function update(dt) {
     e.y += Math.sin(a) * e.speed * dt;
     if (player.invincible <= 0 && Math.hypot(e.x - player.x, e.y - player.y) < player.hitR + e.r) {
       hp--;
+      vibrate(35);
       player.invincible = 0.9;
       player.flashTimer = 0;
       addHitEffect(player.x, player.y);
@@ -570,13 +637,29 @@ function drawEffect(ef) {
 }
 
 function drawStick() {
-  if (!stick.active) return;
-  ctx.globalAlpha = 0.35;
-  ctx.beginPath(); ctx.arc(stick.baseX, stick.baseY, 50, 0, Math.PI*2);
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  const bx = stick.baseX;
+  const by = stick.baseY;
+
+  // ベースリングは常時表示
+  ctx.globalAlpha = 0.16;
+  ctx.beginPath(); ctx.arc(bx, by, STICK_CFG.zoneR, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff'; ctx.fill();
+
+  ctx.globalAlpha = 0.28;
+  ctx.beginPath(); ctx.arc(bx, by, STICK_CFG.maxR + 14, 0, Math.PI*2);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+  ctx.globalAlpha = stick.active ? 0.82 : 0.38;
   ctx.beginPath();
-  ctx.arc(stick.baseX + stick.dx*50, stick.baseY + stick.dy*50, 22, 0, Math.PI*2);
-  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.arc(bx + stick.dx * STICK_CFG.maxR, by + stick.dy * STICK_CFG.maxR, STICK_CFG.knobR, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  ctx.globalAlpha = 0.28;
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('MOVE', bx, by + STICK_CFG.zoneR + 18);
   ctx.globalAlpha = 1;
 }
 
@@ -629,6 +712,12 @@ function drawHUD() {
   ctx.textAlign = 'right';
   ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(255,80,80,0.7)';
   ctx.fillText('敵×' + enemies.length, CW-14, 100);
+
+  // モバイル操作ガイド
+  ctx.textAlign = 'left';
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.38)';
+  ctx.fillText('左下スティックで移動', 18, CH - 16);
 }
 
 // ============================================================
@@ -655,7 +744,7 @@ function drawTitle() {
   ctx.fillText('3秒にげきれ！', CW/2, CH/2 + 32);
 
   ctx.font = '13px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.35)';
-  ctx.fillText('矢印 / WASD / タッチで移動', CW/2, CH/2 + 62);
+  ctx.fillText('スマホ: 左下スティック / PC: 矢印・WASD', CW/2, CH/2 + 62);
 
   ctx.fillStyle = '#4af';
   ctx.beginPath(); ctx.roundRect(CW/2-100, CH/2+96, 200, 54, 27); ctx.fill();
@@ -686,20 +775,20 @@ function drawWeaponSelect() {
   WEAPON_KEYS.forEach((k, i) => {
     const w = WEAPONS[k];
     const col = i % 2, row = Math.floor(i / 2);
-    const bx = 20 + col*165, by = 100 + row*100;
+    const bx = 14 + col*166, by = 96 + row*104;
     const selected = selectedWeapon === k;
     ctx.fillStyle = selected ? 'rgba(68,170,255,0.2)' : 'rgba(255,255,255,0.05)';
-    ctx.beginPath(); ctx.roundRect(bx, by, 150, 88, 12); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(bx, by, 156, 92, 14); ctx.fill();
     ctx.strokeStyle = selected ? '#4af' : 'rgba(255,255,255,0.2)';
     ctx.lineWidth = selected ? 2 : 1;
-    ctx.beginPath(); ctx.roundRect(bx, by, 150, 88, 12); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(bx, by, 156, 92, 14); ctx.stroke();
 
     ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = w.color; ctx.textAlign = 'center';
-    ctx.fillText(w.icon + ' ' + w.name, bx+75, by+30);
+    ctx.fillText(w.icon + ' ' + w.name, bx+78, by+30);
     ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fillText(w.desc, bx+75, by+52);
+    ctx.fillText(w.desc, bx+78, by+54);
     ctx.font = '11px sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillText('間隔 ' + w.interval.toFixed(2) + '秒', bx+75, by+72);
+    ctx.fillText('間隔 ' + w.interval.toFixed(2) + '秒', bx+78, by+75);
   });
 
   // 難易度（時間）選択
