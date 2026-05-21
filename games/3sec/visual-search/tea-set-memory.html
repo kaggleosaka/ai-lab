@@ -56,9 +56,36 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 14px 18px;
+      padding: 14px 136px 14px 18px;
       border-bottom: 1px solid var(--line);
       background: rgba(240, 230, 214, 0.75);
+    }
+
+    .menu-link {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(55, 42, 24, 0.08);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .menu-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 24px rgba(55, 42, 24, 0.12);
     }
 
     .brand {
@@ -544,6 +571,16 @@
         min-height: calc(100vh - 20px);
       }
 
+      .topbar {
+        padding-right: 126px;
+      }
+
+      .menu-link {
+        min-width: 88px;
+        height: 38px;
+        font-size: 13px;
+      }
+
       .home,
       .setup {
         grid-template-columns: 1fr;
@@ -578,6 +615,7 @@
   </style>
 </head>
 <body>
+  <a class="menu-link" href="./index.html">← MENU</a>
   <main class="app" aria-live="polite">
     <header class="topbar">
       <div class="brand">

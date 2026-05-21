@@ -64,8 +64,35 @@
       grid-template-columns: 1fr repeat(4, 128px);
       align-items: center;
       gap: 10px;
-      padding: 0 16px;
+      padding: 0 128px 0 16px;
       border-radius: 8px;
+    }
+
+    .menu-link {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      height: 40px;
+      border: 1px solid rgba(214, 222, 209, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(32, 45, 38, 0.08);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .menu-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 24px rgba(32, 45, 38, 0.12);
     }
 
     .brand {
@@ -623,7 +650,13 @@
 
       .hud {
         grid-template-columns: repeat(4, 1fr);
-        padding: 12px;
+        padding: 62px 12px 12px;
+      }
+
+      .menu-link {
+        min-width: 88px;
+        height: 38px;
+        font-size: 13px;
       }
 
       .brand {
@@ -642,6 +675,7 @@
   </style>
 </head>
 <body>
+  <a class="menu-link" href="./index.html">← MENU</a>
   <main class="app" aria-label="Crowd Search game">
     <section class="hud" aria-label="Game status">
       <div class="brand">

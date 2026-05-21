@@ -55,6 +55,34 @@
 
     header {
       border-bottom: 1px solid var(--line);
+      padding-right: 150px;
+    }
+
+    .menu-link {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      height: 40px;
+      border: 1px solid rgba(216, 208, 195, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(24, 34, 47, 0.08);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .menu-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 24px rgba(24, 34, 47, 0.12);
     }
 
     footer {
@@ -434,6 +462,16 @@
         gap: 12px;
       }
 
+      header {
+        padding-right: 136px;
+      }
+
+      .menu-link {
+        min-width: 88px;
+        height: 38px;
+        font-size: 13px;
+      }
+
       .brand,
       .hud,
       .actions {
@@ -478,6 +516,7 @@
   </style>
 </head>
 <body>
+  <a class="menu-link" href="./index.html">← MENU</a>
   <div class="app">
     <header>
       <div class="brand">

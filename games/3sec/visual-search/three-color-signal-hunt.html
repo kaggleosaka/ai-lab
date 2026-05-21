@@ -53,6 +53,34 @@
       justify-content: space-between;
       align-items: center;
       gap: 18px;
+      padding-right: 124px;
+    }
+
+    .menu-link {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 100px;
+      height: 40px;
+      border: 1px solid rgba(217, 224, 235, 0.9);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: 0 8px 20px rgba(23, 32, 51, 0.08);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .menu-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 12px 24px rgba(23, 32, 51, 0.12);
     }
 
     .title-block h1 {
@@ -405,11 +433,22 @@
         min-height: auto;
       }
 
+      .menu-link {
+        min-width: 88px;
+        height: 38px;
+        font-size: 13px;
+      }
+
       .top-bar,
       .target-area,
       .footer {
         align-items: stretch;
         flex-direction: column;
+      }
+
+      .top-bar {
+        padding-top: 52px;
+        padding-right: 0;
       }
 
       .target-label {
@@ -440,6 +479,7 @@
   </style>
 </head>
 <body>
+  <a class="menu-link" href="./index.html">← MENU</a>
   <main class="game-shell" aria-live="polite">
     <header class="top-bar">
       <div class="title-block">
