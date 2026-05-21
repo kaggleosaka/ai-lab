@@ -1,1 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visual Search Collection</title>
 
+<style>
+:root{
+--bg:#f6f8fb;
+--card:#ffffff;
+--text:#1f2937;
+--muted:#6b7280;
+--accent:#0f766e;
+--shadow:0 16px 40px rgba(0,0,0,.08);
+}
+
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:
+linear-gradient(135deg,#eef7f5,#f8fafc);
+color:var(--text);
+}
+
+.wrapper{
+max-width:1100px;
+margin:auto;
+padding:40px 20px 80px;
+}
+
+.hero{
+text-align:center;
+margin-bottom:48px;
+}
+
+.hero h1{
+margin:0;
+font-size:56px;
+}
+
+.hero p{
+margin-top:12px;
+color:var(--muted);
+font-size:20px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:
+repeat(auto-fit,minmax(260px,1fr));
+gap:22px;
+}
+
+.card{
+background:var(--card);
+border-radius:20px;
+padding:28px;
+box-shadow:var(--shadow);
+display:flex;
+flex-direction:column;
+transition:.2s;
+}
+
+.card:hover{
+transform:translateY(-6px);
+}
+
+.icon{
+font-size:54px;
+margin-bottom:14px;
+}
+
+.title{
+font-size:28px;
+font-weight:700;
+}
+
+.desc{
+margin-top:10px;
+color:var(--muted);
+line-height:1.5;
+flex:1;
+}
+
+.play{
+margin-top:24px;
+display:inline-block;
+text-align:center;
+padding:14px;
+background:var(--accent);
+color:white;
+text-decoration:none;
+border-radius:12px;
+font-weight:bold;
+}
+
+.play:hover{
+background:#0b5f59;
+}
+
+.footer{
+margin-top:60px;
+text-align:center;
+color:var(--muted);
+}
+
+@media(max-width:600px){
+.hero h1{
+font-size:40px;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+<div class="hero">
+<h1>👀 Visual Search</h1>
+<p>5 Mini Games • Play in your browser • No install</p>
+</div>
+
+<div class="grid">
+
+<div class="card">
+<div class="icon">👥</div>
+<div class="title">Crowd Search</div>
+<div class="desc">
+Find the target hidden in the crowd.
+</div>
+<a class="play"
+href="./crowd-search.html">
+PLAY
+</a>
+</div>
+
+<div class="card">
+<div class="icon">🔍</div>
+<div class="title">One Odd One Out</div>
+<div class="desc">
+Spot the single different item.
+</div>
+<a class="play"
+href="./one-odd-one-out.html">
+PLAY
+</a>
+</div>
+
+<div class="card">
+<div class="icon">🫖</div>
+<div class="title">Tea Set Memory</div>
+<div class="desc">
+Memorize and rebuild the tea set.
+</div>
+<a class="play"
+href="./tea-set-memory.html">
+PLAY
+</a>
+</div>
+
+<div class="card">
+<div class="icon">🚦</div>
+<div class="title">Signal Hunt</div>
+<div class="desc">
+Find the correct signal pattern.
+</div>
+<a class="play"
+href="./three-color-signal-hunt.html">
+PLAY
+</a>
+</div>
+
+<div class="card">
+<div class="icon">🔢</div>
+<div class="title">Visual Count</div>
+<div class="desc">
+Count carefully and answer fast.
+</div>
+<a class="play"
+href="./visual-count-challenge.html">
+PLAY
+</a>
+</div>
+
+</div>
+
+<div class="footer">
+Made by Osaka Kaggle
+</div>
+
+</div>
+
+</body>
+</html>
