@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three-Color Signal Hunt</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --muted: #637089;
+      --panel: #ffffff;
+      --line: #d9e0eb;
+      --blue: #2f6fed;
+      --green: #20a663;
+      --red: #ef4444;
+      --yellow: #f7c948;
+      --shadow: 0 18px 44px rgba(23, 32, 51, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(47, 111, 237, 0.15), transparent 28%),
+        radial-gradient(circle at 88% 8%, rgba(32, 166, 99, 0.16), transparent 25%),
+        linear-gradient(135deg, #f5f8fd 0%, #eef3f9 48%, #f8fafc 100%);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 8px 12px;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .game-shell {
+      width: min(1120px, 100%);
+      min-height: calc(100vh - 16px);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 10px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    .title-block p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(112px, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(217, 224, 235, 0.9);
+      border-radius: 8px;
+      padding: 9px 14px;
+      text-align: center;
+      box-shadow: 0 8px 18px rgba(23, 32, 51, 0.06);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .target-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(217, 224, 235, 0.94);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .target-label {
+      display: grid;
+      gap: 4px;
+      text-align: right;
+    }
+
+    .target-label strong {
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+    }
+
+    .target-label span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .signal {
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      gap: 5px;
+      place-items: center;
+      width: 42px;
+      min-height: 92px;
+      padding: 7px 6px;
+      border-radius: 20px;
+      background: #202a3c;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08), 0 10px 20px rgba(23, 32, 51, 0.18);
+    }
+
+    .target-area .signal {
+      width: 58px;
+      min-height: 112px;
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .light {
+      width: 25px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, 0.42);
+      box-shadow: inset 0 -6px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    }
+
+    .target-area .light {
+      width: 32px;
+    }
+
+    .grid-wrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+
+    .fireworks-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .spark {
+      position: absolute;
+      left: var(--x);
+      top: var(--y);
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--spark-color);
+      box-shadow: 0 0 14px var(--spark-color);
+      transform: translate(-50%, -50%);
+      animation: fireworkBurst 680ms ease-out forwards;
+    }
+
+    .grid {
+      width: min(var(--grid-width, 600px), 100%);
+      display: grid;
+      grid-template-columns: repeat(var(--grid-count, 4), 1fr);
+      gap: 8px;
+    }
+
+    .cell {
+      min-height: 86px;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(23, 32, 51, 0.08);
+      transition: transform 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .grid[data-size="5"] {
+      --grid-width: 660px;
+    }
+
+    .grid[data-size="5"] .cell {
+      min-height: 76px;
+    }
+
+    .grid[data-size="5"] .signal {
+      width: 36px;
+      min-height: 78px;
+      gap: 4px;
+      padding: 6px 5px;
+    }
+
+    .grid[data-size="5"] .light {
+      width: 21px;
+      border-width: 2px;
+    }
+
+    .grid[data-size="6"] {
+      --grid-width: 700px;
+      gap: 6px;
+    }
+
+    .grid[data-size="6"] .cell {
+      min-height: 58px;
+    }
+
+    .grid[data-size="6"] .signal {
+      width: 30px;
+      min-height: 54px;
+      gap: 3px;
+      padding: 4px;
+      border-radius: 16px;
+    }
+
+    .grid[data-size="6"] .light {
+      width: 15px;
+      border-width: 2px;
+    }
+
+    .cell:hover:not(:disabled) {
+      transform: translateY(-3px);
+      border-color: #9db4dd;
+      box-shadow: 0 16px 28px rgba(23, 32, 51, 0.14);
+    }
+
+    .cell:disabled {
+      cursor: default;
+      opacity: 0.74;
+    }
+
+    .cell.correct {
+      animation: correctPulse 0.28s ease;
+      border-color: var(--green);
+    }
+
+    .cell.wrong {
+      animation: shake 0.26s ease;
+      border-color: var(--red);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(245, 248, 253, 0.74);
+      backdrop-filter: blur(3px);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .modal {
+      width: min(520px, 100%);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 28px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .modal h2 {
+      margin: 0 0 10px;
+      font-size: 32px;
+    }
+
+    .modal p {
+      margin: 0 0 22px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 18px 0 24px;
+    }
+
+    .result-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+    }
+
+    .result-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .result-item strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 24px;
+    }
+
+    .primary-button {
+      border: 0;
+      border-radius: 8px;
+      background: var(--blue);
+      color: white;
+      padding: 13px 24px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(47, 111, 237, 0.25);
+      transition: transform 0.14s ease, background 0.14s ease;
+    }
+
+    .primary-button:hover {
+      transform: translateY(-2px);
+      background: #255fcf;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 14px;
+      background: #ffffff;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .footer button:hover {
+      border-color: #9db4dd;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @keyframes correctPulse {
+      0% { transform: scale(1); background: #ffffff; }
+      50% { transform: scale(1.04); background: #e8f7ef; }
+      100% { transform: scale(1); background: #ffffff; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); background: #ffffff; }
+      25% { transform: translateX(-8px); background: #fff0f0; }
+      75% { transform: translateX(8px); background: #fff0f0; }
+    }
+
+    @keyframes fireworkBurst {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(0.7);
+      }
+      72% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.18);
+      }
+    }
+
+    @media (max-width: 820px) {
+      body {
+        align-items: flex-start;
+      }
+
+      .game-shell {
+        min-height: auto;
+      }
+
+      .top-bar,
+      .target-area,
+      .footer {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .target-label {
+        text-align: center;
+      }
+
+      .stats {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .grid {
+        gap: 10px;
+      }
+
+      .cell {
+        min-height: 112px;
+      }
+
+      .signal {
+        width: 48px;
+        min-height: 112px;
+      }
+
+      .light {
+        width: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" aria-live="polite">
+    <header class="top-bar">
+      <div class="title-block">
+        <h1>Three-Color Signal Hunt</h1>
+        <p>Find the cell with the exact same three-color signal. Order matters.</p>
+      </div>
+      <section class="stats" aria-label="Game stats">
+        <div class="stat">
+          <span class="stat-label">TIME</span>
+          <span class="stat-value" id="time">30</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">SCORE</span>
+          <span class="stat-value" id="score">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">COMBO</span>
+          <span class="stat-value" id="combo">0</span>
+        </div>
+      </section>
+    </header>
+
+    <section class="target-area" aria-label="Target signal">
+      <div class="target-label">
+        <strong>TARGET</strong>
+        <span>Click the matching signal below</span>
+      </div>
+      <div class="signal" id="targetSignal"></div>
+    </section>
+
+    <section class="grid-wrap">
+      <div class="grid" id="grid" aria-label="Signal grid"></div>
+
+      <div class="overlay" id="startOverlay">
+        <div class="modal">
+          <h2>Ready?</h2>
+          <p>Find the signal that matches the target. Each cell has three colors, and the color order must be exactly the same.</p>
+          <button class="primary-button" id="startButton" type="button">Start Game</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="modal">
+          <h2>Game Over</h2>
+          <p>Nice hunting. Try again and build a longer combo.</p>
+          <div class="result-grid">
+            <div class="result-item">
+              <span>SCORE</span>
+              <strong id="finalScore">0</strong>
+            </div>
+            <div class="result-item">
+              <span>MAX COMBO</span>
+              <strong id="maxCombo">0</strong>
+            </div>
+            <div class="result-item">
+              <span>CORRECT</span>
+              <strong id="correctCount">0</strong>
+            </div>
+          </div>
+          <button class="primary-button" id="restartButton" type="button">Restart</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="fireworks-layer" id="fireworksLayer" aria-hidden="true"></div>
+
+    <footer class="footer">
+      <span id="levelText">Level 1: 4 colors / 4 x 4 grid / 30 seconds</span>
+      <button id="resetButton" type="button">Reset</button>
+    </footer>
+  </main>
+
+  <script>
+    const colorSet = [
+      { name: "red", value: "#ef4444" },
+      { name: "yellow", value: "#f7c948" },
+      { name: "blue", value: "#2f6fed" },
+      { name: "green", value: "#20a663" }
+    ];
+
+    const roundTime = 30;
+    const difficultyLevels = [
+      { level: 1, minCorrect: 0, gridCount: 4, label: "Level 1: 4 colors / 4 x 4 grid / 30 seconds" },
+      { level: 2, minCorrect: 5, gridCount: 5, label: "Level 2: 4 colors / 5 x 5 grid / order matters" },
+      { level: 3, minCorrect: 10, gridCount: 6, label: "Level 3: 4 colors / 6 x 6 grid / sharper eyes" }
+    ];
+
+    const state = {
+      isPlaying: false,
+      time: roundTime,
+      score: 0,
+      combo: 0,
+      maxCombo: 0,
+      correctCount: 0,
+      level: 1,
+      gridCount: 4,
+      target: [],
+      cells: [],
+      timerId: null,
+      roundLocked: false
+    };
+
+    const els = {
+      time: document.querySelector("#time"),
+      score: document.querySelector("#score"),
+      combo: document.querySelector("#combo"),
+      targetSignal: document.querySelector("#targetSignal"),
+      grid: document.querySelector("#grid"),
+      startOverlay: document.querySelector("#startOverlay"),
+      gameOverOverlay: document.querySelector("#gameOverOverlay"),
+      startButton: document.querySelector("#startButton"),
+      restartButton: document.querySelector("#restartButton"),
+      resetButton: document.querySelector("#resetButton"),
+      finalScore: document.querySelector("#finalScore"),
+      maxCombo: document.querySelector("#maxCombo"),
+      correctCount: document.querySelector("#correctCount"),
+      fireworksLayer: document.querySelector("#fireworksLayer"),
+      levelText: document.querySelector("#levelText")
+    };
+
+    let audioContext = null;
+
+    function randomColorName() {
+      return colorSet[Math.floor(Math.random() * colorSet.length)].name;
+    }
+
+    function randomSignal() {
+      return [randomColorName(), randomColorName(), randomColorName()];
+    }
+
+    function signalKey(signal) {
+      return signal.join("|");
+    }
+
+    function getColorValue(name) {
+      return colorSet.find((color) => color.name === name).value;
+    }
+
+    function createSignalElement(signal) {
+      const signalEl = document.createElement("div");
+      signalEl.className = "signal";
+
+      signal.forEach((colorName) => {
+        const light = document.createElement("span");
+        light.className = "light";
+        light.style.backgroundColor = getColorValue(colorName);
+        light.setAttribute("aria-label", colorName);
+        signalEl.appendChild(light);
+      });
+
+      return signalEl;
+    }
+
+    function renderTarget() {
+      els.targetSignal.replaceChildren(...createSignalElement(state.target).children);
+    }
+
+    function buildCells() {
+      const gridSize = state.gridCount * state.gridCount;
+      const correctIndex = Math.floor(Math.random() * gridSize);
+      const cells = [];
+      const targetKey = signalKey(state.target);
+
+      for (let i = 0; i < gridSize; i += 1) {
+        if (i === correctIndex) {
+          cells.push({ signal: [...state.target], isCorrect: true });
+          continue;
+        }
+
+        let signal = randomSignal();
+        while (signalKey(signal) === targetKey) {
+          signal = randomSignal();
+        }
+        cells.push({ signal, isCorrect: false });
+      }
+
+      state.cells = cells;
+    }
+
+    function renderGrid() {
+      els.grid.replaceChildren();
+
+      state.cells.forEach((cell, index) => {
+        const button = document.createElement("button");
+        button.className = "cell";
+        button.type = "button";
+        button.disabled = !state.isPlaying;
+        button.dataset.index = String(index);
+        button.setAttribute("aria-label", `Signal ${index + 1}: ${cell.signal.join(", ")}`);
+        button.appendChild(createSignalElement(cell.signal));
+        button.addEventListener("click", () => handleCellClick(index, button));
+        els.grid.appendChild(button);
+      });
+    }
+
+    function updateStats() {
+      els.time.textContent = String(state.time);
+      els.score.textContent = String(state.score);
+      els.combo.textContent = String(state.combo);
+      els.levelText.textContent = getDifficulty().label;
+    }
+
+    function getDifficulty() {
+      return difficultyLevels
+        .filter((difficulty) => state.correctCount >= difficulty.minCorrect)
+        .at(-1);
+    }
+
+    function updateDifficulty() {
+      const difficulty = getDifficulty();
+      state.level = difficulty.level;
+      state.gridCount = difficulty.gridCount;
+      els.grid.style.setProperty("--grid-count", String(difficulty.gridCount));
+      els.grid.dataset.size = String(difficulty.gridCount);
+    }
+
+    function playCorrectSound() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      if (!audioContext) {
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      const now = audioContext.currentTime;
+      playTone(659.25, now, 0.12, 0.13);
+      playTone(987.77, now + 0.15, 0.22, 0.16);
+    }
+
+    function playTone(frequency, startTime, duration, volume) {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(volume, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration + 0.03);
+    }
+
+    function launchFireworks(button) {
+      const rect = button.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const colors = ["#ef4444", "#f7c948", "#2f6fed", "#20a663", "#f97316", "#a855f7"];
+
+      for (let i = 0; i < 28; i += 1) {
+        const spark = document.createElement("span");
+        const angle = (Math.PI * 2 * i) / 28;
+        const distance = 56 + Math.random() * 54;
+        const driftX = Math.cos(angle) * distance;
+        const driftY = Math.sin(angle) * distance;
+
+        spark.className = "spark";
+        spark.style.setProperty("--x", `${centerX}px`);
+        spark.style.setProperty("--y", `${centerY}px`);
+        spark.style.setProperty("--dx", `${driftX}px`);
+        spark.style.setProperty("--dy", `${driftY}px`);
+        spark.style.setProperty("--spark-color", colors[i % colors.length]);
+        spark.style.animationDelay = `${Math.random() * 70}ms`;
+        els.fireworksLayer.appendChild(spark);
+      }
+
+      window.setTimeout(() => {
+        els.fireworksLayer.replaceChildren();
+      }, 900);
+    }
+
+    function newRound() {
+      state.roundLocked = false;
+      updateDifficulty();
+      state.target = randomSignal();
+      buildCells();
+      renderTarget();
+      renderGrid();
+      updateStats();
+    }
+
+    function handleCellClick(index, button) {
+      if (!state.isPlaying || state.roundLocked) return;
+
+      const cell = state.cells[index];
+
+      if (cell.isCorrect) {
+        state.roundLocked = true;
+        playCorrectSound();
+        launchFireworks(button);
+        state.combo += 1;
+        state.maxCombo = Math.max(state.maxCombo, state.combo);
+        state.correctCount += 1;
+        state.score += 100 + state.combo * 10;
+        button.classList.add("correct");
+        updateStats();
+        window.setTimeout(newRound, 240);
+      } else {
+        state.combo = 0;
+        state.score = Math.max(0, state.score - 30);
+        button.classList.remove("wrong");
+        void button.offsetWidth;
+        button.classList.add("wrong");
+        updateStats();
+      }
+    }
+
+    function tick() {
+      state.time -= 1;
+      updateStats();
+
+      if (state.time <= 0) {
+        endGame();
+      }
+    }
+
+    function startGame() {
+      window.clearInterval(state.timerId);
+      state.isPlaying = true;
+      state.time = roundTime;
+      state.score = 0;
+      state.combo = 0;
+      state.maxCombo = 0;
+      state.correctCount = 0;
+      state.level = 1;
+      state.gridCount = 4;
+      updateStats();
+      els.startOverlay.classList.add("hidden");
+      els.gameOverOverlay.classList.add("hidden");
+      newRound();
+      state.timerId = window.setInterval(tick, 1000);
+    }
+
+    function endGame() {
+      state.isPlaying = false;
+      window.clearInterval(state.timerId);
+      state.timerId = null;
+      els.finalScore.textContent = String(state.score);
+      els.maxCombo.textContent = String(state.maxCombo);
+      els.correctCount.textContent = String(state.correctCount);
+      renderGrid();
+      els.gameOverOverlay.classList.remove("hidden");
+    }
+
+    function resetToReady() {
+      window.clearInterval(state.timerId);
+      state.isPlaying = false;
+      state.time = roundTime;
+      state.score = 0;
+      state.combo = 0;
+      state.maxCombo = 0;
+      state.correctCount = 0;
+      state.level = 1;
+      state.gridCount = 4;
+      state.roundLocked = false;
+      updateStats();
+      newRound();
+      renderGrid();
+      els.gameOverOverlay.classList.add("hidden");
+      els.startOverlay.classList.remove("hidden");
+    }
+
+    els.startButton.addEventListener("click", startGame);
+    els.restartButton.addEventListener("click", startGame);
+    els.resetButton.addEventListener("click", resetToReady);
+
+    resetToReady();
+  </script>
+</body>
+</html>

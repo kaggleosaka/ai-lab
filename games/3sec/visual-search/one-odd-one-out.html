@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>One Odd One Out</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #fffdf8;
+      --ink: #18222f;
+      --muted: #667085;
+      --line: #d8d0c3;
+      --accent: #0f766e;
+      --accent-dark: #0b5e59;
+      --good: #15803d;
+      --bad: #c2410c;
+      --gold: #b7791f;
+      --focus: #2563eb;
+      --shadow: 0 16px 36px rgba(24, 34, 47, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 34%),
+        linear-gradient(315deg, rgba(183, 121, 31, 0.10), transparent 32%),
+        var(--bg);
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 72px minmax(0, 1fr) 58px;
+    }
+
+    header,
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 34px;
+      background: rgba(255, 253, 248, 0.78);
+      border-color: var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+    }
+
+    footer {
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 320px;
+    }
+
+    .mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: linear-gradient(135deg, #0f766e, #2563eb);
+      box-shadow: 0 9px 20px rgba(15, 118, 110, 0.25);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hud {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      min-width: 360px;
+    }
+
+    .chip {
+      min-width: 118px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.74);
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .chip span {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      min-width: 320px;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .icon-button,
+    .text-button {
+      height: 42px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 8px 18px rgba(24, 34, 47, 0.06);
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    .icon-button {
+      width: 42px;
+    }
+
+    .text-button {
+      min-width: 102px;
+      padding: 0 16px;
+      font-weight: 800;
+    }
+
+    .primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+    }
+
+    .icon-button:hover,
+    .text-button:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    .primary:hover {
+      background: var(--accent-dark);
+    }
+
+    main {
+      min-height: 0;
+      padding: 24px 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 22px;
+    }
+
+    .playfield {
+      min-width: 0;
+      min-height: 0;
+      position: relative;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.52)),
+        radial-gradient(circle at 20% 25%, rgba(15, 118, 110, 0.08), transparent 26%),
+        radial-gradient(circle at 80% 75%, rgba(37, 99, 235, 0.07), transparent 30%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .grid {
+      width: min(100%, 1260px);
+      height: min(100%, 760px);
+      padding: 22px;
+      display: grid;
+      gap: var(--gap, 12px);
+      grid-template-columns: repeat(var(--cols), minmax(44px, 1fr));
+      grid-template-rows: repeat(var(--rows), minmax(44px, 1fr));
+      align-content: center;
+      justify-content: center;
+      margin: auto;
+    }
+
+    .tile {
+      min-width: 44px;
+      min-height: 44px;
+      aspect-ratio: 1;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      background: rgba(255, 253, 248, 0.62);
+      border: 1px solid rgba(216, 208, 195, 0.8);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .tile:hover {
+      transform: scale(1.045);
+      background: white;
+      box-shadow: 0 10px 20px rgba(24, 34, 47, 0.12);
+      z-index: 2;
+    }
+
+    .tile:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .tile svg {
+      width: 76%;
+      height: 76%;
+      overflow: visible;
+    }
+
+    .tile.correct {
+      animation: found 0.55s ease both;
+      box-shadow: 0 0 0 5px rgba(21, 128, 61, 0.18), 0 16px 30px rgba(21, 128, 61, 0.22);
+    }
+
+    .tile.wrong {
+      animation: wrong 0.32s ease both;
+      box-shadow: 0 0 0 4px rgba(194, 65, 12, 0.18);
+    }
+
+    .tile.hint-ring::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
+      border: 3px solid rgba(183, 121, 31, 0.65);
+      border-radius: 12px;
+      animation: pulse 1s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes found {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.25) rotate(-4deg); }
+      100% { transform: scale(1.08); }
+    }
+
+    @keyframes wrong {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-3px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+
+    aside {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .side-panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.84);
+      box-shadow: 0 12px 28px rgba(24, 34, 47, 0.08);
+    }
+
+    .side-panel h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .message {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .meter {
+      height: 10px;
+      border-radius: 999px;
+      background: #e5dfd5;
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), #2563eb);
+      transition: width 0.3s ease;
+    }
+
+    .hint-box {
+      min-height: 72px;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid rgba(216, 208, 195, 0.78);
+      font-weight: 800;
+    }
+
+    .stat-row span:first-child {
+      color: var(--muted);
+    }
+
+    .legend {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(216, 208, 195, 0.78);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: rgba(244, 241, 234, 0.82);
+      backdrop-filter: blur(10px);
+      z-index: 5;
+    }
+
+    .overlay[hidden] {
+      display: none;
+    }
+
+    .dialog {
+      width: min(620px, 94%);
+      padding: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .dialog h2 {
+      margin: 0 0 10px;
+      font-size: 40px;
+      letter-spacing: 0;
+    }
+
+    .dialog p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.55;
+      font-weight: 650;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .footer-stat {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .footer-stat strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 1100px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        min-height: 100vh;
+        height: auto;
+        grid-template-rows: auto minmax(720px, 1fr) auto;
+      }
+
+      header,
+      footer {
+        padding: 14px 18px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .brand,
+      .hud,
+      .actions {
+        min-width: 0;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+
+      aside {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: auto;
+      }
+
+      .grid {
+        height: min(68vh, 680px);
+      }
+    }
+
+    @media (max-width: 780px) {
+      h1 {
+        font-size: 20px;
+      }
+
+      .hud,
+      .actions,
+      footer {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      aside {
+        grid-template-columns: 1fr;
+      }
+
+      .chip {
+        min-width: 96px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.3"/>
+            <path d="m16.2 16.2 4.1 4.1" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+            <circle cx="13.6" cy="8.8" r="1.25" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <h1>One Odd One Out</h1>
+          <div class="subtitle">Find the single different icon</div>
+        </div>
+      </div>
+
+      <div class="hud" aria-live="polite">
+        <div class="chip"><span>Level</span><div id="levelText">1</div></div>
+        <div class="chip"><span>Time</span><div id="timeText">00:00</div></div>
+        <div class="chip"><span>Score</span><div id="scoreText">0</div></div>
+      </div>
+
+      <div class="actions">
+        <button class="icon-button" id="pauseButton" type="button" title="Pause" aria-label="Pause">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="icon-button" id="restartButton" type="button" title="Restart" aria-label="Restart">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>
+            <path d="M3 4.2v5.4h5.4" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="text-button" id="hintButton" type="button">Hint</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="playfield" aria-label="Game board">
+        <div class="grid" id="grid"></div>
+
+        <div class="overlay" id="overlay">
+          <div class="dialog">
+            <h2 id="overlayTitle">One Odd One Out</h2>
+            <p id="overlayText">Find the single icon that is different. The trick is that it should feel obvious only after you finally spot it.</p>
+            <div class="dialog-actions">
+              <button class="text-button primary" id="startButton" type="button">Start</button>
+              <button class="text-button" id="practiceButton" type="button">Practice</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside>
+        <section class="side-panel">
+          <h2>Feedback</h2>
+          <div class="message" id="message">Ready when your eyes are.</div>
+          <div class="meter" aria-label="Time bonus remaining">
+            <div class="meter-fill" id="timeMeter"></div>
+          </div>
+        </section>
+
+        <section class="side-panel">
+          <h2>Hint</h2>
+          <div class="hint-box" id="hintText">Hints first name the kind of difference, then narrow the search area.</div>
+        </section>
+
+        <section class="side-panel">
+          <h2>Level Details</h2>
+          <div class="stats">
+            <div class="stat-row"><span>Grid</span><strong id="gridText">5 x 4</strong></div>
+            <div class="stat-row"><span>Difference</span><strong id="differenceText">Hidden</strong></div>
+            <div class="stat-row"><span>Wrong Clicks</span><strong id="wrongText">0</strong></div>
+            <div class="stat-row"><span>Best Streak</span><strong id="bestText">0</strong></div>
+          </div>
+          <div class="legend">Each level uses a prepared pair of icons. One icon breaks a clear rule: a missing part, reversed direction, changed handle, different expression, or a small shape change.</div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="footer-stat">Streak: <strong id="streakText">0</strong></div>
+      <div class="footer-stat">Hints: <strong id="hintsText">3</strong></div>
+      <div class="footer-stat">Accuracy: <strong id="accuracyText">100%</strong></div>
+    </footer>
+  </div>
+
+  <script>
+    const gridEl = document.getElementById("grid");
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlayTitle");
+    const overlayText = document.getElementById("overlayText");
+    const startButton = document.getElementById("startButton");
+    const practiceButton = document.getElementById("practiceButton");
+    const hintButton = document.getElementById("hintButton");
+    const pauseButton = document.getElementById("pauseButton");
+    const restartButton = document.getElementById("restartButton");
+    const levelText = document.getElementById("levelText");
+    const timeText = document.getElementById("timeText");
+    const scoreText = document.getElementById("scoreText");
+    const streakText = document.getElementById("streakText");
+    const hintsText = document.getElementById("hintsText");
+    const accuracyText = document.getElementById("accuracyText");
+    const message = document.getElementById("message");
+    const hintText = document.getElementById("hintText");
+    const gridText = document.getElementById("gridText");
+    const differenceText = document.getElementById("differenceText");
+    const wrongText = document.getElementById("wrongText");
+    const bestText = document.getElementById("bestText");
+    const timeMeter = document.getElementById("timeMeter");
+    const playfield = document.querySelector(".playfield");
+
+    const puzzleSets = [
+      { title: "Apple Leaf", category: "Leaf", hint: "Check the leaf.", kind: "apple" },
+      { title: "Fish Direction", category: "Direction", hint: "Check which way it swims.", kind: "fish" },
+      { title: "Mug Handle", category: "Handle", hint: "Check the handle.", kind: "mug" },
+      { title: "Star Point", category: "Shape", hint: "Check the top point.", kind: "star" },
+      { title: "Flower Petal", category: "Petals", hint: "Count the petals.", kind: "flower" },
+      { title: "Umbrella Tip", category: "Part", hint: "Check the tip.", kind: "umbrella" },
+      { title: "House Window", category: "Window", hint: "Check the window.", kind: "house" },
+      { title: "Balloon String", category: "String", hint: "Check the string.", kind: "balloon" },
+      { title: "Car Wheel", category: "Wheel", hint: "Check the wheels.", kind: "car" },
+      { title: "Face Expression", category: "Expression", hint: "Check the mouth.", kind: "face" },
+      { title: "Clock Hand", category: "Time", hint: "Check the minute hand.", kind: "clock" },
+      { title: "Book Bookmark", category: "Bookmark", hint: "Check the bookmark side.", kind: "book" },
+      { title: "Pencil Eraser", category: "Eraser", hint: "Check the eraser color.", kind: "pencil" },
+      { title: "Key Tooth", category: "Shape", hint: "Check the key teeth.", kind: "key" },
+      { title: "Pizza Topping", category: "Topping", hint: "Check the missing topping.", kind: "pizza" },
+      { title: "Rocket Fin", category: "Fin", hint: "Check the side fins.", kind: "rocket" },
+      { title: "Tree Branch", category: "Branch", hint: "Check the branch direction.", kind: "tree" },
+      { title: "Shoe Lace", category: "Lace", hint: "Check the lace pattern.", kind: "shoe" },
+      { title: "Camera Flash", category: "Flash", hint: "Check the flash position.", kind: "camera" },
+      { title: "Cupcake Cherry", category: "Topper", hint: "Check the cherry.", kind: "cupcake" }
+    ];
+
+    const messages = {
+      correct: ["Found it!", "Nice catch!", "Sharp eyes!", "There it is!"],
+      wrong: ["Look again.", "That one is the same.", "So close!", "Try a different pattern."]
+    };
+    const finalLevel = 30;
+
+    const state = {
+      level: 1,
+      score: 0,
+      streak: 0,
+      bestStreak: 0,
+      hints: 3,
+      wrong: 0,
+      attempts: 0,
+      correct: 0,
+      started: false,
+      practice: false,
+      paused: false,
+      levelSolved: false,
+      timedOut: false,
+      oddIndex: 0,
+      hintStage: 0,
+      startedAt: 0,
+      elapsedBeforePause: 0,
+      timerId: null,
+      nextLevelId: null,
+      config: null
+    };
+
+    function choose(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function getGridSize(level) {
+      if (level <= 3) return { cols: 4, rows: 3 };
+      if (level <= 6) return { cols: 5, rows: 4 };
+      if (level <= 12) return { cols: 6, rows: 5 };
+      if (level <= 20) return { cols: 8, rows: 6 };
+      if (level <= 30) return { cols: 10, rows: 8 };
+      return { cols: 10, rows: 10 };
+    }
+
+    function describeDifference(type) {
+      return type || "Unknown";
+    }
+
+    function makeConfig() {
+      const grid = getGridSize(state.level);
+      const puzzle = puzzleSets[(state.level - 1) % puzzleSets.length];
+      const total = grid.cols * grid.rows;
+      const timeLimit = clamp(30 - Math.floor(state.level / 5), 16, 30);
+      return {
+        ...grid,
+        total,
+        puzzle,
+        type: puzzle.category,
+        timeLimit,
+        gap: state.level > 30 ? 5 : state.level > 20 ? 7 : state.level > 10 ? 9 : 12
+      };
+    }
+
+    function iconSvg(puzzle, isOdd) {
+      const odd = isOdd;
+      const common = `viewBox="0 0 100 100" aria-hidden="true"`;
+      const shadow = `<ellipse cx="52" cy="86" rx="27" ry="5" fill="#1f2937" opacity="0.12"/>`;
+
+      if (puzzle.kind === "apple") {
+        return `<svg ${common}>${shadow}<path d="M50 24 C36 13 22 28 23 50 C24 74 42 86 50 77 C58 86 76 74 77 50 C78 28 64 13 50 24Z" fill="#d94841" stroke="#7f1d1d" stroke-width="4"/><path d="M50 25 C48 18 51 12 58 9" fill="none" stroke="#6b3f1d" stroke-width="5" stroke-linecap="round"/><path d="${odd ? "M58 14 C66 13 70 18 68 25 C62 24 58 20 58 14Z" : "M58 14 C71 9 78 15 75 27 C66 27 60 22 58 14Z"}" fill="#2f9e44" stroke="#1f6f33" stroke-width="3"/></svg>`;
+      }
+      if (puzzle.kind === "fish") {
+        const flip = odd ? ` transform="translate(100 0) scale(-1 1)"` : "";
+        return `<svg ${common}>${shadow}<g${flip}><path d="M20 50 L5 34 L5 66 Z" fill="#f59e0b" stroke="#92400e" stroke-width="4" stroke-linejoin="round"/><ellipse cx="52" cy="50" rx="34" ry="23" fill="#38bdf8" stroke="#075985" stroke-width="4"/><circle cx="70" cy="44" r="4" fill="#0f172a"/><path d="M42 39 Q48 50 42 61" stroke="#075985" stroke-width="3" fill="none" opacity="0.65"/></g></svg>`;
+      }
+      if (puzzle.kind === "mug") {
+        return `<svg ${common}>${shadow}<rect x="24" y="28" width="43" height="44" rx="8" fill="#f8fafc" stroke="#475569" stroke-width="4"/><path d="${odd ? "M25 40 C10 38 10 62 25 60" : "M67 40 C83 38 83 62 67 60"}" fill="none" stroke="#475569" stroke-width="7" stroke-linecap="round"/><path d="M32 22 H59" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "star") {
+        const top = odd ? "50,13" : "50,6";
+        return `<svg ${common}>${shadow}<polygon points="${top} 61,37 94,38 68,57 77,89 50,70 23,89 32,57 6,38 39,37" fill="#facc15" stroke="#a16207" stroke-width="4" stroke-linejoin="round"/></svg>`;
+      }
+      if (puzzle.kind === "flower") {
+        const extra = odd ? "" : `<ellipse cx="50" cy="22" rx="11" ry="18" fill="#fb7185" stroke="#be123c" stroke-width="3"/>`;
+        return `<svg ${common}>${shadow}<g>${extra}<ellipse cx="50" cy="78" rx="11" ry="18" fill="#fb7185" stroke="#be123c" stroke-width="3"/><ellipse cx="22" cy="50" rx="18" ry="11" fill="#fb7185" stroke="#be123c" stroke-width="3"/><ellipse cx="78" cy="50" rx="18" ry="11" fill="#fb7185" stroke="#be123c" stroke-width="3"/><ellipse cx="31" cy="31" rx="13" ry="17" transform="rotate(-45 31 31)" fill="#fb7185" stroke="#be123c" stroke-width="3"/><ellipse cx="69" cy="31" rx="13" ry="17" transform="rotate(45 69 31)" fill="#fb7185" stroke="#be123c" stroke-width="3"/><circle cx="50" cy="50" r="15" fill="#fde047" stroke="#a16207" stroke-width="4"/></g></svg>`;
+      }
+      if (puzzle.kind === "umbrella") {
+        return `<svg ${common}>${shadow}<path d="M13 52 Q50 11 87 52 Z" fill="#a78bfa" stroke="#5b21b6" stroke-width="4"/><path d="M50 52 V78 Q50 89 ${odd ? "39" : "61"} 84" fill="none" stroke="#5b21b6" stroke-width="6" stroke-linecap="round"/><path d="M31 52 Q37 43 43 52 M57 52 Q63 43 69 52" fill="none" stroke="#5b21b6" stroke-width="3"/></svg>`;
+      }
+      if (puzzle.kind === "house") {
+        return `<svg ${common}>${shadow}<path d="M17 46 L50 17 L83 46" fill="#f97316" stroke="#9a3412" stroke-width="5" stroke-linejoin="round"/><rect x="25" y="43" width="50" height="39" rx="4" fill="#fed7aa" stroke="#9a3412" stroke-width="4"/><rect x="43" y="58" width="14" height="24" fill="#7c2d12"/><rect x="${odd ? "62" : "29"}" y="51" width="13" height="13" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="3"/></svg>`;
+      }
+      if (puzzle.kind === "balloon") {
+        return `<svg ${common}>${shadow}<ellipse cx="50" cy="35" rx="24" ry="28" fill="#ef4444" stroke="#991b1b" stroke-width="4"/><path d="M50 63 L45 72 H55 Z" fill="#991b1b"/><path d="${odd ? "M50 71 C42 81 57 85 49 94" : "M50 71 C57 81 42 85 50 94"}" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "car") {
+        return `<svg ${common}>${shadow}<path d="M20 58 L29 39 H67 L80 58 V72 H20 Z" fill="#22c55e" stroke="#166534" stroke-width="4" stroke-linejoin="round"/><path d="M35 43 H61 L68 57 H28 Z" fill="#dcfce7" stroke="#166534" stroke-width="3"/><circle cx="32" cy="73" r="${odd ? "6" : "9"}" fill="#1f2937"/><circle cx="69" cy="73" r="9" fill="#1f2937"/></svg>`;
+      }
+      if (puzzle.kind === "face") {
+        return `<svg ${common}>${shadow}<circle cx="50" cy="50" r="33" fill="#fbbf24" stroke="#92400e" stroke-width="4"/><circle cx="38" cy="43" r="5" fill="#111827"/><circle cx="62" cy="43" r="5" fill="#111827"/><path d="${odd ? "M35 66 Q50 55 65 66" : "M35 59 Q50 73 65 59"}" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "clock") {
+        return `<svg ${common}>${shadow}<circle cx="50" cy="50" r="34" fill="#ecfeff" stroke="#0e7490" stroke-width="4"/><circle cx="50" cy="50" r="4" fill="#0f172a"/><path d="M50 50 L50 28" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/><path d="${odd ? "M50 50 L68 61" : "M50 50 L68 39"}" stroke="#f97316" stroke-width="5" stroke-linecap="round"/><path d="M50 21 V27 M50 73 V79 M21 50 H27 M73 50 H79" stroke="#0e7490" stroke-width="4" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "book") {
+        return `<svg ${common}>${shadow}<path d="M18 25 Q34 18 50 28 Q66 18 82 25 V78 Q66 70 50 80 Q34 70 18 78 Z" fill="#dbeafe" stroke="#1d4ed8" stroke-width="4" stroke-linejoin="round"/><path d="M50 28 V80" stroke="#1d4ed8" stroke-width="3"/><path d="M${odd ? "61" : "35"} 24 V55 L${odd ? "68" : "42"} 49 L${odd ? "75" : "49"} 55 V24" fill="#ef4444" stroke="#991b1b" stroke-width="3" stroke-linejoin="round"/></svg>`;
+      }
+      if (puzzle.kind === "pencil") {
+        return `<svg ${common}>${shadow}<g transform="rotate(-33 50 50)"><path d="M18 46 H70 L84 50 L70 54 H18 Z" fill="#facc15" stroke="#a16207" stroke-width="4" stroke-linejoin="round"/><path d="M70 46 L84 50 L70 54 Z" fill="#fed7aa" stroke="#a16207" stroke-width="3" stroke-linejoin="round"/><path d="M83 50 L76 47 V53 Z" fill="#111827"/><rect x="10" y="45" width="12" height="10" rx="2" fill="${odd ? "#60a5fa" : "#fb7185"}" stroke="#475569" stroke-width="3"/></g></svg>`;
+      }
+      if (puzzle.kind === "key") {
+        return `<svg ${common}>${shadow}<circle cx="32" cy="49" r="15" fill="#fde68a" stroke="#92400e" stroke-width="4"/><circle cx="32" cy="49" r="6" fill="#fffdf8" stroke="#92400e" stroke-width="3"/><path d="M47 49 H82" stroke="#92400e" stroke-width="10" stroke-linecap="round"/><path d="M66 49 V${odd ? "65" : "60"} M77 49 V58" stroke="#92400e" stroke-width="8" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "pizza") {
+        const topping = odd ? "" : `<circle cx="50" cy="49" r="5" fill="#b91c1c"/>`;
+        return `<svg ${common}>${shadow}<path d="M50 15 L83 79 Q50 92 17 79 Z" fill="#fbbf24" stroke="#92400e" stroke-width="4" stroke-linejoin="round"/><path d="M24 68 Q50 78 76 68" fill="none" stroke="#f97316" stroke-width="7" stroke-linecap="round"/><circle cx="41" cy="63" r="5" fill="#b91c1c"/><circle cx="62" cy="66" r="5" fill="#b91c1c"/>${topping}<circle cx="58" cy="38" r="4" fill="#22c55e"/></svg>`;
+      }
+      if (puzzle.kind === "rocket") {
+        return `<svg ${common}>${shadow}<path d="M50 9 C66 22 70 47 58 70 H42 C30 47 34 22 50 9Z" fill="#e0f2fe" stroke="#075985" stroke-width="4"/><circle cx="50" cy="36" r="10" fill="#93c5fd" stroke="#1d4ed8" stroke-width="3"/><path d="M42 66 L${odd ? "29" : "22"} 82 L42 78 Z M58 66 L78 82 L58 78 Z" fill="#ef4444" stroke="#991b1b" stroke-width="4" stroke-linejoin="round"/><path d="M44 72 Q50 93 56 72" fill="#fb923c" stroke="#c2410c" stroke-width="3"/></svg>`;
+      }
+      if (puzzle.kind === "tree") {
+        return `<svg ${common}>${shadow}<path d="M46 54 H56 V83 H46 Z" fill="#8b5a2b" stroke="#5b3719" stroke-width="4"/><circle cx="50" cy="31" r="21" fill="#22c55e" stroke="#166534" stroke-width="4"/><circle cx="33" cy="47" r="17" fill="#16a34a" stroke="#166534" stroke-width="4"/><circle cx="67" cy="47" r="17" fill="#16a34a" stroke="#166534" stroke-width="4"/><path d="M51 61 C${odd ? "36 55 33 65" : "66 55 69 65"}" fill="none" stroke="#5b3719" stroke-width="5" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "shoe") {
+        return `<svg ${common}>${shadow}<path d="M18 62 C30 62 36 50 44 44 H63 C71 51 75 57 85 60 V74 H18 Z" fill="#38bdf8" stroke="#075985" stroke-width="4" stroke-linejoin="round"/><path d="M22 74 H86" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/><path d="${odd ? "M44 53 L58 63 M58 53 L44 63" : "M42 54 H60 M44 62 H62"}" stroke="#fffdf8" stroke-width="4" stroke-linecap="round"/></svg>`;
+      }
+      if (puzzle.kind === "camera") {
+        return `<svg ${common}>${shadow}<rect x="19" y="34" width="62" height="43" rx="8" fill="#334155" stroke="#0f172a" stroke-width="4"/><path d="M34 34 L40 25 H59 L66 34" fill="#475569" stroke="#0f172a" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="56" r="14" fill="#bfdbfe" stroke="#1d4ed8" stroke-width="4"/><circle cx="50" cy="56" r="6" fill="#1d4ed8"/><rect x="${odd ? "63" : "25"}" y="40" width="10" height="7" rx="2" fill="#fef3c7"/></svg>`;
+      }
+      if (puzzle.kind === "cupcake") {
+        const cherry = odd ? `<circle cx="61" cy="22" r="6" fill="#dc2626" stroke="#7f1d1d" stroke-width="3"/>` : `<circle cx="50" cy="20" r="6" fill="#dc2626" stroke="#7f1d1d" stroke-width="3"/>`;
+        return `<svg ${common}>${shadow}${cherry}<path d="M27 47 C28 28 72 28 73 47 C82 48 82 63 70 64 H30 C18 63 18 48 27 47Z" fill="#f9a8d4" stroke="#be185d" stroke-width="4"/><path d="M29 61 H71 L66 84 H34 Z" fill="#fcd34d" stroke="#a16207" stroke-width="4" stroke-linejoin="round"/><path d="M38 64 L41 82 M50 64 V82 M62 64 L59 82" stroke="#a16207" stroke-width="3"/></svg>`;
+      }
+      return `<svg ${common}>${shadow}<circle cx="50" cy="50" r="33" fill="#fbbf24" stroke="#92400e" stroke-width="4"/><circle cx="38" cy="43" r="5" fill="#111827"/><circle cx="62" cy="43" r="5" fill="#111827"/><path d="${odd ? "M35 66 Q50 55 65 66" : "M35 59 Q50 73 65 59"}" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round"/></svg>`;
+    }
+
+    function renderLevel() {
+      if (state.nextLevelId) {
+        window.clearTimeout(state.nextLevelId);
+        state.nextLevelId = null;
+      }
+      state.config = makeConfig();
+      state.oddIndex = Math.floor(Math.random() * state.config.total);
+      state.hintStage = 0;
+      state.levelSolved = false;
+      state.timedOut = false;
+      state.startedAt = performance.now();
+      state.elapsedBeforePause = 0;
+      gridEl.innerHTML = "";
+      gridEl.style.setProperty("--cols", state.config.cols);
+      gridEl.style.setProperty("--rows", state.config.rows);
+      gridEl.style.setProperty("--gap", `${state.config.gap}px`);
+      sizeGrid();
+
+      for (let i = 0; i < state.config.total; i += 1) {
+        const tile = document.createElement("button");
+        tile.className = "tile";
+        tile.type = "button";
+        tile.dataset.index = String(i);
+        tile.setAttribute("aria-label", `Icon ${i + 1}`);
+        tile.innerHTML = iconSvg(
+          state.config.puzzle,
+          i === state.oddIndex
+        );
+        tile.addEventListener("click", () => handleTileClick(tile, i));
+        gridEl.appendChild(tile);
+      }
+
+      levelText.textContent = state.level;
+      gridText.textContent = `${state.config.cols} x ${state.config.rows}`;
+      differenceText.textContent = "Hidden";
+      wrongText.textContent = state.wrong;
+      bestText.textContent = state.bestStreak;
+      hintText.textContent = `${state.config.puzzle.title}. Look for the one that breaks the set.`;
+      setMessage(`Level ${state.level}. Find the odd one.`, "neutral");
+      updateHud();
+      restartTimer();
+    }
+
+    function sizeGrid() {
+      if (!state.config) return;
+      const bounds = playfield.getBoundingClientRect();
+      const pad = 54;
+      const maxWidth = Math.min(1260, Math.max(320, bounds.width - pad));
+      const maxHeight = Math.min(760, Math.max(260, bounds.height - pad));
+      const ratio = state.config.cols / state.config.rows;
+      let width = maxWidth;
+      let height = width / ratio;
+
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * ratio;
+      }
+
+      gridEl.style.width = `${Math.floor(width)}px`;
+      gridEl.style.height = `${Math.floor(height)}px`;
+    }
+
+    function handleTileClick(tile, index) {
+      if (!state.started || state.paused || state.levelSolved) return;
+
+      state.attempts += 1;
+      if (index === state.oddIndex) {
+        state.levelSolved = true;
+        state.correct += 1;
+        state.streak += 1;
+        state.bestStreak = Math.max(state.bestStreak, state.streak);
+        tile.classList.add("correct");
+        const elapsed = getElapsedSeconds();
+        const timeBonus = Math.max(0, Math.round((state.config.timeLimit - elapsed) * 38));
+        const streakBonus = state.streak * 35;
+        const scoreGain = 1000 + timeBonus + streakBonus - (state.hintStage * 140);
+        state.score += Math.max(250, scoreGain);
+        setMessage(choose(messages.correct), "good");
+        updateHud();
+        goToNextLevel();
+        return;
+      }
+
+      state.wrong += 1;
+      state.streak = 0;
+      state.score = Math.max(0, state.score - 75);
+      tile.classList.remove("wrong");
+      void tile.offsetWidth;
+      tile.classList.add("wrong");
+      setMessage(choose(messages.wrong), "bad");
+      updateHud();
+    }
+
+    function useHint() {
+      if (!state.started || state.paused || state.levelSolved || state.hints <= 0) return;
+
+      state.hints -= 1;
+      state.hintStage += 1;
+      state.score = Math.max(0, state.score - 120);
+      const config = state.config;
+      const oddRow = Math.floor(state.oddIndex / config.cols) + 1;
+      const oddCol = (state.oddIndex % config.cols) + 1;
+
+      if (state.hintStage === 1) {
+        hintText.textContent = config.puzzle.hint;
+        differenceText.textContent = describeDifference(config.type);
+      } else if (state.hintStage === 2) {
+        const vertical = oddRow <= config.rows / 2 ? "upper" : "lower";
+        const horizontal = oddCol <= config.cols / 2 ? "left" : "right";
+        hintText.textContent = `Focus on the ${vertical} ${horizontal} area.`;
+      } else {
+        hintText.textContent = "Watch for the soft pulse. It marks the exact odd icon.";
+        const oddTile = gridEl.querySelector(`[data-index="${state.oddIndex}"]`);
+        oddTile.classList.add("hint-ring");
+      }
+
+      updateHud();
+    }
+
+    function setMessage(text, tone) {
+      message.textContent = text;
+      message.style.color = tone === "good" ? "var(--good)" : tone === "bad" ? "var(--bad)" : "var(--ink)";
+    }
+
+    function getElapsedSeconds() {
+      if (!state.started) return 0;
+      if (state.paused) return state.elapsedBeforePause;
+      return (state.elapsedBeforePause * 1000 + performance.now() - state.startedAt) / 1000;
+    }
+
+    function formatTime(seconds) {
+      const total = Math.floor(seconds);
+      const minutes = String(Math.floor(total / 60)).padStart(2, "0");
+      const secs = String(total % 60).padStart(2, "0");
+      return `${minutes}:${secs}`;
+    }
+
+    function restartTimer() {
+      if (state.timerId) window.clearInterval(state.timerId);
+      state.timerId = window.setInterval(tick, 250);
+      tick();
+    }
+
+    function goToNextLevel(delay = 850) {
+      if (state.nextLevelId) window.clearTimeout(state.nextLevelId);
+      state.nextLevelId = window.setTimeout(() => {
+        state.nextLevelId = null;
+        if (!state.practice && state.level >= finalLevel) {
+          showCompleteOverlay();
+          return;
+        }
+        state.level += 1;
+        state.hints = Math.min(3, state.hints + (state.level % 4 === 0 ? 1 : 0));
+        renderLevel();
+      }, delay);
+    }
+
+    function showCompleteOverlay() {
+      if (state.timerId) window.clearInterval(state.timerId);
+      state.started = false;
+      state.paused = false;
+      const accuracy = state.attempts === 0 ? 100 : Math.round((state.correct / state.attempts) * 100);
+      overlayTitle.textContent = "Clear!";
+      overlayText.textContent = `You cleared ${finalLevel} levels. Score ${state.score.toLocaleString("en-US")} / Accuracy ${accuracy}% / Best streak ${state.bestStreak}.`;
+      startButton.textContent = "Play Again";
+      practiceButton.textContent = "Practice";
+      overlay.hidden = false;
+      setMessage("Run complete. That was a clean finish.", "good");
+      updateHud();
+    }
+
+    function revealTimedOutAnswer() {
+      state.timedOut = true;
+      state.levelSolved = true;
+      state.streak = 0;
+      state.score = Math.max(0, state.score - 10);
+      if (state.timerId) window.clearInterval(state.timerId);
+
+      const oddTile = gridEl.querySelector(`[data-index="${state.oddIndex}"]`);
+      if (oddTile) {
+        oddTile.classList.add("correct", "hint-ring");
+      }
+
+      differenceText.textContent = describeDifference(state.config.type);
+      hintText.textContent = `${state.config.puzzle.title}. The highlighted icon was the odd one.`;
+      setMessage("Time's up. Check the highlighted answer.", "bad");
+      updateHud();
+      goToNextLevel(2800);
+    }
+
+    function tick() {
+      const elapsed = getElapsedSeconds();
+      timeText.textContent = formatTime(elapsed);
+      const remainingRatio = clamp(1 - elapsed / state.config.timeLimit, 0, 1);
+      timeMeter.style.width = `${Math.round(remainingRatio * 100)}%`;
+      if (!state.levelSolved && !state.timedOut && elapsed > state.config.timeLimit && state.started && !state.paused) {
+        revealTimedOutAnswer();
+      }
+    }
+
+    function updateHud() {
+      scoreText.textContent = state.score.toLocaleString("en-US");
+      streakText.textContent = state.streak;
+      hintsText.textContent = state.hints;
+      wrongText.textContent = state.wrong;
+      bestText.textContent = state.bestStreak;
+      const accuracy = state.attempts === 0 ? 100 : Math.round((state.correct / state.attempts) * 100);
+      accuracyText.textContent = `${accuracy}%`;
+    }
+
+    function startGame(practice = false) {
+      if (state.nextLevelId) {
+        window.clearTimeout(state.nextLevelId);
+        state.nextLevelId = null;
+      }
+      state.level = 1;
+      state.score = 0;
+      state.streak = 0;
+      state.bestStreak = 0;
+      state.hints = practice ? 5 : 3;
+      state.wrong = 0;
+      state.attempts = 0;
+      state.correct = 0;
+      state.started = true;
+      state.practice = practice;
+      state.paused = false;
+      overlay.hidden = true;
+      pauseButton.title = "Pause";
+      pauseButton.setAttribute("aria-label", "Pause");
+      renderLevel();
+    }
+
+    function togglePause() {
+      if (!state.started || state.levelSolved) return;
+
+      if (!state.paused) {
+        state.elapsedBeforePause = getElapsedSeconds();
+        state.paused = true;
+        overlayTitle.textContent = "Paused";
+        overlayText.textContent = "Resume when you are ready to search again.";
+        startButton.textContent = "Resume";
+        practiceButton.textContent = "Restart";
+        overlay.hidden = false;
+        pauseButton.title = "Resume";
+        pauseButton.setAttribute("aria-label", "Resume");
+      } else {
+        state.paused = false;
+        state.startedAt = performance.now();
+        overlay.hidden = true;
+        pauseButton.title = "Pause";
+        pauseButton.setAttribute("aria-label", "Pause");
+      }
+    }
+
+    function showStartOverlay() {
+      if (state.timerId) window.clearInterval(state.timerId);
+      if (state.nextLevelId) {
+        window.clearTimeout(state.nextLevelId);
+        state.nextLevelId = null;
+      }
+      state.started = false;
+      state.practice = false;
+      state.paused = false;
+      overlayTitle.textContent = "One Odd One Out";
+      overlayText.textContent = `Find the single icon that is different. Clear all ${finalLevel} levels, or use Practice for an endless run.`;
+      startButton.textContent = "Start";
+      practiceButton.textContent = "Practice";
+      overlay.hidden = false;
+      gridEl.innerHTML = "";
+      timeText.textContent = "00:00";
+      timeMeter.style.width = "100%";
+      setMessage("Ready when your eyes are.", "neutral");
+    }
+
+    startButton.addEventListener("click", () => {
+      if (state.paused) {
+        togglePause();
+      } else {
+        startGame(false);
+      }
+    });
+    practiceButton.addEventListener("click", () => startGame(true));
+    hintButton.addEventListener("click", useHint);
+    pauseButton.addEventListener("click", togglePause);
+    restartButton.addEventListener("click", showStartOverlay);
+    window.addEventListener("resize", sizeGrid);
+
+    showStartOverlay();
+    if (new URLSearchParams(window.location.search).get("autostart") === "1") {
+      window.setTimeout(() => startGame(false), 0);
+    }
+  </script>
+</body>
+</html>

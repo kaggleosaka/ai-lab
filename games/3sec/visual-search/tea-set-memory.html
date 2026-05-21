@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tea Set Memory</title>
+  <style>
+    :root {
+      --ink: #24302b;
+      --paper: #fbf7ef;
+      --paper-2: #f0e6d6;
+      --line: rgba(36, 48, 43, 0.16);
+      --tea: #6f8f5f;
+      --gold: #d3a642;
+      --good: #2e9d62;
+      --bad: #d84e45;
+      --muted: #6d766f;
+      --shadow: rgba(55, 42, 24, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.64)),
+        repeating-linear-gradient(90deg, #d8c7a9 0 22px, #cfbb9a 22px 44px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1120px, 100%);
+      min-height: min(760px, calc(100vh - 32px));
+      background: var(--paper);
+      border: 1px solid var(--line);
+      box-shadow: 0 24px 80px var(--shadow);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(240, 230, 214, 0.75);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--tea);
+      border-radius: 7px;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-weight: 800;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(55, 42, 24, 0.12);
+    }
+
+    .btn.primary {
+      color: white;
+      background: var(--tea);
+      border-color: transparent;
+    }
+
+    .btn.icon {
+      width: 44px;
+      padding: 0;
+    }
+
+    .screen {
+      display: none;
+      min-height: 0;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .home {
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 30px;
+      padding: 34px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(42px, 6vw, 78px);
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 530px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .demo-tray {
+      justify-self: center;
+      width: min(450px, 100%);
+      padding: 24px;
+      background: linear-gradient(#b9824e, #8f6339);
+      border: 8px solid #6e4528;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18), 0 18px 42px var(--shadow);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .setup {
+      padding: 28px 34px 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+      gap: 24px;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .option {
+      text-align: left;
+      border: 1px solid var(--line);
+      background: white;
+      padding: 14px;
+      min-height: 96px;
+      border-radius: 7px;
+      cursor: pointer;
+    }
+
+    .option strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 17px;
+    }
+
+    .option span {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .option.selected {
+      border-color: var(--tea);
+      box-shadow: inset 0 0 0 2px var(--tea);
+    }
+
+    .settings-box {
+      border: 1px solid var(--line);
+      background: white;
+      padding: 18px;
+      align-self: start;
+    }
+
+    .range-row {
+      display: grid;
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .range-row label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--tea);
+    }
+
+    .game {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .hud-item {
+      border: 1px solid var(--line);
+      background: white;
+      padding: 10px;
+    }
+
+    .hud-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .hud-value {
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .message {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+    }
+
+    .message strong {
+      font-size: 22px;
+    }
+
+    .message span {
+      color: var(--muted);
+    }
+
+    .timer-bar {
+      height: 8px;
+      background: rgba(36, 48, 43, 0.12);
+      overflow: hidden;
+      border-radius: 999px;
+      margin-top: 8px;
+    }
+
+    .timer-fill {
+      width: 100%;
+      height: 100%;
+      background: var(--gold);
+      transform-origin: left center;
+      transition: transform 0.08s linear, background 0.12s ease;
+    }
+
+    .play-area {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .tray-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tray-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .memory-tray {
+      min-height: 160px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(88px, 1fr));
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: linear-gradient(#ba8350, #94663e);
+      border: 8px solid #70482d;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.17);
+    }
+
+    .pick-tray {
+      min-height: 124px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(88px, 1fr));
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(240, 230, 214, 0.86);
+      border: 1px solid var(--line);
+    }
+
+    .pick-slot {
+      min-height: 104px;
+      border: 1px dashed rgba(36, 48, 43, 0.24);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: rgba(36, 48, 43, 0.34);
+      font-size: 22px;
+      font-weight: 900;
+      background: rgba(255, 255, 255, 0.42);
+    }
+
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(104px, 1fr));
+      gap: 12px;
+      align-content: start;
+      min-height: 0;
+      overflow: auto;
+      padding: 2px;
+    }
+
+    .tea-card {
+      position: relative;
+      min-height: 128px;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 8px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      place-items: center;
+      gap: 4px;
+      padding: 10px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .tea-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(55, 42, 24, 0.12);
+    }
+
+    .tea-card.memory {
+      cursor: default;
+      min-height: 132px;
+    }
+
+    .tea-card.pick {
+      cursor: default;
+      min-height: 104px;
+      padding: 8px;
+    }
+
+    .tea-card.pick .tea-visual {
+      width: 72px;
+      height: 58px;
+    }
+
+    .tea-card.pick .tea-label {
+      font-size: 12px;
+      min-height: 28px;
+    }
+
+    .tea-card.hidden-card {
+      background: rgba(255,255,255,0.36);
+    }
+
+    .tea-card.hidden-card .tea-visual,
+    .tea-card.hidden-card .tea-label {
+      visibility: hidden;
+    }
+
+    .tea-card.hidden-card::after {
+      content: "?";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: rgba(255,255,255,0.78);
+      font-size: 54px;
+      font-weight: 900;
+    }
+
+    .tea-card.selected {
+      border-color: var(--gold);
+      box-shadow: inset 0 0 0 3px var(--gold);
+    }
+
+    .tea-card.correct {
+      border-color: var(--good);
+      background: rgba(46, 157, 98, 0.12);
+    }
+
+    .tea-card.wrong {
+      border-color: var(--bad);
+      background: rgba(216, 78, 69, 0.12);
+      animation: shake 0.24s linear 1;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .tea-label {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.25;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .order-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      min-width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--tea);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .tea-visual {
+      width: 86px;
+      height: 70px;
+      position: relative;
+    }
+
+    .tea-visual svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .result {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 30px;
+    }
+
+    .result-box {
+      width: min(640px, 100%);
+      background: white;
+      border: 1px solid var(--line);
+      padding: 26px;
+    }
+
+    .rank {
+      margin: 0 0 8px;
+      color: var(--tea);
+      font-size: 76px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      padding: 12px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .stat strong {
+      font-size: 24px;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        padding: 10px;
+        align-items: stretch;
+      }
+
+      .app {
+        min-height: calc(100vh - 20px);
+      }
+
+      .home,
+      .setup {
+        grid-template-columns: 1fr;
+        padding: 22px 18px;
+      }
+
+      .hud {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hud-item:last-child {
+        grid-column: span 2;
+      }
+
+      .memory-tray {
+        grid-template-columns: repeat(2, minmax(100px, 1fr));
+      }
+
+      .pick-tray {
+        grid-template-columns: repeat(2, minmax(100px, 1fr));
+      }
+
+      .choice-grid {
+        grid-template-columns: repeat(2, minmax(126px, 1fr));
+      }
+
+      .message {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-live="polite">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">茶</div>
+        <span>Tea Set Memory</span>
+      </div>
+      <button class="btn icon" id="muteButton" title="Mute or unmute audio" aria-label="Mute or unmute audio">Sound</button>
+    </header>
+
+    <section class="screen active" id="titleScreen">
+      <div class="home">
+        <div>
+          <h1>Tea Set Memory</h1>
+          <p class="lead">Memorize the color and shape of the tea utensils on the tray. When they vanish, choose the matching pieces from the selection below.</p>
+          <div class="actions">
+            <button class="btn primary" id="setupButton">Start</button>
+            <button class="btn" id="quickButton">Quick Play</button>
+          </div>
+        </div>
+        <div class="demo-tray" id="demoTray" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="setupScreen">
+      <div class="setup">
+        <div>
+          <h2 class="section-title">Difficulty</h2>
+          <div class="option-grid" id="difficultyOptions"></div>
+          <div class="actions">
+            <button class="btn primary" id="playButton">Play</button>
+            <button class="btn" id="backButton">Back</button>
+          </div>
+        </div>
+        <aside class="settings-box">
+          <h2 class="section-title">Audio</h2>
+          <div class="range-row">
+            <label for="bgmVolume">BGM Volume <span id="bgmValue">42</span></label>
+            <input id="bgmVolume" type="range" min="0" max="100" value="42" />
+          </div>
+          <div class="range-row">
+            <label for="seVolume">SE Volume <span id="seValue">72</span></label>
+            <input id="seVolume" type="range" min="0" max="100" value="72" />
+          </div>
+          <p class="lead">Hard and Expert check the order too. Audio starts after your first click or tap.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="screen" id="gameScreen">
+      <div class="game">
+        <div class="hud">
+          <div class="hud-item"><div class="hud-label">Score</div><div class="hud-value" id="scoreText">0</div></div>
+          <div class="hud-item"><div class="hud-label">Combo</div><div class="hud-value" id="comboText">0</div></div>
+          <div class="hud-item"><div class="hud-label">Round</div><div class="hud-value" id="roundText">1/10</div></div>
+          <div class="hud-item"><div class="hud-label">Correct</div><div class="hud-value" id="correctText">0</div></div>
+          <div class="hud-item"><div class="hud-label">Timer</div><div class="hud-value" id="timerText">3.0</div></div>
+        </div>
+        <div class="message">
+          <div>
+            <strong id="phaseText">Memorize</strong>
+            <span id="phaseCopy">Remember the tea set on the tray.</span>
+            <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+          </div>
+          <strong id="feedbackText"></strong>
+        </div>
+        <div class="play-area">
+          <div class="tray-block">
+            <div class="tray-heading">
+              <span id="memoryHeading">Tea Tray</span>
+              <span id="orderHint">Color + Type</span>
+            </div>
+            <div class="memory-tray" id="memoryTray"></div>
+          </div>
+          <div class="tray-block">
+            <div class="tray-heading">
+              <span>Your Picks</span>
+              <span id="pickHint">Selected pieces appear here</span>
+            </div>
+            <div class="pick-tray" id="pickTray"></div>
+          </div>
+          <div class="choice-grid" id="choiceGrid"></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="pauseButton">Pause</button>
+          <button class="btn" id="quitButton">Quit</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="resultScreen">
+      <div class="result">
+        <div class="result-box">
+          <p class="rank" id="rankText">A</p>
+          <h2 class="section-title">Result</h2>
+          <div class="stats">
+            <div class="stat"><span>Final Score</span><strong id="finalScore">0</strong></div>
+            <div class="stat"><span>Accuracy</span><strong id="accuracyText">0%</strong></div>
+            <div class="stat"><span>Max Combo</span><strong id="maxComboText">0</strong></div>
+            <div class="stat"><span>Average Time</span><strong id="avgTimeText">0.0s</strong></div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="againButton">Play Again</button>
+            <button class="btn" id="titleButton">Title</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const colors = {
+      red: "#c94d44",
+      blue: "#4f82b8",
+      green: "#6f8f5f",
+      black: "#2f3433",
+      white: "#f8f3e7",
+      gold: "#d3a642",
+      brown: "#8b5b38"
+    };
+
+    const colorNames = {
+      red: "Red",
+      blue: "Blue",
+      green: "Green",
+      black: "Black",
+      white: "White",
+      gold: "Gold",
+      brown: "Brown"
+    };
+
+    const teaTypes = {
+      teapot: "Teapot",
+      cup: "Tea Cup",
+      bowl: "Matcha Bowl",
+      caddy: "Tea Caddy",
+      whisk: "Tea Whisk",
+      saucer: "Saucer"
+    };
+
+    const difficulties = {
+      easy: { name: "Easy", memory: 2, choices: 4, memorizeMs: 4200, answerMs: 9000, rounds: 8, order: false, copy: "2 items, 4 choices, no order check." },
+      normal: { name: "Normal", memory: 3, choices: 6, memorizeMs: 3300, answerMs: 8500, rounds: 10, order: false, copy: "3 items, 6 choices, color and type memory." },
+      hard: { name: "Hard", memory: 4, choices: 9, memorizeMs: 2700, answerMs: 7600, rounds: 12, order: true, copy: "4 items, 9 choices, order matters." },
+      expert: { name: "Expert", memory: 5, choices: 12, memorizeMs: 2200, answerMs: 6800, rounds: 15, order: true, copy: "5 items, 12 choices, fast order recall." }
+    };
+
+    const state = {
+      screen: "title",
+      difficulty: "normal",
+      phase: "idle",
+      round: 0,
+      score: 0,
+      combo: 0,
+      maxCombo: 0,
+      correct: 0,
+      wrong: 0,
+      responseTimes: [],
+      memoryItems: [],
+      choiceItems: [],
+      selectedIds: new Set(),
+      selectedOrder: [],
+      phaseStart: 0,
+      remainingMs: 0,
+      memorizeTimer: null,
+      answerTimer: null,
+      tickTimer: null,
+      paused: false,
+      muted: false,
+      audioReady: false,
+      bgmVolume: 0.42,
+      seVolume: 0.72
+    };
+
+    const els = {
+      titleScreen: document.getElementById("titleScreen"),
+      setupScreen: document.getElementById("setupScreen"),
+      gameScreen: document.getElementById("gameScreen"),
+      resultScreen: document.getElementById("resultScreen"),
+      demoTray: document.getElementById("demoTray"),
+      difficultyOptions: document.getElementById("difficultyOptions"),
+      memoryTray: document.getElementById("memoryTray"),
+      pickTray: document.getElementById("pickTray"),
+      choiceGrid: document.getElementById("choiceGrid"),
+      memoryHeading: document.getElementById("memoryHeading"),
+      orderHint: document.getElementById("orderHint"),
+      pickHint: document.getElementById("pickHint"),
+      scoreText: document.getElementById("scoreText"),
+      comboText: document.getElementById("comboText"),
+      roundText: document.getElementById("roundText"),
+      correctText: document.getElementById("correctText"),
+      timerText: document.getElementById("timerText"),
+      timerFill: document.getElementById("timerFill"),
+      phaseText: document.getElementById("phaseText"),
+      phaseCopy: document.getElementById("phaseCopy"),
+      feedbackText: document.getElementById("feedbackText"),
+      muteButton: document.getElementById("muteButton"),
+      bgmVolume: document.getElementById("bgmVolume"),
+      seVolume: document.getElementById("seVolume"),
+      bgmValue: document.getElementById("bgmValue"),
+      seValue: document.getElementById("seValue"),
+      rankText: document.getElementById("rankText"),
+      finalScore: document.getElementById("finalScore"),
+      accuracyText: document.getElementById("accuracyText"),
+      maxComboText: document.getElementById("maxComboText"),
+      avgTimeText: document.getElementById("avgTimeText")
+    };
+
+    class AudioManager {
+      constructor() {
+        this.ctx = null;
+        this.master = null;
+        this.bgmGain = null;
+        this.seGain = null;
+        this.bgmNodes = [];
+      }
+
+      async init() {
+        if (this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.master = this.ctx.createGain();
+        this.bgmGain = this.ctx.createGain();
+        this.seGain = this.ctx.createGain();
+        this.bgmGain.connect(this.master);
+        this.seGain.connect(this.master);
+        this.master.connect(this.ctx.destination);
+        this.setBgmVolume(state.bgmVolume);
+        this.setSeVolume(state.seVolume);
+        this.setMuted(state.muted);
+      }
+
+      async unlock() {
+        await this.init();
+        if (this.ctx.state === "suspended") await this.ctx.resume();
+        state.audioReady = true;
+      }
+
+      setBgmVolume(value) {
+        state.bgmVolume = value;
+        if (this.bgmGain) this.bgmGain.gain.value = value;
+      }
+
+      setSeVolume(value) {
+        state.seVolume = value;
+        if (this.seGain) this.seGain.gain.value = value;
+      }
+
+      setMuted(value) {
+        state.muted = value;
+        if (this.master) this.master.gain.value = value ? 0 : 1;
+        els.muteButton.textContent = value ? "Muted" : "Sound";
+      }
+
+      stopBgm() {
+        this.bgmNodes.forEach((node) => {
+          try { node.stop(); } catch (error) {}
+        });
+        this.bgmNodes = [];
+      }
+
+      playBgm(kind) {
+        if (!this.ctx) return;
+        this.stopBgm();
+        const patterns = {
+          title: [392, 494, 587, 494],
+          game: [294, 392, 440, 392],
+          result: [392, 523, 659, 784]
+        };
+        const notes = patterns[kind] || patterns.title;
+        const now = this.ctx.currentTime;
+        notes.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, now);
+          for (let loop = 0; loop < 96; loop++) {
+            const start = now + i * 0.48 + loop * notes.length * 0.48;
+            gain.gain.setValueAtTime(0.0001, start);
+            gain.gain.linearRampToValueAtTime(0.07, start + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
+          }
+          osc.connect(gain);
+          gain.connect(this.bgmGain);
+          osc.start(now);
+          osc.stop(now + 185);
+          this.bgmNodes.push(osc);
+        });
+      }
+
+      playSe(name) {
+        if (!this.ctx) return;
+        const table = {
+          select: [660, 0.07, "triangle"],
+          place: [360, 0.09, "sine"],
+          hide: [220, 0.18, "triangle"],
+          correct: [880, 0.16, "sine"],
+          wrong: [130, 0.22, "sawtooth"],
+          combo: [1040, 0.12, "triangle"],
+          finish: [700, 0.28, "sine"],
+          pause: [260, 0.08, "triangle"]
+        };
+        const [freq, length, type] = table[name] || table.select;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        if (name === "correct" || name === "combo") osc.frequency.exponentialRampToValueAtTime(freq * 1.45, now + length);
+        if (name === "wrong") osc.frequency.exponentialRampToValueAtTime(70, now + length);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.42, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + length);
+        osc.connect(gain);
+        gain.connect(this.seGain);
+        osc.start(now);
+        osc.stop(now + length + 0.03);
+      }
+    }
+
+    const audio = new AudioManager();
+
+    function showScreen(name) {
+      state.screen = name;
+      document.querySelectorAll(".screen").forEach((screen) => screen.classList.remove("active"));
+      document.getElementById(`${name}Screen`).classList.add("active");
+      if (state.audioReady) audio.playBgm(name === "game" ? "game" : name === "result" ? "result" : "title");
+    }
+
+    function renderSetup() {
+      els.difficultyOptions.innerHTML = "";
+      Object.entries(difficulties).forEach(([id, item]) => {
+        const button = document.createElement("button");
+        button.className = `option ${state.difficulty === id ? "selected" : ""}`;
+        button.innerHTML = `<strong>${item.name}</strong><span>${item.copy}</span>`;
+        button.addEventListener("click", () => {
+          state.difficulty = id;
+          audio.playSe("select");
+          renderSetup();
+        });
+        els.difficultyOptions.appendChild(button);
+      });
+    }
+
+    function renderDemo() {
+      const demoItems = [
+        makeItem("teapot", "red"),
+        makeItem("cup", "green"),
+        makeItem("bowl", "gold")
+      ];
+      els.demoTray.innerHTML = demoItems.map((item) => teaCardHtml(item, { memory: true })).join("");
+    }
+
+    function getConfig() {
+      return difficulties[state.difficulty];
+    }
+
+    function resetGame() {
+      state.phase = "idle";
+      state.round = 0;
+      state.score = 0;
+      state.combo = 0;
+      state.maxCombo = 0;
+      state.correct = 0;
+      state.wrong = 0;
+      state.responseTimes = [];
+      state.memoryItems = [];
+      state.choiceItems = [];
+      state.selectedIds = new Set();
+      state.selectedOrder = [];
+      state.paused = false;
+      clearTimers();
+      updateHud();
+    }
+
+    function clearTimers() {
+      clearTimeout(state.memorizeTimer);
+      clearTimeout(state.answerTimer);
+      clearInterval(state.tickTimer);
+      state.memorizeTimer = null;
+      state.answerTimer = null;
+      state.tickTimer = null;
+    }
+
+    function startGame() {
+      resetGame();
+      showScreen("game");
+      audio.playSe("place");
+      nextRound();
+    }
+
+    function nextRound() {
+      clearTimers();
+      const config = getConfig();
+      if (state.round >= config.rounds) {
+        finishGame();
+        return;
+      }
+
+      state.round += 1;
+      state.phase = "memorize";
+      state.selectedIds = new Set();
+      state.selectedOrder = [];
+      const round = generateRound(config);
+      state.memoryItems = round.memoryItems;
+      state.choiceItems = round.choiceItems;
+      state.phaseStart = performance.now();
+      state.remainingMs = config.memorizeMs;
+      els.feedbackText.textContent = "";
+      els.phaseText.textContent = "Memorize";
+      els.phaseCopy.textContent = config.order
+        ? "Remember each tea piece and its order."
+        : "Remember the colors and types on the tray.";
+      renderRound();
+      updateHud();
+      startCountdown(config.memorizeMs, hideMemory);
+    }
+
+    function startCountdown(ms, done) {
+      clearInterval(state.tickTimer);
+      state.tickTimer = setInterval(() => {
+        const elapsed = performance.now() - state.phaseStart;
+        state.remainingMs = Math.max(0, ms - elapsed);
+        renderTimer(ms);
+      }, 80);
+      if (state.phase === "memorize") {
+        state.memorizeTimer = setTimeout(done, ms);
+      } else {
+        state.answerTimer = setTimeout(done, ms);
+      }
+    }
+
+    function renderTimer(totalMs) {
+      const ratio = totalMs ? Math.max(0, Math.min(1, state.remainingMs / totalMs)) : 0;
+      els.timerText.textContent = (state.remainingMs / 1000).toFixed(1);
+      els.timerFill.style.transform = `scaleX(${ratio})`;
+      els.timerFill.style.background = ratio < 0.25 ? "var(--bad)" : "var(--gold)";
+    }
+
+    function hideMemory() {
+      clearTimers();
+      const config = getConfig();
+      state.phase = "choose";
+      state.phaseStart = performance.now();
+      state.remainingMs = config.answerMs;
+      els.phaseText.textContent = "Choose";
+      els.phaseCopy.textContent = config.order
+        ? "Select the same tea pieces in the same order."
+        : "Select the matching tea pieces.";
+      audio.playSe("hide");
+      renderRound();
+      startCountdown(config.answerMs, timeOut);
+    }
+
+    function generateRound(config) {
+      const pool = buildPool();
+      shuffle(pool);
+      const memoryItems = pool.slice(0, config.memory).map((item, index) => ({ ...item, order: index + 1 }));
+      const usedIds = new Set(memoryItems.map((item) => item.id));
+      const choices = [...memoryItems];
+
+      const decoys = buildDecoys(memoryItems).filter((item) => !usedIds.has(item.id));
+      shuffle(decoys);
+      decoys.forEach((item) => {
+        if (choices.length < config.choices && !choices.some((choice) => choice.id === item.id)) choices.push(item);
+      });
+
+      const fresh = pool.filter((item) => !choices.some((choice) => choice.id === item.id));
+      shuffle(fresh);
+      fresh.forEach((item) => {
+        if (choices.length < config.choices) choices.push(item);
+      });
+
+      shuffle(choices);
+      return { memoryItems, choiceItems: choices };
+    }
+
+    function buildPool() {
+      const typeIds = Object.keys(teaTypes);
+      const colorIds = Object.keys(colors);
+      const pool = [];
+      typeIds.forEach((type) => {
+        colorIds.forEach((color) => pool.push(makeItem(type, color)));
+      });
+      return pool;
+    }
+
+    function buildDecoys(memoryItems) {
+      const typeIds = Object.keys(teaTypes);
+      const colorIds = Object.keys(colors);
+      const decoys = [];
+      memoryItems.forEach((item) => {
+        const nextColor = colorIds[(colorIds.indexOf(item.color) + 1) % colorIds.length];
+        const nextType = typeIds[(typeIds.indexOf(item.type) + 1) % typeIds.length];
+        decoys.push(makeItem(item.type, nextColor));
+        decoys.push(makeItem(nextType, item.color));
+      });
+      return decoys;
+    }
+
+    function makeItem(type, color) {
+      return {
+        id: `${color}_${type}`,
+        type,
+        color,
+        label: `${colorNames[color]} ${teaTypes[type]}`
+      };
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function renderRound() {
+      const config = getConfig();
+      els.memoryHeading.textContent = state.phase === "judge" ? "Correct Tray" : "Tea Tray";
+      els.orderHint.textContent = config.order ? "Order matters" : "Color + Type";
+      els.pickHint.textContent = config.order ? "Your click order" : "Your selected set";
+      els.memoryTray.style.gridTemplateColumns = `repeat(${Math.min(5, config.memory)}, minmax(88px, 1fr))`;
+      els.memoryTray.innerHTML = state.memoryItems.map((item, index) => {
+        const hidden = state.phase !== "memorize" && state.phase !== "judge";
+        return teaCardHtml(item, { memory: true, hidden, order: config.order ? index + 1 : null });
+      }).join("");
+
+      els.pickTray.style.gridTemplateColumns = `repeat(${Math.min(5, config.memory)}, minmax(88px, 1fr))`;
+      els.pickTray.innerHTML = renderPickTray(config);
+
+      els.choiceGrid.innerHTML = state.choiceItems.map((item) => {
+        const selected = state.selectedIds.has(item.id);
+        const isTarget = state.memoryItems.some((target) => target.id === item.id);
+        const cls = state.phase === "judge"
+          ? selected && isTarget ? "correct" : selected && !isTarget ? "wrong" : ""
+          : "";
+        return teaCardHtml(item, { selected, extraClass: cls, button: true });
+      }).join("");
+
+      [...els.choiceGrid.querySelectorAll(".tea-card")].forEach((button) => {
+        button.addEventListener("click", () => selectChoice(button.dataset.id));
+      });
+    }
+
+    function renderPickTray(config) {
+      const selectedItems = state.selectedOrder
+        .map((id) => state.choiceItems.find((item) => item.id === id))
+        .filter(Boolean);
+      const targetIds = state.memoryItems.map((item) => item.id);
+      const cells = [];
+
+      for (let index = 0; index < config.memory; index++) {
+        const item = selectedItems[index];
+        if (!item) {
+          cells.push(`<div class="pick-slot">${index + 1}</div>`);
+          continue;
+        }
+
+        const isCorrectHere = config.order
+          ? targetIds[index] === item.id
+          : targetIds.includes(item.id);
+        const extraClass = state.phase === "judge" ? (isCorrectHere ? "correct" : "wrong") : "";
+        cells.push(teaCardHtml(item, {
+          pick: true,
+          extraClass,
+          order: config.order ? index + 1 : null
+        }));
+      }
+
+      return cells.join("");
+    }
+
+    function teaCardHtml(item, options = {}) {
+      const classes = ["tea-card"];
+      if (options.memory) classes.push("memory");
+      if (options.pick) classes.push("pick");
+      if (options.hidden) classes.push("hidden-card");
+      if (options.selected) classes.push("selected");
+      if (options.extraClass) classes.push(options.extraClass);
+      const tag = options.button ? "button" : "div";
+      const disabled = options.button && state.phase !== "choose" ? " disabled" : "";
+      return `<${tag} class="${classes.join(" ")}" data-id="${item.id}"${disabled}>
+        ${options.order ? `<span class="order-badge">${options.order}</span>` : ""}
+        <div class="tea-visual">${teaSvg(item)}</div>
+        <div class="tea-label">${item.label}</div>
+      </${tag}>`;
+    }
+
+    function teaSvg(item) {
+      const c = colors[item.color];
+      const stroke = item.color === "white" ? "#8e8578" : "#24302b";
+      const shine = item.color === "black" ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.42)";
+      const common = `fill="${c}" stroke="${stroke}" stroke-width="3" stroke-linejoin="round"`;
+      if (item.type === "teapot") {
+        return `<svg viewBox="0 0 100 80" aria-hidden="true">
+          <path d="M33 31 C36 18 62 18 66 31 L70 57 C67 69 34 69 30 57 Z" ${common}/>
+          <path d="M66 39 C83 36 88 48 72 53" fill="none" stroke="${stroke}" stroke-width="5" stroke-linecap="round"/>
+          <path d="M31 42 L12 35 L28 54" fill="none" stroke="${stroke}" stroke-width="5" stroke-linecap="round"/>
+          <path d="M42 20 L56 20 L53 12 L45 12 Z" ${common}/>
+          <path d="M42 36 C48 32 56 32 62 36" fill="none" stroke="${shine}" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+      }
+      if (item.type === "cup") {
+        return `<svg viewBox="0 0 100 80" aria-hidden="true">
+          <path d="M27 25 H65 L60 64 H32 Z" ${common}/>
+          <path d="M65 34 C82 33 82 55 62 53" fill="none" stroke="${stroke}" stroke-width="5"/>
+          <ellipse cx="46" cy="25" rx="20" ry="6" fill="${c}" stroke="${stroke}" stroke-width="3"/>
+          <path d="M35 36 C43 32 51 32 57 35" fill="none" stroke="${shine}" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+      }
+      if (item.type === "bowl") {
+        return `<svg viewBox="0 0 100 80" aria-hidden="true">
+          <ellipse cx="50" cy="31" rx="34" ry="11" fill="${c}" stroke="${stroke}" stroke-width="3"/>
+          <path d="M17 31 C22 66 78 66 83 31 Z" ${common}/>
+          <path d="M31 40 C43 47 58 47 70 40" fill="none" stroke="${shine}" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+      }
+      if (item.type === "caddy") {
+        return `<svg viewBox="0 0 100 80" aria-hidden="true">
+          <rect x="29" y="22" width="42" height="43" rx="8" ${common}/>
+          <path d="M34 22 H66 L62 13 H38 Z" ${common}/>
+          <path d="M39 34 H61" stroke="${shine}" stroke-width="4" stroke-linecap="round"/>
+        </svg>`;
+      }
+      if (item.type === "whisk") {
+        return `<svg viewBox="0 0 100 80" aria-hidden="true">
+          <rect x="45" y="10" width="10" height="28" rx="5" ${common}/>
+          <path d="M24 66 C28 42 35 36 50 36 C65 36 72 42 76 66 Z" ${common}/>
+          <path d="M34 66 L39 39 M45 66 L47 37 M55 66 L53 37 M66 66 L61 39" stroke="${stroke}" stroke-width="2"/>
+        </svg>`;
+      }
+      return `<svg viewBox="0 0 100 80" aria-hidden="true">
+        <ellipse cx="50" cy="48" rx="36" ry="13" ${common}/>
+        <ellipse cx="50" cy="44" rx="22" ry="7" fill="none" stroke="${shine}" stroke-width="4"/>
+      </svg>`;
+    }
+
+    function selectChoice(id) {
+      if (state.phase !== "choose" || state.selectedIds.has(id)) return;
+      state.selectedIds.add(id);
+      state.selectedOrder.push(id);
+      audio.playSe("select");
+      renderRound();
+      if (state.selectedIds.size >= state.memoryItems.length) judgeAnswer();
+    }
+
+    function judgeAnswer() {
+      clearTimers();
+      const config = getConfig();
+      state.phase = "judge";
+      const answerTime = performance.now() - state.phaseStart;
+      state.responseTimes.push(answerTime);
+      const targetIds = state.memoryItems.map((item) => item.id);
+      const isCorrect = config.order
+        ? targetIds.every((id, index) => state.selectedOrder[index] === id)
+        : targetIds.every((id) => state.selectedIds.has(id)) && state.selectedIds.size === targetIds.length;
+
+      if (isCorrect) {
+        const speedBonus = Math.max(0, Math.round(100 - answerTime / 60));
+        state.combo += 1;
+        state.maxCombo = Math.max(state.maxCombo, state.combo);
+        state.correct += 1;
+        state.score += 100 + state.combo * 10 + speedBonus;
+        els.feedbackText.textContent = state.combo >= 3 ? "Nice Combo" : "Correct";
+        els.feedbackText.style.color = "var(--good)";
+        audio.playSe(state.combo >= 3 ? "combo" : "correct");
+      } else {
+        state.combo = 0;
+        state.wrong += 1;
+        els.feedbackText.textContent = "Miss";
+        els.feedbackText.style.color = "var(--bad)";
+        audio.playSe("wrong");
+      }
+
+      els.phaseText.textContent = isCorrect ? "Correct" : "Miss";
+      els.phaseCopy.textContent = config.order
+        ? "Compare the Correct Tray with Your Picks in order."
+        : "Compare the Correct Tray with Your Picks.";
+      updateHud();
+      renderRound();
+      setTimeout(nextRound, 2400);
+    }
+
+    function timeOut() {
+      if (state.phase !== "choose") return;
+      clearTimers();
+      state.phase = "judge";
+      state.responseTimes.push(getConfig().answerMs);
+      state.combo = 0;
+      state.wrong += 1;
+      els.feedbackText.textContent = "Time Up";
+      els.feedbackText.style.color = "var(--bad)";
+      els.phaseText.textContent = "Time Up";
+      els.phaseCopy.textContent = "Compare the Correct Tray with Your Picks.";
+      audio.playSe("wrong");
+      updateHud();
+      renderRound();
+      setTimeout(nextRound, 2400);
+    }
+
+    function updateHud() {
+      const config = getConfig();
+      els.scoreText.textContent = state.score;
+      els.comboText.textContent = state.combo;
+      els.roundText.textContent = `${Math.min(state.round || 1, config.rounds)}/${config.rounds}`;
+      els.correctText.textContent = state.correct;
+      if (state.phase !== "memorize" && state.phase !== "choose") {
+        els.timerText.textContent = "-";
+        els.timerFill.style.transform = "scaleX(0)";
+      }
+    }
+
+    function finishGame() {
+      clearTimers();
+      state.phase = "finished";
+      audio.playSe("finish");
+      const total = state.correct + state.wrong;
+      const accuracy = total ? Math.round((state.correct / total) * 100) : 0;
+      const avgMs = state.responseTimes.length
+        ? state.responseTimes.reduce((sum, value) => sum + value, 0) / state.responseTimes.length
+        : 0;
+      const rank = accuracy >= 95 ? "S" : accuracy >= 85 ? "A" : accuracy >= 70 ? "B" : accuracy >= 50 ? "C" : "D";
+      els.rankText.textContent = rank;
+      els.finalScore.textContent = state.score;
+      els.accuracyText.textContent = `${accuracy}%`;
+      els.maxComboText.textContent = state.maxCombo;
+      els.avgTimeText.textContent = `${(avgMs / 1000).toFixed(1)}s`;
+      showScreen("result");
+    }
+
+    function togglePause() {
+      if (state.screen !== "game" || state.phase === "finished") return;
+      state.paused = !state.paused;
+      audio.playSe("pause");
+      if (state.paused) {
+        clearTimers();
+        els.phaseText.textContent = "Paused";
+        els.phaseCopy.textContent = "Press resume when you are ready.";
+        document.getElementById("pauseButton").textContent = "Resume";
+      } else {
+        document.getElementById("pauseButton").textContent = "Pause";
+        const phase = state.phase;
+        state.phaseStart = performance.now();
+        if (phase === "memorize") startCountdown(Math.max(700, state.remainingMs), hideMemory);
+        if (phase === "choose") startCountdown(Math.max(700, state.remainingMs), timeOut);
+        els.phaseText.textContent = phase === "memorize" ? "Memorize" : "Choose";
+        els.phaseCopy.textContent = phase === "memorize" ? "Remember the tea set on the tray." : "Select the matching tea pieces.";
+      }
+    }
+
+    async function ensureAudio() {
+      await audio.unlock();
+      audio.playBgm(state.screen === "game" ? "game" : state.screen === "result" ? "result" : "title");
+    }
+
+    document.addEventListener("pointerdown", ensureAudio, { once: true });
+    document.getElementById("setupButton").addEventListener("click", () => {
+      audio.playSe("select");
+      renderSetup();
+      showScreen("setup");
+    });
+    document.getElementById("quickButton").addEventListener("click", () => {
+      state.difficulty = "normal";
+      startGame();
+    });
+    document.getElementById("playButton").addEventListener("click", startGame);
+    document.getElementById("backButton").addEventListener("click", () => showScreen("title"));
+    document.getElementById("quitButton").addEventListener("click", () => {
+      clearTimers();
+      showScreen("title");
+    });
+    document.getElementById("pauseButton").addEventListener("click", togglePause);
+    document.getElementById("againButton").addEventListener("click", startGame);
+    document.getElementById("titleButton").addEventListener("click", () => showScreen("title"));
+    els.muteButton.addEventListener("click", async () => {
+      await ensureAudio();
+      audio.setMuted(!state.muted);
+      audio.playSe("select");
+    });
+    els.bgmVolume.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      els.bgmValue.textContent = value;
+      audio.setBgmVolume(value / 100);
+    });
+    els.seVolume.addEventListener("input", (event) => {
+      const value = Number(event.target.value);
+      els.seValue.textContent = value;
+      audio.setSeVolume(value / 100);
+      audio.playSe("select");
+    });
+
+    renderDemo();
+    renderSetup();
+  </script>
+</body>
+</html>

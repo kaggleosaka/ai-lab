@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crowd Search</title>
+  <style>
+    :root {
+      --bg: #f3f6f1;
+      --ink: #17211b;
+      --muted: #657064;
+      --panel: #ffffff;
+      --line: #d6ded1;
+      --accent: #0f766e;
+      --accent-dark: #0b5d58;
+      --danger: #c24135;
+      --good: #12805c;
+      --shadow: 0 18px 45px rgba(32, 45, 38, 0.14);
+      --red: #d9473f;
+      --blue: #2d72d9;
+      --yellow: #e2ad20;
+      --green: #2f9d63;
+      --purple: #8957c9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.2)),
+        radial-gradient(circle at 16% 10%, rgba(15, 118, 110, 0.12), transparent 34%),
+        radial-gradient(circle at 90% 18%, rgba(226, 173, 32, 0.12), transparent 30%),
+        var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    .app {
+      width: min(1240px, calc(100vw - 36px));
+      height: calc(100vh - 32px);
+      min-height: 690px;
+      margin: 16px auto;
+      display: grid;
+      grid-template-rows: 66px 64px 1fr;
+      gap: 10px;
+    }
+
+    .hud,
+    .target-bar,
+    .crowd-wrap {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(214, 222, 209, 0.95);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr repeat(4, 128px);
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      border-radius: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .tagline {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .stat {
+      height: 46px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-left: 1px solid var(--line);
+      padding-left: 16px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      margin-top: 2px;
+      font-size: 24px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .stat-value.low-time {
+      color: var(--danger);
+    }
+
+    .target-bar {
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 18px;
+      padding: 10px 16px;
+    }
+
+    .target-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .target-list {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    .condition {
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      background: #f8faf7;
+      border-radius: 999px;
+      color: #202a23;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 2px solid rgba(0, 0, 0, 0.16);
+      background: var(--swatch, #aaa);
+      flex: 0 0 auto;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .sound-button {
+      height: 36px;
+      min-width: 104px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf7;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .sound-button:hover {
+      border-color: rgba(15, 118, 110, 0.45);
+      color: var(--accent-dark);
+    }
+
+    .crowd-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .crowd {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(23, 33, 27, 0.045) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(23, 33, 27, 0.045) 1px, transparent 1px),
+        #f9fbf7;
+      background-size: 42px 42px;
+      cursor: crosshair;
+    }
+
+    .person {
+      position: absolute;
+      width: 34px;
+      height: 46px;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    .person:hover {
+      transform: translate(-50%, -50%) scale(1.15);
+      filter: drop-shadow(0 8px 8px rgba(23, 33, 27, 0.25));
+      z-index: 8;
+    }
+
+    .person:focus-visible {
+      outline: 3px solid rgba(15, 118, 110, 0.65);
+      outline-offset: 3px;
+      border-radius: 10px;
+      z-index: 9;
+    }
+
+    .person.correct {
+      animation: correct-pop 520ms ease;
+      z-index: 20;
+    }
+
+    .person.wrong {
+      animation: wrong-shake 360ms ease;
+      z-index: 20;
+    }
+
+    .head {
+      position: absolute;
+      left: 10px;
+      top: 7px;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #e6b98d;
+      border: 1px solid rgba(78, 49, 30, 0.22);
+    }
+
+    .hair {
+      position: absolute;
+      left: 9px;
+      top: 6px;
+      width: 17px;
+      height: 8px;
+      border-radius: 11px 11px 3px 3px;
+      background: #3c2b1f;
+    }
+
+    .hat {
+      position: absolute;
+      left: 7px;
+      top: 0;
+      width: 20px;
+      height: 9px;
+      background: var(--hat-color);
+      border: 1px solid rgba(30, 30, 30, 0.18);
+      border-radius: 7px 7px 2px 2px;
+    }
+
+    .hat::after {
+      content: "";
+      position: absolute;
+      left: -4px;
+      bottom: -3px;
+      width: 28px;
+      height: 4px;
+      border-radius: 999px;
+      background: inherit;
+      border: 1px solid rgba(30, 30, 30, 0.16);
+    }
+
+    .body {
+      position: absolute;
+      left: 7px;
+      top: 22px;
+      width: 20px;
+      height: 20px;
+      border-radius: 8px 8px 5px 5px;
+      background: var(--shirt-color);
+      border: 1px solid rgba(30, 30, 30, 0.18);
+    }
+
+    .body::before,
+    .body::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      width: 6px;
+      height: 15px;
+      border-radius: 999px;
+      background: inherit;
+      border: 1px solid rgba(30, 30, 30, 0.12);
+    }
+
+    .body::before {
+      left: -6px;
+      transform: rotate(13deg);
+    }
+
+    .body::after {
+      right: -6px;
+      transform: rotate(-13deg);
+    }
+
+    .legs {
+      position: absolute;
+      left: 10px;
+      top: 40px;
+      width: 14px;
+      height: 6px;
+    }
+
+    .legs::before,
+    .legs::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 5px;
+      height: 6px;
+      background: #27343d;
+      border-radius: 0 0 3px 3px;
+    }
+
+    .legs::before {
+      left: 1px;
+    }
+
+    .legs::after {
+      right: 1px;
+    }
+
+    .glasses {
+      position: absolute;
+      left: 11px;
+      top: 12px;
+      width: 13px;
+      height: 5px;
+      pointer-events: none;
+    }
+
+    .glasses::before,
+    .glasses::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 5px;
+      height: 5px;
+      border: 1.5px solid #22313a;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .glasses::before {
+      left: 0;
+    }
+
+    .glasses::after {
+      right: 0;
+    }
+
+    .item {
+      position: absolute;
+      right: -5px;
+      top: 22px;
+      width: 14px;
+      height: 19px;
+      pointer-events: none;
+    }
+
+    .item.bag::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 5px;
+      width: 11px;
+      height: 10px;
+      border-radius: 3px;
+      background: #8d5f3c;
+      border: 1px solid rgba(30, 30, 30, 0.2);
+    }
+
+    .item.bag::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 6px;
+      height: 6px;
+      border: 1.5px solid #6e492d;
+      border-bottom: 0;
+      border-radius: 6px 6px 0 0;
+    }
+
+    .item.umbrella::before {
+      content: "";
+      position: absolute;
+      left: 1px;
+      top: 1px;
+      width: 14px;
+      height: 8px;
+      border-radius: 10px 10px 1px 1px;
+      background: #d9473f;
+      border: 1px solid rgba(30, 30, 30, 0.2);
+    }
+
+    .item.umbrella::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      width: 2px;
+      height: 11px;
+      background: #39464f;
+      border-radius: 999px;
+    }
+
+    .item.flag::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 2px;
+      height: 17px;
+      background: #39464f;
+    }
+
+    .item.flag::after {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 1px;
+      width: 9px;
+      height: 7px;
+      background: #2d72d9;
+      border-radius: 1px 4px 4px 1px;
+    }
+
+    .item.book::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 5px;
+      width: 12px;
+      height: 10px;
+      border-radius: 2px;
+      background: #5b67d8;
+      border: 1px solid rgba(30, 30, 30, 0.2);
+    }
+
+    .item.book::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 6px;
+      width: 1px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: rgba(243, 246, 241, 0.72);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .dialog {
+      width: min(560px, 92vw);
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 30px;
+      text-align: center;
+    }
+
+    .dialog h2 {
+      margin: 0;
+      font-size: 42px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .dialog p {
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      max-width: 420px;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .primary-button {
+      height: 46px;
+      min-width: 156px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 12px 22px rgba(15, 118, 110, 0.25);
+    }
+
+    .primary-button:hover {
+      background: var(--accent-dark);
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .result-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px 8px;
+      background: #f8faf7;
+    }
+
+    .result-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .result-card strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 22px;
+    }
+
+    .toast {
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      transform: translateX(-50%);
+      min-width: 210px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: rgba(23, 33, 27, 0.92);
+      color: #ffffff;
+      text-align: center;
+      font-weight: 850;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, top 160ms ease;
+      z-index: 40;
+    }
+
+    .toast.show {
+      opacity: 1;
+      top: 30px;
+    }
+
+    .toast.good {
+      background: rgba(18, 128, 92, 0.95);
+    }
+
+    .toast.bad {
+      background: rgba(194, 65, 53, 0.95);
+    }
+
+    @keyframes wrong-shake {
+      0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+      25% { transform: translate(-50%, -50%) translateX(-6px); }
+      50% { transform: translate(-50%, -50%) translateX(6px); }
+      75% { transform: translate(-50%, -50%) translateX(-3px); }
+    }
+
+    @keyframes correct-pop {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      40% { transform: translate(-50%, -50%) scale(1.45); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @media (max-width: 980px), (max-height: 720px) {
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        height: auto;
+        min-height: 720px;
+        grid-template-rows: auto auto 620px;
+      }
+
+      .hud {
+        grid-template-columns: repeat(4, 1fr);
+        padding: 12px;
+      }
+
+      .brand {
+        grid-column: 1 / -1;
+      }
+
+      .target-bar {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="Crowd Search game">
+    <section class="hud" aria-label="Game status">
+      <div class="brand">
+        <h1>Crowd Search</h1>
+        <div class="tagline">Find the matching person in the crowd.</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Time</div>
+        <div class="stat-value" id="timeValue">60</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Score</div>
+        <div class="stat-value" id="scoreValue">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Round</div>
+        <div class="stat-value" id="roundValue">1</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Combo</div>
+        <div class="stat-value" id="comboValue">0</div>
+      </div>
+    </section>
+
+    <section class="target-bar" aria-label="Current target">
+      <div class="target-label">Find</div>
+      <div class="target-list" id="targetList"></div>
+      <div class="hint">Click the one person who matches every trait.</div>
+      <button class="sound-button" id="soundButton" type="button" aria-pressed="true">Sound On</button>
+    </section>
+
+    <section class="crowd-wrap">
+      <div class="crowd" id="crowd" aria-label="Crowd area"></div>
+      <div class="toast" id="toast" aria-live="polite"></div>
+
+      <div class="overlay" id="startOverlay">
+        <div class="dialog">
+          <h2>Crowd Search</h2>
+          <p>Scan the crowd and click the only person who matches the target. You have 60 seconds.</p>
+          <div class="button-row">
+            <button class="primary-button" id="startButton">Start Game</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="dialog">
+          <h2>Time Up</h2>
+          <p>Your final results are ready. Try again and push your visual search speed higher.</p>
+          <div class="results">
+            <div class="result-card">
+              <span>Score</span>
+              <strong id="finalScore">0</strong>
+            </div>
+            <div class="result-card">
+              <span>Cleared</span>
+              <strong id="finalCleared">0</strong>
+            </div>
+            <div class="result-card">
+              <span>Mistakes</span>
+              <strong id="finalMistakes">0</strong>
+            </div>
+            <div class="result-card">
+              <span>Avg Time</span>
+              <strong id="finalAverage">0.0s</strong>
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="primary-button" id="retryButton">Retry</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const crowdEl = document.getElementById("crowd");
+    const targetListEl = document.getElementById("targetList");
+    const timeValueEl = document.getElementById("timeValue");
+    const scoreValueEl = document.getElementById("scoreValue");
+    const roundValueEl = document.getElementById("roundValue");
+    const comboValueEl = document.getElementById("comboValue");
+    const startOverlayEl = document.getElementById("startOverlay");
+    const gameOverOverlayEl = document.getElementById("gameOverOverlay");
+    const startButtonEl = document.getElementById("startButton");
+    const retryButtonEl = document.getElementById("retryButton");
+    const soundButtonEl = document.getElementById("soundButton");
+    const toastEl = document.getElementById("toast");
+    const finalScoreEl = document.getElementById("finalScore");
+    const finalClearedEl = document.getElementById("finalCleared");
+    const finalMistakesEl = document.getElementById("finalMistakes");
+    const finalAverageEl = document.getElementById("finalAverage");
+
+    const COLORS = {
+      red: "#d9473f",
+      blue: "#2d72d9",
+      yellow: "#e2ad20",
+      green: "#2f9d63",
+      purple: "#8957c9"
+    };
+
+    const HAT_COLORS = ["red", "blue", "yellow", "green", "none"];
+    const SHIRT_COLORS = ["red", "blue", "yellow", "green", "purple"];
+    const ITEMS = ["bag", "umbrella", "flag", "book", "none"];
+    const TRAITS = ["hatColor", "shirtColor", "item", "glasses"];
+
+    const audio = {
+      ctx: null,
+      master: null,
+      bgmGain: null,
+      bgmTimer: null,
+      bgmStep: 0,
+      enabled: true
+    };
+
+    const state = {
+      playing: false,
+      timeLeft: 60,
+      score: 0,
+      round: 1,
+      combo: 0,
+      mistakes: 0,
+      cleared: 0,
+      roundStartedAt: 0,
+      totalSearchTime: 0,
+      target: [],
+      timerId: null
+    };
+
+    function initAudio() {
+      if (audio.ctx) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        audio.enabled = false;
+        updateSoundButton();
+        return;
+      }
+
+      audio.ctx = new AudioContextClass();
+      audio.master = audio.ctx.createGain();
+      audio.master.gain.value = 0.28;
+      audio.master.connect(audio.ctx.destination);
+
+      audio.bgmGain = audio.ctx.createGain();
+      audio.bgmGain.gain.value = 0.18;
+      audio.bgmGain.connect(audio.master);
+    }
+
+    function updateSoundButton() {
+      soundButtonEl.textContent = audio.enabled ? "Sound On" : "Sound Off";
+      soundButtonEl.setAttribute("aria-pressed", String(audio.enabled));
+    }
+
+    function playTone(frequency, startOffset, duration, type, gainValue, destination) {
+      if (!audio.enabled || !audio.ctx || !destination) return;
+      const now = audio.ctx.currentTime + startOffset;
+      const oscillator = audio.ctx.createOscillator();
+      const gain = audio.ctx.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(gainValue, now + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      oscillator.connect(gain);
+      gain.connect(destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration + 0.03);
+    }
+
+    function playNoise(startOffset, duration, gainValue) {
+      if (!audio.enabled || !audio.ctx || !audio.master) return;
+      const sampleRate = audio.ctx.sampleRate;
+      const buffer = audio.ctx.createBuffer(1, Math.floor(sampleRate * duration), sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      }
+      const source = audio.ctx.createBufferSource();
+      const filter = audio.ctx.createBiquadFilter();
+      const gain = audio.ctx.createGain();
+      const now = audio.ctx.currentTime + startOffset;
+      filter.type = "highpass";
+      filter.frequency.value = 900;
+      gain.gain.setValueAtTime(gainValue, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      source.buffer = buffer;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(audio.master);
+      source.start(now);
+    }
+
+    function playSfx(name) {
+      if (!audio.enabled) return;
+      initAudio();
+      if (!audio.ctx || !audio.master) return;
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+
+      if (name === "start") {
+        playTone(392, 0, 0.09, "triangle", 0.14, audio.master);
+        playTone(523.25, 0.08, 0.12, "triangle", 0.14, audio.master);
+      }
+      if (name === "correct") {
+        playTone(523.25, 0, 0.09, "sine", 0.15, audio.master);
+        playTone(659.25, 0.08, 0.1, "sine", 0.15, audio.master);
+        playTone(783.99, 0.16, 0.13, "sine", 0.13, audio.master);
+      }
+      if (name === "wrong") {
+        playTone(196, 0, 0.12, "sawtooth", 0.1, audio.master);
+        playTone(146.83, 0.1, 0.16, "sawtooth", 0.09, audio.master);
+        playNoise(0, 0.08, 0.05);
+      }
+      if (name === "end") {
+        playTone(392, 0, 0.16, "triangle", 0.12, audio.master);
+        playTone(329.63, 0.14, 0.18, "triangle", 0.1, audio.master);
+        playTone(261.63, 0.32, 0.28, "triangle", 0.1, audio.master);
+      }
+    }
+
+    function playBgmStep() {
+      if (!audio.enabled || !audio.ctx || !audio.bgmGain || !state.playing) return;
+      const bass = [196, 220, 261.63, 246.94, 196, 220, 293.66, 261.63];
+      const melody = [392, 0, 440, 523.25, 0, 493.88, 440, 329.63];
+      const step = audio.bgmStep % bass.length;
+      playTone(bass[step], 0, 0.16, "triangle", 0.055, audio.bgmGain);
+      if (melody[step]) playTone(melody[step], 0.03, 0.11, "sine", 0.045, audio.bgmGain);
+      audio.bgmStep += 1;
+    }
+
+    function startBgm() {
+      if (!audio.enabled) return;
+      initAudio();
+      if (!audio.ctx) return;
+      if (audio.ctx.state === "suspended") audio.ctx.resume();
+      stopBgm();
+      audio.bgmStep = 0;
+      playBgmStep();
+      audio.bgmTimer = window.setInterval(playBgmStep, 360);
+    }
+
+    function stopBgm() {
+      window.clearInterval(audio.bgmTimer);
+      audio.bgmTimer = null;
+    }
+
+    function titleCase(value) {
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function traitLabel(key, value) {
+      if (key === "hatColor") return value === "none" ? "No Hat" : `${titleCase(value)} Hat`;
+      if (key === "shirtColor") return `${titleCase(value)} Shirt`;
+      if (key === "item") return value === "none" ? "No Item" : titleCase(value);
+      if (key === "glasses") return value ? "Glasses" : "No Glasses";
+      return value;
+    }
+
+    function randomFrom(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function randomPerson() {
+      return {
+        hatColor: randomFrom(HAT_COLORS),
+        shirtColor: randomFrom(SHIRT_COLORS),
+        item: randomFrom(ITEMS),
+        glasses: Math.random() > 0.5
+      };
+    }
+
+    function getConditionCount() {
+      if (state.round <= 2) return 1;
+      if (state.round <= 5) return 2;
+      if (state.round <= 9) return 3;
+      return 4;
+    }
+
+    function getCrowdCount() {
+      return Math.min(250, 48 + state.round * 16);
+    }
+
+    function generateTargetPerson() {
+      const person = randomPerson();
+      if (person.hatColor === "none" && Math.random() > 0.35) {
+        person.hatColor = randomFrom(["red", "blue", "yellow", "green"]);
+      }
+      if (person.item === "none" && Math.random() > 0.45) {
+        person.item = randomFrom(["bag", "umbrella", "flag", "book"]);
+      }
+      return person;
+    }
+
+    function generateTarget(targetPerson) {
+      const shuffled = [...TRAITS].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, getConditionCount());
+      return selected.map((key) => ({ key, value: targetPerson[key] }));
+    }
+
+    function isMatch(person, target) {
+      return target.every((condition) => person[condition.key] === condition.value);
+    }
+
+    function createNearMatch(targetPerson, target) {
+      const person = { ...targetPerson };
+      const conditionToChange = randomFrom(target);
+      if (conditionToChange.key === "hatColor") {
+        person.hatColor = randomFrom(HAT_COLORS.filter((value) => value !== targetPerson.hatColor));
+      }
+      if (conditionToChange.key === "shirtColor") {
+        person.shirtColor = randomFrom(SHIRT_COLORS.filter((value) => value !== targetPerson.shirtColor));
+      }
+      if (conditionToChange.key === "item") {
+        person.item = randomFrom(ITEMS.filter((value) => value !== targetPerson.item));
+      }
+      if (conditionToChange.key === "glasses") {
+        person.glasses = !targetPerson.glasses;
+      }
+      return person;
+    }
+
+    function generateDistractor(targetPerson, target, nearMatchRate) {
+      let person = Math.random() < nearMatchRate ? createNearMatch(targetPerson, target) : randomPerson();
+      let guard = 0;
+      while (isMatch(person, target) && guard < 30) {
+        person = Math.random() < 0.55 ? createNearMatch(targetPerson, target) : randomPerson();
+        guard += 1;
+      }
+      if (isMatch(person, target)) {
+        const key = target[0].key;
+        if (key === "hatColor") person.hatColor = randomFrom(HAT_COLORS.filter((value) => value !== person.hatColor));
+        if (key === "shirtColor") person.shirtColor = randomFrom(SHIRT_COLORS.filter((value) => value !== person.shirtColor));
+        if (key === "item") person.item = randomFrom(ITEMS.filter((value) => value !== person.item));
+        if (key === "glasses") person.glasses = !person.glasses;
+      }
+      return person;
+    }
+
+    function getPositions(count) {
+      const rect = crowdEl.getBoundingClientRect();
+      const positions = [];
+      const marginX = 28;
+      const marginY = 32;
+      const minDistance = count > 190 ? 29 : count > 120 ? 33 : 38;
+      let attempts = 0;
+
+      while (positions.length < count && attempts < count * 150) {
+        const x = marginX + Math.random() * Math.max(1, rect.width - marginX * 2);
+        const y = marginY + Math.random() * Math.max(1, rect.height - marginY * 2);
+        const ok = positions.every((pos) => {
+          const dx = pos.x - x;
+          const dy = pos.y - y;
+          return Math.hypot(dx, dy) >= minDistance;
+        });
+        if (ok || attempts > count * 90) positions.push({ x, y });
+        attempts += 1;
+      }
+
+      while (positions.length < count) {
+        positions.push({
+          x: marginX + Math.random() * Math.max(1, rect.width - marginX * 2),
+          y: marginY + Math.random() * Math.max(1, rect.height - marginY * 2)
+        });
+      }
+
+      return positions;
+    }
+
+    function createPersonElement(person, position, isTarget) {
+      const button = document.createElement("button");
+      button.className = "person";
+      button.type = "button";
+      button.style.left = `${position.x}px`;
+      button.style.top = `${position.y}px`;
+      button.style.setProperty("--shirt-color", COLORS[person.shirtColor]);
+      if (person.hatColor !== "none") {
+        button.style.setProperty("--hat-color", COLORS[person.hatColor]);
+      }
+      button.dataset.target = isTarget ? "true" : "false";
+      button.setAttribute("aria-label", describePerson(person));
+
+      const hair = document.createElement("span");
+      hair.className = "hair";
+      const head = document.createElement("span");
+      head.className = "head";
+      const body = document.createElement("span");
+      body.className = "body";
+      const legs = document.createElement("span");
+      legs.className = "legs";
+      button.append(hair, head, body, legs);
+
+      if (person.hatColor !== "none") {
+        const hat = document.createElement("span");
+        hat.className = "hat";
+        button.appendChild(hat);
+      }
+
+      if (person.glasses) {
+        const glasses = document.createElement("span");
+        glasses.className = "glasses";
+        button.appendChild(glasses);
+      }
+
+      if (person.item !== "none") {
+        const item = document.createElement("span");
+        item.className = `item ${person.item}`;
+        button.appendChild(item);
+      }
+
+      button.addEventListener("click", () => handlePersonClick(button, isTarget));
+      return button;
+    }
+
+    function describePerson(person) {
+      const parts = [
+        traitLabel("hatColor", person.hatColor),
+        traitLabel("shirtColor", person.shirtColor),
+        traitLabel("item", person.item),
+        traitLabel("glasses", person.glasses)
+      ];
+      return parts.join(", ");
+    }
+
+    function renderTarget() {
+      targetListEl.innerHTML = "";
+      state.target.forEach((condition) => {
+        const pill = document.createElement("div");
+        pill.className = "condition";
+        if ((condition.key === "hatColor" || condition.key === "shirtColor") && condition.value !== "none") {
+          const swatch = document.createElement("span");
+          swatch.className = "swatch";
+          swatch.style.setProperty("--swatch", COLORS[condition.value]);
+          pill.appendChild(swatch);
+        }
+        const text = document.createElement("span");
+        text.textContent = traitLabel(condition.key, condition.value);
+        pill.appendChild(text);
+        targetListEl.appendChild(pill);
+      });
+    }
+
+    function startRound() {
+      crowdEl.innerHTML = "";
+      const count = getCrowdCount();
+      const targetPerson = generateTargetPerson();
+      state.target = generateTarget(targetPerson);
+      renderTarget();
+
+      const positions = getPositions(count);
+      const targetIndex = Math.floor(Math.random() * count);
+      const fragment = document.createDocumentFragment();
+      const nearMatchRate = Math.min(0.68, 0.34 + state.round * 0.025);
+
+      for (let i = 0; i < count; i += 1) {
+        const isTarget = i === targetIndex;
+        const person = isTarget ? targetPerson : generateDistractor(targetPerson, state.target, nearMatchRate);
+        fragment.appendChild(createPersonElement(person, positions[i], isTarget));
+      }
+
+      crowdEl.appendChild(fragment);
+      state.roundStartedAt = performance.now();
+      updateHUD();
+    }
+
+    function handlePersonClick(button, isTarget) {
+      if (!state.playing) return;
+
+      if (isTarget) {
+        const elapsed = (performance.now() - state.roundStartedAt) / 1000;
+        state.totalSearchTime += elapsed;
+        state.cleared += 1;
+        state.combo += 1;
+        state.score += 100 + state.combo * 10 + Math.max(0, Math.ceil(state.timeLeft));
+        state.round += 1;
+        button.classList.add("correct");
+        playSfx("correct");
+        showToast("Correct", "good");
+        updateHUD();
+        window.setTimeout(startRound, 360);
+        return;
+      }
+
+      state.mistakes += 1;
+      state.combo = 0;
+      state.score = Math.max(0, state.score - 50);
+      state.timeLeft = Math.max(0, state.timeLeft - 2);
+      button.classList.remove("wrong");
+      void button.offsetWidth;
+      button.classList.add("wrong");
+      playSfx("wrong");
+      showToast("-50 and -2s", "bad");
+      updateHUD();
+      if (state.timeLeft <= 0) endGame();
+    }
+
+    function updateHUD() {
+      timeValueEl.textContent = Math.ceil(state.timeLeft);
+      scoreValueEl.textContent = state.score;
+      roundValueEl.textContent = state.round;
+      comboValueEl.textContent = state.combo;
+      timeValueEl.classList.toggle("low-time", state.timeLeft <= 10);
+    }
+
+    function showToast(message, tone) {
+      toastEl.textContent = message;
+      toastEl.className = `toast ${tone} show`;
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        toastEl.classList.remove("show");
+      }, 620);
+    }
+
+    function startTimer() {
+      window.clearInterval(state.timerId);
+      state.timerId = window.setInterval(() => {
+        if (!state.playing) return;
+        state.timeLeft = Math.max(0, state.timeLeft - 0.25);
+        updateHUD();
+        if (state.timeLeft <= 0) endGame();
+      }, 250);
+    }
+
+    function startGame() {
+      state.playing = true;
+      state.timeLeft = 60;
+      state.score = 0;
+      state.round = 1;
+      state.combo = 0;
+      state.mistakes = 0;
+      state.cleared = 0;
+      state.totalSearchTime = 0;
+      startOverlayEl.classList.add("hidden");
+      gameOverOverlayEl.classList.add("hidden");
+      initAudio();
+      if (audio.enabled && audio.ctx && audio.ctx.state === "suspended") audio.ctx.resume();
+      playSfx("start");
+      startBgm();
+      startRound();
+      startTimer();
+    }
+
+    function endGame() {
+      if (!state.playing) return;
+      state.playing = false;
+      window.clearInterval(state.timerId);
+      stopBgm();
+      playSfx("end");
+      finalScoreEl.textContent = state.score;
+      finalClearedEl.textContent = state.cleared;
+      finalMistakesEl.textContent = state.mistakes;
+      const average = state.cleared ? state.totalSearchTime / state.cleared : 0;
+      finalAverageEl.textContent = `${average.toFixed(1)}s`;
+      gameOverOverlayEl.classList.remove("hidden");
+    }
+
+    startButtonEl.addEventListener("click", startGame);
+    retryButtonEl.addEventListener("click", startGame);
+    soundButtonEl.addEventListener("click", () => {
+      audio.enabled = !audio.enabled;
+      updateSoundButton();
+      if (!audio.enabled) {
+        stopBgm();
+        return;
+      }
+      initAudio();
+      if (audio.ctx && audio.ctx.state === "suspended") audio.ctx.resume();
+      playSfx("start");
+      if (state.playing) startBgm();
+    });
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !state.playing) {
+        startGame();
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (state.playing) startRound();
+    });
+
+    updateHUD();
+    updateSoundButton();
+  </script>
+</body>
+</html>
