@@ -392,11 +392,37 @@
       z-index: 10;
     }
 
+    .spark-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 11;
+      overflow: hidden;
+    }
+
+    .spark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--spark-color);
+      box-shadow: 0 0 12px var(--spark-color);
+      transform: translate(-50%, -50%) scale(1);
+      animation: spark-pop 780ms ease-out forwards;
+    }
+
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       25% { transform: translateX(-7px); }
       50% { transform: translateX(7px); }
       75% { transform: translateX(-4px); }
+    }
+
+    @keyframes spark-pop {
+      100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(0);
+      }
     }
 
     @media (max-width: 430px), (max-height: 760px) {
@@ -516,6 +542,7 @@
 <body>
   <main class="phone" aria-label="Find the 3 game">
     <canvas id="fireworks"></canvas>
+    <div class="spark-layer" id="sparkLayer" aria-hidden="true"></div>
 
     <section class="screen active" id="startScreen">
       <header>
@@ -595,6 +622,7 @@
     const resultText = document.getElementById("resultText");
     const grid = document.getElementById("grid");
     const canvas = document.getElementById("fireworks");
+    const sparkLayer = document.getElementById("sparkLayer");
     const ctx = canvas.getContext("2d");
     const roundSeconds = 3;
     const distractors = ["8", "8", "8", "B", "6", "9", "0"];
@@ -613,6 +641,9 @@
     let particles = [];
     let animationId = null;
     let timerId = null;
+    let nextRoundId = null;
+    let sparkClearId = null;
+    let sparkRun = 0;
     let roundStartedAt = 0;
 
     function showScreen(screen) {
@@ -628,17 +659,17 @@
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
 
-    function ensureAudio() {
+    async function ensureAudio() {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
       }
       if (audioContext.state === "suspended") {
-        audioContext.resume();
+        await audioContext.resume();
       }
     }
 
-    function playCorrectSound() {
-      ensureAudio();
+    async function playCorrectSound() {
+      await ensureAudio();
       const now = audioContext.currentTime;
       const gain = audioContext.createGain();
       gain.connect(audioContext.destination);
@@ -657,8 +688,10 @@
     }
 
     function startGame() {
-      ensureAudio();
+      ensureAudio().catch(() => {});
       stopTimer();
+      clearNextRound();
+      resetEffects();
       round = 0;
       correctCount = 0;
       showScreen(gameScreen);
@@ -681,6 +714,7 @@
     }
 
     function nextRound() {
+      nextRoundId = null;
       stopTimer();
       if (round >= totalRounds) {
         resultText.textContent = correctCount === totalRounds
@@ -688,7 +722,7 @@
           : `You found ${correctCount} of ${totalRounds}. Try for a perfect run.`;
         showScreen(resultScreen);
         if (correctCount === totalRounds) {
-          burst(canvas.clientWidth / 2, canvas.clientHeight * 0.34, 46);
+          safeBurst(canvas.clientWidth / 2, canvas.clientHeight * 0.34, 46);
         }
         return;
       }
@@ -735,6 +769,27 @@
       }
     }
 
+    function clearNextRound() {
+      if (nextRoundId) {
+        clearTimeout(nextRoundId);
+        nextRoundId = null;
+      }
+    }
+
+    function resetEffects() {
+      particles = [];
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (sparkClearId) {
+        clearTimeout(sparkClearId);
+        sparkClearId = null;
+      }
+      sparkLayer.innerHTML = "";
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    }
+
     function updateTimer(now = performance.now()) {
       const elapsed = (now - roundStartedAt) / 1000;
       const remaining = Math.max(0, roundSeconds - elapsed);
@@ -758,11 +813,11 @@
       timeFill.style.transform = "scaleX(0)";
       const target = grid.children[targetIndex];
       if (target) target.classList.add("correct");
-      setTimeout(nextRound, 950);
+      nextRoundId = setTimeout(nextRound, 950);
     }
 
     function handleTile(button, index) {
-      ensureAudio();
+      ensureAudio().catch(() => {});
       if (locked) return;
 
       if (index !== targetIndex) {
@@ -779,18 +834,32 @@
       hitScore.textContent = `Correct: ${correctCount}`;
       message.textContent = "Correct!";
       button.classList.add("correct");
-      playCorrectSound();
+      nextRoundId = setTimeout(nextRound, 1050);
+      playCorrectSound().catch(() => {});
 
       const phoneRect = canvas.getBoundingClientRect();
       const tileRect = button.getBoundingClientRect();
       const x = tileRect.left - phoneRect.left + tileRect.width / 2;
       const y = tileRect.top - phoneRect.top + tileRect.height / 2;
-      burst(x, y, 38);
+      safeBurst(x, y, 38);
+    }
 
-      setTimeout(nextRound, 1050);
+    function safeBurst(x, y, count) {
+      try {
+        burst(x, y, count);
+      } catch (error) {
+        resetEffects();
+      }
     }
 
     function burst(x, y, count) {
+      launchSparks(x, y, count);
+      resizeCanvas();
+      particles = [];
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
       const colors = ["#0f9f8f", "#f5b942", "#ef476f", "#3a86ff", "#8338ec", "#06d6a0"];
       for (let i = 0; i < count; i += 1) {
         const angle = (Math.PI * 2 * i) / count + Math.random() * 0.25;
@@ -806,7 +875,36 @@
           color: colors[Math.floor(Math.random() * colors.length)]
         });
       }
-      if (!animationId) animateFireworks();
+      animateFireworks();
+    }
+
+    function launchSparks(x, y, count) {
+      const colors = ["#0f9f8f", "#f5b942", "#ef476f", "#3a86ff", "#8338ec", "#06d6a0"];
+      sparkRun += 1;
+      const run = sparkRun;
+      if (sparkClearId) {
+        clearTimeout(sparkClearId);
+        sparkClearId = null;
+      }
+      sparkLayer.innerHTML = "";
+      for (let i = 0; i < count; i += 1) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.25;
+        const distance = 54 + Math.random() * 118;
+        const spark = document.createElement("span");
+        spark.className = "spark";
+        spark.style.left = `${x}px`;
+        spark.style.top = `${y}px`;
+        spark.style.setProperty("--spark-x", `${Math.cos(angle) * distance}px`);
+        spark.style.setProperty("--spark-y", `${Math.sin(angle) * distance}px`);
+        spark.style.setProperty("--spark-color", colors[Math.floor(Math.random() * colors.length)]);
+        sparkLayer.appendChild(spark);
+      }
+      sparkClearId = setTimeout(() => {
+        if (run === sparkRun) {
+          sparkLayer.innerHTML = "";
+          sparkClearId = null;
+        }
+      }, 900);
     }
 
     function animateFireworks() {
@@ -840,13 +938,17 @@
     startButton.addEventListener("click", startGame);
     againButton.addEventListener("click", () => {
       stopTimer();
+      clearNextRound();
+      resetEffects();
       showScreen(startScreen);
     });
     levelButtons.forEach((button) => {
       button.addEventListener("click", () => selectLevel(Number(button.dataset.level)));
     });
     window.addEventListener("resize", resizeCanvas);
-    document.addEventListener("pointerdown", ensureAudio, { once: true });
+    document.addEventListener("pointerdown", () => {
+      ensureAudio().catch(() => {});
+    }, { once: true });
     resizeCanvas();
   </script>
 </body>
