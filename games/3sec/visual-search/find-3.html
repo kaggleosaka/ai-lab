@@ -244,25 +244,25 @@
     }
 
     .timer-panel {
-      width: min(280px, 100%);
-      margin: 14px auto 0;
+      width: min(240px, 100%);
+      margin: 8px auto 0;
       display: grid;
       justify-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .countdown {
-      width: 86px;
-      height: 86px;
+      width: 64px;
+      height: 64px;
       display: grid;
       place-items: center;
       border-radius: 50%;
       background: #fff2c4;
       color: #8a5300;
-      font-size: 54px;
+      font-size: 40px;
       font-weight: 1000;
       line-height: 1;
-      box-shadow: inset 0 -7px 0 rgba(138, 83, 0, 0.15), 0 12px 22px rgba(29, 36, 51, 0.12);
+      box-shadow: inset 0 -5px 0 rgba(138, 83, 0, 0.15), 0 9px 16px rgba(29, 36, 51, 0.11);
     }
 
     .time-track {
@@ -286,7 +286,7 @@
       flex: 1;
       display: grid;
       place-items: center;
-      padding: 24px 0 28px;
+      padding: 16px 0 16px;
     }
 
     .grid {
@@ -399,7 +399,7 @@
       75% { transform: translateX(-4px); }
     }
 
-    @media (max-height: 700px) {
+    @media (max-width: 430px), (max-height: 760px) {
       .phone {
         height: 100vh;
         height: 100svh;
@@ -466,22 +466,49 @@
       }
 
       .game-title {
-        margin-top: 16px;
-        font-size: 32px;
+        margin-top: 10px;
+        margin-bottom: 4px;
+        font-size: 28px;
+      }
+
+      .hint {
+        min-height: 20px;
+        font-size: 15px;
       }
 
       .timer-panel {
-        margin-top: 8px;
+        width: min(230px, 100%);
+        margin-top: 4px;
+        gap: 5px;
       }
 
       .countdown {
-        width: 68px;
-        height: 68px;
-        font-size: 43px;
+        width: 46px;
+        height: 46px;
+        font-size: 28px;
+        box-shadow: inset 0 -5px 0 rgba(138, 83, 0, 0.15), 0 8px 14px rgba(29, 36, 51, 0.1);
+      }
+
+      .time-track {
+        height: 8px;
+      }
+
+      .grid-wrap {
+        padding: 12px 0 12px;
       }
 
       .grid {
         width: min(340px, calc(100vw - 44px));
+      }
+
+      .tile {
+        border-radius: 16px;
+        box-shadow: 0 7px 0 #d8e1db, 0 12px 18px rgba(29, 36, 51, 0.11);
+      }
+
+      .footer-note {
+        min-height: 30px;
+        font-size: 13px;
       }
     }
   </style>
