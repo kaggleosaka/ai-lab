@@ -1,198 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Visual Search Collection</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3-Second Visual Search Games</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a;
+      --panel: #172033;
+      --panel-strong: #1f2b43;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --line: rgba(255, 255, 255, 0.14);
+      --accent: #38bdf8;
+      --accent-2: #facc15;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    }
 
-<style>
-:root{
---bg:#f6f8fb;
---card:#ffffff;
---text:#1f2937;
---muted:#6b7280;
---accent:#0f766e;
---shadow:0 16px 40px rgba(0,0,0,.08);
-}
+    * {
+      box-sizing: border-box;
+    }
 
-*{box-sizing:border-box}
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 34rem),
+        linear-gradient(135deg, #0f172a 0%, #111827 52%, #1e293b 100%);
+      color: var(--text);
+    }
 
-body{
-margin:0;
-font-family:Arial,sans-serif;
-background:
-linear-gradient(135deg,#eef7f5,#f8fafc);
-color:var(--text);
-}
+    main {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 34px;
+    }
 
-.wrapper{
-max-width:1100px;
-margin:auto;
-padding:40px 20px 80px;
-}
+    .hero {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 34px;
+    }
 
-.hero{
-text-align:center;
-margin-bottom:48px;
-}
+    .eyebrow {
+      margin: 0;
+      color: var(--accent-2);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
-.hero h1{
-margin:0;
-font-size:56px;
-}
+    h1 {
+      margin: 0;
+      max-width: 780px;
+      font-size: clamp(2.25rem, 5vw, 4.75rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
 
-.hero p{
-margin-top:12px;
-color:var(--muted);
-font-size:20px;
-}
+    .intro {
+      margin: 0;
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.7;
+    }
 
-.grid{
-display:grid;
-grid-template-columns:
-repeat(auto-fit,minmax(260px,1fr));
-gap:22px;
-}
+    .section {
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+    }
 
-.card{
-background:var(--card);
-border-radius:20px;
-padding:28px;
-box-shadow:var(--shadow);
-display:flex;
-flex-direction:column;
-transition:.2s;
-}
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
 
-.card:hover{
-transform:translateY(-6px);
-}
+    h2 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+    }
 
-.icon{
-font-size:54px;
-margin-bottom:14px;
-}
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
 
-.title{
-font-size:28px;
-font-weight:700;
-}
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
 
-.desc{
-margin-top:10px;
-color:var(--muted);
-line-height:1.5;
-flex:1;
-}
+    .grid.pc {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
 
-.play{
-margin-top:24px;
-display:inline-block;
-text-align:center;
-padding:14px;
-background:var(--accent);
-color:white;
-text-decoration:none;
-border-radius:12px;
-font-weight:bold;
-}
+    .game-card {
+      display: flex;
+      min-height: 138px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+      color: var(--text);
+      text-decoration: none;
+      box-shadow: var(--shadow);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
 
-.play:hover{
-background:#0b5f59;
-}
+    .game-card:hover,
+    .game-card:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(56, 189, 248, 0.86);
+      background: linear-gradient(180deg, #263653, #1b263c);
+      outline: none;
+    }
 
-.footer{
-margin-top:60px;
-text-align:center;
-color:var(--muted);
-}
+    .card-inner {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 22px;
+      width: 100%;
+    }
 
-@media(max-width:600px){
-.hero h1{
-font-size:40px;
-}
-}
-</style>
+    .tag {
+      width: fit-content;
+      padding: 5px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-size: 1.22rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    footer {
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      main {
+        width: min(100% - 24px, 680px);
+        padding-top: 34px;
+      }
+
+      .grid,
+      .grid.pc {
+        grid-template-columns: 1fr;
+      }
+
+      .game-card {
+        min-height: 108px;
+        padding: 17px;
+      }
+
+      .section-header {
+        display: grid;
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <main>
+    <header class="hero">
+      <p class="eyebrow">Kaggle Osaka AI Lab</p>
+      <h1>3-Second Visual Search Games</h1>
+      <p class="intro">Pick a challenge. Look carefully. You only have three seconds.</p>
+    </header>
 
-<div class="wrapper">
+    <section class="section" aria-labelledby="smartphone-games">
+      <div class="section-header">
+        <h2 id="smartphone-games">Smartphone Games</h2>
+        <p class="note">Built for quick play on a phone.</p>
+      </div>
+      <div class="grid">
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-Z.html">
+          <span class="card-inner">
+            <span class="tag">Phone</span>
+            <span class="title">Find Z</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-O.html">
+          <span class="card-inner">
+            <span class="tag">Phone</span>
+            <span class="title">Find O</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-3.html">
+          <span class="card-inner">
+            <span class="tag">Phone</span>
+            <span class="title">Find 3</span>
+          </span>
+        </a>
+      </div>
+    </section>
 
-<div class="hero">
-<h1>👀 Visual Search</h1>
-<p>5 Mini Games • Play in your browser • No install</p>
-</div>
+    <section class="section" aria-labelledby="pc-games">
+      <div class="section-header">
+        <h2 id="pc-games">PC Games</h2>
+        <p class="note">Best played on a larger screen.</p>
+      </div>
+      <div class="grid pc">
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/tea-set-memory.html">
+          <span class="card-inner">
+            <span class="tag">PC</span>
+            <span class="title">Tea Set Memory</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/three-color-signal-hunt.html">
+          <span class="card-inner">
+            <span class="tag">PC</span>
+            <span class="title">Three-Color Signal Hunt</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/visual-count-challenge.html">
+          <span class="card-inner">
+            <span class="tag">PC</span>
+            <span class="title">Visual Count Challenge</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/crowd-search.html">
+          <span class="card-inner">
+            <span class="tag">PC</span>
+            <span class="title">Crowd Search</span>
+          </span>
+        </a>
+        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/one-odd-one-out.html">
+          <span class="card-inner">
+            <span class="tag">PC</span>
+            <span class="title">One Odd One Out</span>
+          </span>
+        </a>
+      </div>
+    </section>
 
-<div class="grid">
-
-<div class="card">
-<div class="icon">👥</div>
-<div class="title">Crowd Search</div>
-<div class="desc">
-Find the target hidden in the crowd.
-</div>
-<a class="play"
-href="./crowd-search.html">
-PLAY
-</a>
-</div>
-
-<div class="card">
-<div class="icon">🔍</div>
-<div class="title">One Odd One Out</div>
-<div class="desc">
-Spot the single different item.
-</div>
-<a class="play"
-href="./one-odd-one-out.html">
-PLAY
-</a>
-</div>
-
-<div class="card">
-<div class="icon">🫖</div>
-<div class="title">Tea Set Memory</div>
-<div class="desc">
-Memorize and rebuild the tea set.
-</div>
-<a class="play"
-href="./tea-set-memory.html">
-PLAY
-</a>
-</div>
-
-<div class="card">
-<div class="icon">🚦</div>
-<div class="title">Signal Hunt</div>
-<div class="desc">
-Find the correct signal pattern.
-</div>
-<a class="play"
-href="./three-color-signal-hunt.html">
-PLAY
-</a>
-</div>
-
-<div class="card">
-<div class="icon">🔢</div>
-<div class="title">Visual Count</div>
-<div class="desc">
-Count carefully and answer fast.
-</div>
-<a class="play"
-href="./visual-count-challenge.html">
-PLAY
-</a>
-</div>
-
-</div>
-
-<div class="footer">
-Made by Osaka Kaggle
-</div>
-
-</div>
-
+    <footer>Kaggle Osaka AI Lab</footer>
+  </main>
 </body>
 </html>
