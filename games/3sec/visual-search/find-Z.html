@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find the Z</title>
+  <style>
+    :root {
+      --ink: #1d2433;
+      --muted: #667085;
+      --paper: #fffdf8;
+      --accent: #0f9f8f;
+      --accent-dark: #08796d;
+      --wrong: #e5484d;
+      --gold: #f5b942;
+      font-family: "Arial Rounded MT Bold", "Trebuchet MS", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(245, 185, 66, 0.24), transparent 28%),
+        radial-gradient(circle at 82% 8%, rgba(15, 159, 143, 0.2), transparent 30%),
+        linear-gradient(135deg, #eef7f4 0%, #f8efe1 100%);
+      color: var(--ink);
+      overflow: hidden;
+    }
+
+    .phone {
+      position: relative;
+      width: min(464px, 100vw);
+      height: min(825px, 100vh);
+      min-height: 640px;
+      background: var(--paper);
+      overflow: hidden;
+      box-shadow: 0 22px 60px rgba(29, 36, 51, 0.22);
+      isolation: isolate;
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)),
+        repeating-linear-gradient(0deg, transparent 0 28px, rgba(15, 159, 143, 0.06) 29px 30px),
+        repeating-linear-gradient(90deg, transparent 0 28px, rgba(245, 185, 66, 0.07) 29px 30px);
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      padding: 34px 28px 30px;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      min-height: 54px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 86px;
+      height: 38px;
+      border-radius: 999px;
+      background: #e6f5f2;
+      color: var(--accent-dark);
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0;
+      border: 2px solid rgba(15, 159, 143, 0.22);
+    }
+
+    .score {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 48px 0 10px;
+      font-size: 58px;
+      line-height: 0.98;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 350px;
+      color: var(--muted);
+      font-size: 21px;
+      line-height: 1.38;
+      font-weight: 700;
+    }
+
+    .start-art {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 238px;
+      margin: 32px auto 24px;
+      transform: rotate(-3deg);
+    }
+
+    .mini-tile {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 9px 0 #dde6df, 0 16px 22px rgba(29, 36, 51, 0.12);
+      font-size: 38px;
+      font-weight: 1000;
+      color: #2d3748;
+    }
+
+    .mini-tile.target {
+      color: var(--accent);
+      background: #e9fbf7;
+    }
+
+    .primary-button {
+      width: 100%;
+      min-height: 64px;
+      border: 0;
+      border-radius: 18px;
+      background: var(--accent);
+      color: #fff;
+      font: inherit;
+      font-size: 22px;
+      font-weight: 1000;
+      box-shadow: 0 9px 0 var(--accent-dark), 0 18px 28px rgba(8, 121, 109, 0.18);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .primary-button:active {
+      transform: translateY(5px);
+      box-shadow: 0 4px 0 var(--accent-dark), 0 10px 18px rgba(8, 121, 109, 0.16);
+    }
+
+    .level-select {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 0 0 18px;
+    }
+
+    .level-button {
+      min-height: 58px;
+      border: 2px solid #dfe9e5;
+      border-radius: 16px;
+      background: #ffffff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 15px;
+      font-weight: 1000;
+      line-height: 1.15;
+      cursor: pointer;
+      touch-action: manipulation;
+      box-shadow: 0 6px 0 #d8e1db;
+    }
+
+    .level-button span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .level-button.active {
+      border-color: rgba(15, 159, 143, 0.45);
+      background: #e9fbf7;
+      color: var(--accent-dark);
+      box-shadow: 0 6px 0 #9ddfd4;
+    }
+
+    .game-title {
+      margin: 28px 0 8px;
+      font-size: 38px;
+      line-height: 1.05;
+      text-align: center;
+      letter-spacing: 0;
+    }
+
+    .hint {
+      margin: 0 auto;
+      text-align: center;
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 800;
+      min-height: 26px;
+    }
+
+    .timer-panel {
+      width: min(280px, 100%);
+      margin: 14px auto 0;
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+    }
+
+    .countdown {
+      width: 86px;
+      height: 86px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff2c4;
+      color: #8a5300;
+      font-size: 54px;
+      font-weight: 1000;
+      line-height: 1;
+      box-shadow: inset 0 -7px 0 rgba(138, 83, 0, 0.15), 0 12px 22px rgba(29, 36, 51, 0.12);
+    }
+
+    .time-track {
+      width: 100%;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e6e9df;
+    }
+
+    .time-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      transform-origin: left center;
+      transform: scaleX(1);
+    }
+
+    .grid-wrap {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      padding: 24px 0 28px;
+    }
+
+    .grid {
+      width: min(390px, calc(100vw - 48px));
+      display: grid;
+      grid-template-columns: repeat(var(--grid-size, 3), 1fr);
+      gap: var(--grid-gap, 13px);
+    }
+
+    .tile {
+      aspect-ratio: 1;
+      border: 0;
+      border-radius: 20px;
+      background: #ffffff;
+      color: #222b3a;
+      box-shadow: 0 10px 0 #d8e1db, 0 18px 24px rgba(29, 36, 51, 0.13);
+      font: inherit;
+      font-size: var(--tile-font, clamp(70px, 18vw, 94px));
+      font-weight: 1000;
+      line-height: 1;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 0.12s ease, background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .tile-value {
+      display: inline-block;
+      transform: rotate(var(--tilt, 0deg));
+      transform-origin: center;
+    }
+
+    .tile:active {
+      transform: translateY(5px);
+      box-shadow: 0 5px 0 #d8e1db, 0 10px 16px rgba(29, 36, 51, 0.11);
+    }
+
+    .tile.correct {
+      background: #dff9f4;
+      color: var(--accent-dark);
+      box-shadow: 0 10px 0 #9ddfd4, 0 18px 24px rgba(8, 121, 109, 0.18);
+    }
+
+    .tile.wrong {
+      background: #ffe7e8;
+      color: var(--wrong);
+      animation: shake 0.28s ease;
+    }
+
+    .footer-note {
+      min-height: 44px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .result {
+      text-align: center;
+      justify-content: center;
+      gap: 24px;
+    }
+
+    .result h2 {
+      margin: 0;
+      font-size: 62px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .result p {
+      margin: 0 auto 16px;
+      max-width: 330px;
+      color: var(--muted);
+      font-size: 22px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .medal {
+      width: 188px;
+      height: 188px;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, #fff4bd 0 17%, transparent 18%),
+        linear-gradient(145deg, #ffd86b, #f0a824);
+      color: #7a4100;
+      font-size: 92px;
+      font-weight: 1000;
+      box-shadow: inset 0 -10px 0 rgba(122, 65, 0, 0.16), 0 20px 32px rgba(29, 36, 51, 0.16);
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-7px); }
+      50% { transform: translateX(7px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    @media (max-height: 700px) {
+      .screen {
+        padding-top: 22px;
+        padding-bottom: 22px;
+      }
+
+      h1 {
+        margin-top: 36px;
+        font-size: 48px;
+      }
+
+      .start-art {
+        width: 230px;
+        margin-top: 20px;
+        margin-bottom: 16px;
+      }
+
+      .game-title {
+        margin-top: 16px;
+        font-size: 32px;
+      }
+
+      .timer-panel {
+        margin-top: 8px;
+      }
+
+      .countdown {
+        width: 68px;
+        height: 68px;
+        font-size: 43px;
+      }
+
+      .grid {
+        width: min(340px, calc(100vw - 44px));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone" aria-label="Find the Z game">
+    <canvas id="fireworks"></canvas>
+
+    <section class="screen active" id="startScreen">
+      <header>
+        <span class="badge">Brain Fit</span>
+        <span class="score">3 rounds</span>
+      </header>
+      <h1>Find the Z</h1>
+      <p class="subtitle">One hidden Z. Watch out for 2, 7, N, M, W, and S.</p>
+      <div class="start-art" aria-hidden="true">
+        <div class="mini-tile">2</div>
+        <div class="mini-tile">7</div>
+        <div class="mini-tile">N</div>
+        <div class="mini-tile">M</div>
+        <div class="mini-tile target">Z</div>
+        <div class="mini-tile">W</div>
+        <div class="mini-tile">S</div>
+        <div class="mini-tile">2</div>
+        <div class="mini-tile">7</div>
+      </div>
+      <div class="level-select" aria-label="Choose level">
+        <button class="level-button active" type="button" data-level="1">Level 1<span>3 x 3</span></button>
+        <button class="level-button" type="button" data-level="2">Level 2<span>4 x 4</span></button>
+        <button class="level-button" type="button" data-level="3">Level 3<span>5 x 5</span></button>
+      </div>
+      <button class="primary-button" id="startButton" type="button">Start</button>
+    </section>
+
+    <section class="screen" id="gameScreen">
+      <header>
+        <span class="badge" id="roundBadge">1 / 3</span>
+        <span class="score" id="hitScore">Correct: 0</span>
+      </header>
+      <h2 class="game-title">Which one is Z?</h2>
+      <p class="hint" id="message">Look closely.</p>
+      <div class="timer-panel" aria-label="Time remaining">
+        <div class="countdown" id="countdown">3</div>
+        <div class="time-track" aria-hidden="true">
+          <div class="time-fill" id="timeFill"></div>
+        </div>
+      </div>
+      <div class="grid-wrap">
+        <div class="grid" id="grid" aria-label="Number grid"></div>
+      </div>
+      <div class="footer-note">Tap the only Z before the countdown hits zero.</div>
+    </section>
+
+    <section class="screen result" id="resultScreen">
+      <div class="medal" aria-hidden="true">Z</div>
+      <div>
+        <h2>Clear!</h2>
+        <p id="resultText">You found all three hidden Zs. Nice focus.</p>
+      </div>
+      <button class="primary-button" id="againButton" type="button">Choose Level</button>
+    </section>
+  </main>
+
+  <script>
+    const totalRounds = 3;
+    const startScreen = document.getElementById("startScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const resultScreen = document.getElementById("resultScreen");
+    const startButton = document.getElementById("startButton");
+    const againButton = document.getElementById("againButton");
+    const levelButtons = [...document.querySelectorAll(".level-button")];
+    const roundBadge = document.getElementById("roundBadge");
+    const hitScore = document.getElementById("hitScore");
+    const message = document.getElementById("message");
+    const countdown = document.getElementById("countdown");
+    const timeFill = document.getElementById("timeFill");
+    const resultText = document.getElementById("resultText");
+    const grid = document.getElementById("grid");
+    const canvas = document.getElementById("fireworks");
+    const ctx = canvas.getContext("2d");
+    const roundSeconds = 3;
+    const targetCharacter = "Z";
+    const distractors = ["2", "2", "7", "7", "N", "M", "W", "S"];
+    const levelConfig = {
+      1: { size: 3, gap: 13, font: "clamp(70px, 18vw, 94px)" },
+      2: { size: 4, gap: 10, font: "clamp(48px, 13vw, 68px)" },
+      3: { size: 5, gap: 8, font: "clamp(36px, 10vw, 52px)" }
+    };
+
+    let round = 0;
+    let correctCount = 0;
+    let targetIndex = 0;
+    let selectedLevel = 1;
+    let locked = false;
+    let audioContext = null;
+    let particles = [];
+    let animationId = null;
+    let timerId = null;
+    let roundStartedAt = 0;
+
+    function showScreen(screen) {
+      [startScreen, gameScreen, resultScreen].forEach((item) => item.classList.remove("active"));
+      screen.classList.add("active");
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * ratio);
+      canvas.height = Math.floor(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function ensureAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+    }
+
+    function playCorrectSound() {
+      ensureAudio();
+      const now = audioContext.currentTime;
+      const gain = audioContext.createGain();
+      gain.connect(audioContext.destination);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+
+      [660, 990].forEach((frequency, index) => {
+        const osc = audioContext.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(frequency, now + index * 0.16);
+        osc.connect(gain);
+        osc.start(now + index * 0.16);
+        osc.stop(now + index * 0.16 + 0.28);
+      });
+    }
+
+    function startGame() {
+      ensureAudio();
+      stopTimer();
+      round = 0;
+      correctCount = 0;
+      showScreen(gameScreen);
+      nextRound();
+    }
+
+    function selectLevel(level) {
+      selectedLevel = level;
+      levelButtons.forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.level) === selectedLevel);
+      });
+    }
+
+    function applyGridLevel() {
+      const config = levelConfig[selectedLevel];
+      grid.style.setProperty("--grid-size", config.size);
+      grid.style.setProperty("--grid-gap", `${config.gap}px`);
+      grid.style.setProperty("--tile-font", config.font);
+      return config.size;
+    }
+
+    function nextRound() {
+      stopTimer();
+      if (round >= totalRounds) {
+        resultText.textContent = correctCount === totalRounds
+          ? "You found all three hidden Zs. Nice focus."
+          : `You found ${correctCount} of ${totalRounds}. Try for a perfect run.`;
+        showScreen(resultScreen);
+        if (correctCount === totalRounds) {
+          burst(canvas.clientWidth / 2, canvas.clientHeight * 0.34, 46);
+        }
+        return;
+      }
+
+      round += 1;
+      locked = false;
+      const gridSize = applyGridLevel();
+      targetIndex = Math.floor(Math.random() * gridSize * gridSize);
+      roundBadge.textContent = `${round} / ${totalRounds}`;
+      hitScore.textContent = `Correct: ${correctCount}`;
+      message.textContent = `Level ${selectedLevel}: find it before time runs out.`;
+      renderGrid(gridSize);
+      startTimer();
+    }
+
+    function renderGrid(gridSize) {
+      grid.innerHTML = "";
+      for (let i = 0; i < gridSize * gridSize; i += 1) {
+        const button = document.createElement("button");
+        button.className = "tile";
+        button.type = "button";
+        const text = i === targetIndex ? targetCharacter : distractors[Math.floor(Math.random() * distractors.length)];
+        const value = document.createElement("span");
+        const tilt = Math.round(Math.random() * 60 - 30);
+        value.className = "tile-value";
+        value.textContent = text;
+        value.style.setProperty("--tilt", `${tilt}deg`);
+        button.appendChild(value);
+        button.setAttribute("aria-label", text === targetCharacter ? "Letter Z" : `Distractor ${text}`);
+        button.addEventListener("click", () => handleTile(button, i));
+        grid.appendChild(button);
+      }
+    }
+
+    function startTimer() {
+      roundStartedAt = performance.now();
+      updateTimer();
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        cancelAnimationFrame(timerId);
+        timerId = null;
+      }
+    }
+
+    function updateTimer(now = performance.now()) {
+      const elapsed = (now - roundStartedAt) / 1000;
+      const remaining = Math.max(0, roundSeconds - elapsed);
+      countdown.textContent = Math.ceil(remaining).toString();
+      timeFill.style.transform = `scaleX(${remaining / roundSeconds})`;
+
+      if (remaining <= 0) {
+        handleTimeUp();
+        return;
+      }
+
+      timerId = requestAnimationFrame(updateTimer);
+    }
+
+    function handleTimeUp() {
+      if (locked) return;
+      stopTimer();
+      locked = true;
+      message.textContent = "Time's up!";
+      countdown.textContent = "0";
+      timeFill.style.transform = "scaleX(0)";
+      const target = grid.children[targetIndex];
+      if (target) target.classList.add("correct");
+      setTimeout(nextRound, 950);
+    }
+
+    function handleTile(button, index) {
+      ensureAudio();
+      if (locked) return;
+
+      if (index !== targetIndex) {
+        button.classList.remove("wrong");
+        void button.offsetWidth;
+        button.classList.add("wrong");
+        message.textContent = "Try again.";
+        return;
+      }
+
+      locked = true;
+      stopTimer();
+      correctCount += 1;
+      hitScore.textContent = `Correct: ${correctCount}`;
+      message.textContent = "Correct!";
+      button.classList.add("correct");
+      playCorrectSound();
+
+      const phoneRect = canvas.getBoundingClientRect();
+      const tileRect = button.getBoundingClientRect();
+      const x = tileRect.left - phoneRect.left + tileRect.width / 2;
+      const y = tileRect.top - phoneRect.top + tileRect.height / 2;
+      burst(x, y, 38);
+
+      setTimeout(nextRound, 1050);
+    }
+
+    function burst(x, y, count) {
+      const colors = ["#0f9f8f", "#f5b942", "#ef476f", "#3a86ff", "#8338ec", "#06d6a0"];
+      for (let i = 0; i < count; i += 1) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.25;
+        const speed = 2.3 + Math.random() * 5.3;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 42 + Math.random() * 24,
+          age: 0,
+          size: 4 + Math.random() * 5,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        });
+      }
+      if (!animationId) animateFireworks();
+    }
+
+    function animateFireworks() {
+      ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      particles = particles.filter((p) => p.age < p.life);
+
+      particles.forEach((p) => {
+        p.age += 1;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08;
+        p.vx *= 0.985;
+        const alpha = 1 - p.age / p.life;
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.globalAlpha = 1;
+      if (particles.length) {
+        animationId = requestAnimationFrame(animateFireworks);
+      } else {
+        animationId = null;
+        ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      }
+    }
+
+    startButton.addEventListener("click", startGame);
+    againButton.addEventListener("click", () => {
+      stopTimer();
+      showScreen(startScreen);
+    });
+    levelButtons.forEach((button) => {
+      button.addEventListener("click", () => selectLevel(Number(button.dataset.level)));
+    });
+    window.addEventListener("resize", resizeCanvas);
+    document.addEventListener("pointerdown", ensureAudio, { once: true });
+    resizeCanvas();
+  </script>
+</body>
+</html>
