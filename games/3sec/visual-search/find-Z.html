@@ -98,6 +98,35 @@
       font-weight: 800;
     }
 
+    .header-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .menu-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 2px solid rgba(15, 159, 143, 0.22);
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--accent-dark);
+      font-size: 15px;
+      font-weight: 1000;
+      text-decoration: none;
+      box-shadow: 0 5px 0 #d8e1db;
+      touch-action: manipulation;
+    }
+
+    .menu-button:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #d8e1db;
+    }
+
     h1 {
       margin: 48px 0 10px;
       font-size: 58px;
@@ -415,7 +444,10 @@
     <section class="screen active" id="startScreen">
       <header>
         <span class="badge">Brain Fit</span>
-        <span class="score">3 rounds</span>
+        <span class="header-actions">
+          <a class="menu-button" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/">Menu</a>
+          <span class="score">3 rounds</span>
+        </span>
       </header>
       <h1>Find the Z</h1>
       <p class="subtitle">One hidden Z. Watch out for 2, 7, N, M, W, and S.</p>
@@ -441,7 +473,10 @@
     <section class="screen" id="gameScreen">
       <header>
         <span class="badge" id="roundBadge">1 / 3</span>
-        <span class="score" id="hitScore">Correct: 0</span>
+        <span class="header-actions">
+          <a class="menu-button" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/">Menu</a>
+          <span class="score" id="hitScore">Correct: 0</span>
+        </span>
       </header>
       <h2 class="game-title">Which one is Z?</h2>
       <p class="hint" id="message">Look closely.</p>
@@ -464,6 +499,7 @@
         <p id="resultText">You found all three hidden Zs. Nice focus.</p>
       </div>
       <button class="primary-button" id="againButton" type="button">Choose Level</button>
+      <a class="menu-button" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/">Menu</a>
     </section>
   </main>
 
