@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Dice Challenge - CPU Battle</title>
+  <style>
+    :root {
+      --bg1: #111827;
+      --bg2: #1f2937;
+      --panel: rgba(255,255,255,0.08);
+      --text: #f9fafb;
+      --muted: #cbd5e1;
+      --shadow: 0 14px 40px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #334155 0%, var(--bg1) 45%, #020617 100%);
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    .app {
+      width: 100%;
+      max-width: 540px;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) 14px env(safe-area-inset-bottom);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .screen { width: 100%; display: none; animation: fadeIn .25s ease; }
+    .screen.active { display: block; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      backdrop-filter: blur(12px);
+    }
+    .title {
+      font-size: clamp(28px, 6vw, 40px);
+      font-weight: 800;
+      text-align: center;
+      margin: 8px 0 6px;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 16px;
+      line-height: 1.6;
+    }
+    .heroDice {
+      font-size: 58px;
+      text-align: center;
+      margin: 4px 0 10px;
+      letter-spacing: 8px;
+    }
+    .btns, .menuBtns { display: grid; gap: 12px; }
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-size: 18px;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      transition: transform .08s ease, opacity .15s ease;
+      min-height: 58px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn.primary { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .btn.secondary { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+    .btn.ghost { background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.08)); }
+    .btn.small { min-height: 48px; font-size: 15px; padding: 12px 14px; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .topRow {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .turnBadge {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 14px;
+      text-align: center;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .turnBadge.human { color: #ffd4e8; }
+    .turnBadge.cpu { color: #dbeafe; }
+    .scoreGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .scoreBox {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 12px;
+    }
+    .scoreBox .label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .scoreBox .value {
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .humanBox .value { color: #ffd4e8; }
+    .cpuBox .value { color: #dbeafe; }
+    .diceRow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0 6px;
+      min-height: 96px;
+    }
+    .die {
+      width: 86px;
+      height: 86px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.85));
+      color: #111827;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+      display: grid;
+      place-items: center;
+      font-size: 46px;
+      font-weight: 900;
+    }
+    .sumText {
+      text-align: center;
+      margin: 6px 0 14px;
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 900;
+    }
+    .sumText small {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .message {
+      min-height: 44px;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fef3c7;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .tile {
+      min-height: 78px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.08));
+      color: white;
+      font-size: 30px;
+      font-weight: 900;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+      transition: transform .08s ease, opacity .15s ease, box-shadow .15s ease, background .15s ease;
+      cursor: pointer;
+    }
+    .tile:active { transform: scale(0.97); }
+    .tile.selected {
+      background: linear-gradient(180deg, rgba(245,158,11,.95), rgba(239,68,68,.95));
+      box-shadow: 0 0 0 3px rgba(255,255,255,.18), 0 12px 26px rgba(0,0,0,.28);
+    }
+    .tile.used {
+      opacity: 0.28;
+      filter: grayscale(1);
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .rules {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .bigResult {
+      font-size: clamp(30px, 8vw, 48px);
+      font-weight: 900;
+      text-align: center;
+      margin: 10px 0 8px;
+    }
+    .resultSub {
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 18px;
+      font-size: 15px;
+    }
+    .sparkles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .spark {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: white;
+      opacity: 0.9;
+      animation: pop 700ms ease-out forwards;
+    }
+    .shake { animation: shake .35s ease; }
+    .pulse { animation: pulse .35s ease; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    @keyframes pop {
+      from { transform: translateY(0) scale(1); opacity: 1; }
+      to { transform: translateY(-70px) scale(0.2); opacity: 0; }
+    }
+    @media (max-width: 380px) {
+      .tile { min-height: 68px; font-size: 26px; }
+      .die { width: 74px; height: 74px; font-size: 40px; }
+      .controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="screen active" id="screen-home">
+      <div class="card">
+        <div class="heroDice">🎲🎲</div>
+        <div class="title">Dice Challenge</div>
+        <div class="subtitle">
+          Pick numbers that add up to the total of two dice.<br>
+          The player with the lower remaining total wins!
+        </div>
+        <div class="menuBtns">
+          <button class="btn primary" id="startCpuBtn">Start CPU Battle</button>
+          <button class="btn secondary" id="startSoloBtn">Solo Play</button>
+        </div>
+        <div class="rules">
+          <strong>Rules</strong><br>
+          - Choose numbers from 1 to 9 that add up to the dice total.<br>
+          - Chosen numbers are removed and cannot be used again.<br>
+          - The game ends when no valid combination remains.<br>
+          - In CPU Battle, you and the CPU take turns.<br>
+          - The lower remaining total wins.
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-game">
+      <div class="card" id="gameCard">
+        <div class="topRow">
+          <div class="turnBadge human" id="turnBadge">Your Turn</div>
+          <button class="btn ghost small" id="backHomeBtn">Quit</button>
+        </div>
+
+        <div class="scoreGrid">
+          <div class="scoreBox humanBox">
+            <div class="label">Your Remaining Total</div>
+            <div class="value" id="humanScore">45</div>
+          </div>
+          <div class="scoreBox cpuBox" id="cpuScoreBox">
+            <div class="label" id="cpuLabel">CPU Remaining Total</div>
+            <div class="value" id="cpuScore">45</div>
+          </div>
+        </div>
+
+        <div class="diceRow">
+          <div class="die" id="die1">⚀</div>
+          <div class="die" id="die2">⚀</div>
+        </div>
+
+        <div class="sumText" id="sumText">
+          Total 2
+          <small id="phaseText">Rolling the dice...</small>
+        </div>
+
+        <div class="message" id="message">Choose your numbers</div>
+
+        <div class="tiles" id="tiles"></div>
+
+        <div class="controls">
+          <button class="btn primary" id="submitBtn">Submit Move</button>
+          <button class="btn ghost" id="clearBtn">Clear Selection</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-result">
+      <div class="card">
+        <div class="heroDice">🏁</div>
+        <div class="bigResult" id="resultTitle">You Win!</div>
+        <div class="resultSub" id="resultText"></div>
+        <div class="btns">
+          <button class="btn primary" id="retryBtn">Play Again</button>
+          <button class="btn secondary" id="toHomeBtn">Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sparkles" id="sparkles"></div>
+
+  <script>
+    const screens = {
+      home: document.getElementById('screen-home'),
+      game: document.getElementById('screen-game'),
+      result: document.getElementById('screen-result')
+    };
+
+    const startCpuBtn = document.getElementById('startCpuBtn');
+    const startSoloBtn = document.getElementById('startSoloBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const toHomeBtn = document.getElementById('toHomeBtn');
+    const backHomeBtn = document.getElementById('backHomeBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const tilesEl = document.getElementById('tiles');
+    const messageEl = document.getElementById('message');
+    const turnBadgeEl = document.getElementById('turnBadge');
+    const humanScoreEl = document.getElementById('humanScore');
+    const cpuScoreEl = document.getElementById('cpuScore');
+    const cpuLabelEl = document.getElementById('cpuLabel');
+    const cpuScoreBox = document.getElementById('cpuScoreBox');
+    const sumTextEl = document.getElementById('sumText');
+    const phaseTextEl = document.getElementById('phaseText');
+    const die1El = document.getElementById('die1');
+    const die2El = document.getElementById('die2');
+    const resultTitleEl = document.getElementById('resultTitle');
+    const resultTextEl = document.getElementById('resultText');
+    const gameCardEl = document.getElementById('gameCard');
+    const sparklesEl = document.getElementById('sparkles');
+
+    const state = {
+      mode: 'cpu',
+      currentTurn: 'human',
+      humanAvailable: [1,2,3,4,5,6,7,8,9],
+      cpuAvailable: [1,2,3,4,5,6,7,8,9],
+      currentSum: 2,
+      dice: [1,1],
+      selected: [],
+      isInputLocked: true,
+      gameEnded: false
+    };
+
+    function showScreen(name) {
+      Object.values(screens).forEach(s => s.classList.remove('active'));
+      screens[name].classList.add('active');
+    }
+
+    function resetState(mode) {
+      state.mode = mode;
+      state.currentTurn = 'human';
+      state.humanAvailable = [1,2,3,4,5,6,7,8,9];
+      state.cpuAvailable = [1,2,3,4,5,6,7,8,9];
+      state.currentSum = 2;
+      state.dice = [1,1];
+      state.selected = [];
+      state.isInputLocked = true;
+      state.gameEnded = false;
+      render();
+    }
+
+    function startGame(mode) {
+      resetState(mode);
+      cpuScoreBox.style.display = mode === 'cpu' ? 'block' : 'none';
+      cpuLabelEl.textContent = mode === 'cpu' ? 'CPU Remaining Total' : '';
+      showScreen('game');
+      nextTurn('human');
+    }
+
+    function render() {
+      const available = getCurrentAvailable();
+      humanScoreEl.textContent = sumArray(state.humanAvailable);
+      cpuScoreEl.textContent = state.mode === 'cpu' ? sumArray(state.cpuAvailable) : '-';
+      turnBadgeEl.textContent = state.currentTurn === 'human' ? 'Your Turn' : 'CPU Turn';
+      turnBadgeEl.className = 'turnBadge ' + (state.currentTurn === 'human' ? 'human' : 'cpu');
+      die1El.textContent = toDieFace(state.dice[0]);
+      die2El.textContent = toDieFace(state.dice[1]);
+      sumTextEl.childNodes[0].nodeValue = `Total ${state.currentSum} `;
+
+      tilesEl.innerHTML = '';
+      const selectedSet = new Set(state.selected);
+      for (let n = 1; n <= 9; n++) {
+        const btn = document.createElement('button');
+        btn.className = 'tile';
+        btn.textContent = n;
+        if (!available.includes(n)) btn.classList.add('used');
+        if (selectedSet.has(n)) btn.classList.add('selected');
+        btn.disabled = state.isInputLocked || !available.includes(n) || state.currentTurn !== 'human';
+        btn.addEventListener('click', () => toggleSelect(n));
+        tilesEl.appendChild(btn);
+      }
+
+      submitBtn.disabled = state.isInputLocked || state.currentTurn !== 'human';
+      clearBtn.disabled = state.isInputLocked || state.currentTurn !== 'human' || state.selected.length === 0;
+    }
+
+    function getCurrentAvailable() {
+      return state.currentTurn === 'human' ? state.humanAvailable : state.cpuAvailable;
+    }
+
+    function setMessage(text, tone = 'normal') {
+      messageEl.textContent = text;
+      if (tone === 'good') messageEl.style.color = '#bbf7d0';
+      else if (tone === 'bad') messageEl.style.color = '#fecaca';
+      else messageEl.style.color = '#fef3c7';
+    }
+
+    function toggleSelect(n) {
+      if (state.isInputLocked) return;
+      const idx = state.selected.indexOf(n);
+      if (idx >= 0) {
+        state.selected.splice(idx, 1);
+      } else {
+        state.selected.push(n);
+        state.selected.sort((a,b) => a-b);
+      }
+      const total = sumArray(state.selected);
+      if (total > state.currentSum) {
+        setMessage(`Too high! Current ${total} / Target ${state.currentSum}`, 'bad');
+      } else if (total === state.currentSum) {
+        setMessage(`Perfect ${state.currentSum}! Press "Submit Move"`, 'good');
+      } else {
+        setMessage(`Current ${total} / Target ${state.currentSum}`);
+      }
+      render();
+    }
+
+    function nextTurn(turn) {
+      if (state.gameEnded) return;
+      state.currentTurn = turn;
+      state.selected = [];
+      render();
+
+      const available = getCurrentAvailable();
+      if (available.length === 0) {
+        endGame();
+        return;
+      }
+
+      rollDiceAnimation(() => {
+        state.dice = [rand1to6(), rand1to6()];
+        state.currentSum = state.dice[0] + state.dice[1];
+        render();
+
+        const combos = getCombinations(available, state.currentSum);
+        if (combos.length === 0) {
+          setMessage(`${turn === 'human' ? 'You' : 'CPU'} cannot make that total. Game over!`, 'bad');
+          if (turn === 'human') playBadSound();
+          setTimeout(endGame, 900);
+          return;
+        }
+
+        if (turn === 'human') {
+          phaseTextEl.textContent = 'Choose numbers that add up to the total';
+          setMessage('Pick numbers to match the dice total');
+          state.isInputLocked = false;
+          render();
+        } else {
+          phaseTextEl.textContent = 'CPU is thinking...';
+          setMessage('CPU is looking for the best combination');
+          state.isInputLocked = true;
+          render();
+          setTimeout(() => cpuPlay(), 900);
+        }
+      });
+    }
+
+    function submitHumanMove() {
+      if (state.isInputLocked || state.currentTurn !== 'human') return;
+      const total = sumArray(state.selected);
+      if (total !== state.currentSum) {
+        gameCardEl.classList.remove('shake');
+        void gameCardEl.offsetWidth;
+        gameCardEl.classList.add('shake');
+        setMessage(`That total does not match. Current ${total} / Target ${state.currentSum}`, 'bad');
+        playBadSound();
+        return;
+      }
+      const submitted = [...state.selected];
+      applyMove('human', submitted);
+      setMessage(`Correct! ${submitted.join(' + ')} = ${state.currentSum}`, 'good');
+      gameCardEl.classList.remove('pulse');
+      void gameCardEl.offsetWidth;
+      gameCardEl.classList.add('pulse');
+      playGoodSound();
+      burstSparkles();
+      state.isInputLocked = true;
+      render();
+      setTimeout(() => {
+        if (state.mode === 'cpu') nextTurn('cpu');
+        else nextTurn('human');
+      }, 950);
+    }
+
+    function cpuPlay() {
+      const combos = getCombinations(state.cpuAvailable, state.currentSum);
+      if (combos.length === 0) {
+        endGame();
+        return;
+      }
+      const choice = chooseCpuMove(combos, state.cpuAvailable);
+      state.selected = [...choice];
+      render();
+      setMessage(`CPU chooses ${choice.join(' + ')}`, 'normal');
+      setTimeout(() => {
+        applyMove('cpu', choice);
+        setMessage(`CPU scores! ${choice.join(' + ')} = ${state.currentSum}`,'normal');
+        render();
+        setTimeout(() => nextTurn('human'), 900);
+      }, 750);
+    }
+
+    function applyMove(player, nums) {
+      const src = player === 'human' ? state.humanAvailable : state.cpuAvailable;
+      for (const n of nums) {
+        const idx = src.indexOf(n);
+        if (idx >= 0) src.splice(idx, 1);
+      }
+      state.selected = [];
+    }
+
+    function chooseCpuMove(combos, available) {
+      const scored = combos.map(combo => {
+        const remaining = available.filter(n => !combo.includes(n));
+        let futureOptions = 0;
+        for (let sum = 2; sum <= 12; sum++) {
+          futureOptions += getCombinations(remaining, sum).length > 0 ? 1 : 0;
+        }
+        return {
+          combo,
+          pieces: combo.length,
+          maxNum: Math.max(...combo),
+          futureOptions,
+          remainingSum: sumArray(remaining)
+        };
+      });
+
+      scored.sort((a, b) => {
+        if (b.pieces !== a.pieces) return b.pieces - a.pieces;
+        if (b.futureOptions !== a.futureOptions) return b.futureOptions - a.futureOptions;
+        if (a.maxNum !== b.maxNum) return a.maxNum - b.maxNum;
+        return a.remainingSum - b.remainingSum;
+      });
+      return scored[0].combo;
+    }
+
+    function endGame() {
+      state.gameEnded = true;
+      const human = sumArray(state.humanAvailable);
+      const cpu = sumArray(state.cpuAvailable);
+
+      if (state.mode === 'solo') {
+        resultTitleEl.textContent = human === 0 ? 'Perfect Clear!' : 'Game Over';
+        resultTextEl.innerHTML = `Your remaining total is <strong>${human}</strong>.<br>${human === 0 ? 'You cleared every number!' : 'Try again and aim for a lower score!'}`;
+      } else {
+        if (human < cpu) resultTitleEl.textContent = 'You Win!';
+        else if (human > cpu) resultTitleEl.textContent = 'CPU Wins!';
+        else resultTitleEl.textContent = 'Draw!';
+        resultTextEl.innerHTML = `Your remaining total: <strong>${human}</strong><br>CPU remaining total: <strong>${cpu}</strong><br><br>The lower total wins.`;
+      }
+      showScreen('result');
+    }
+
+    function rollDiceAnimation(onDone) {
+      state.isInputLocked = true;
+      phaseTextEl.textContent = 'Rolling the dice...';
+      render();
+      let count = 0;
+      const max = 10;
+      const interval = setInterval(() => {
+        die1El.textContent = toDieFace(rand1to6());
+        die2El.textContent = toDieFace(rand1to6());
+        count++;
+        if (count >= max) {
+          clearInterval(interval);
+          onDone();
+        }
+      }, 70);
+    }
+
+    function getCombinations(numbers, target) {
+      const result = [];
+      function dfs(start, path, sum) {
+        if (sum === target) {
+          result.push([...path]);
+          return;
+        }
+        if (sum > target) return;
+        for (let i = start; i < numbers.length; i++) {
+          path.push(numbers[i]);
+          dfs(i + 1, path, sum + numbers[i]);
+          path.pop();
+        }
+      }
+      dfs(0, [], 0);
+      return result;
+    }
+
+    function burstSparkles() {
+      for (let i = 0; i < 18; i++) {
+        const s = document.createElement('div');
+        s.className = 'spark';
+        s.style.left = `${20 + Math.random() * 60}%`;
+        s.style.top = `${35 + Math.random() * 25}%`;
+        s.style.transform = `translate(${(Math.random() - 0.5) * 50}px, ${(Math.random() - 0.5) * 30}px)`;
+        s.style.animationDelay = `${Math.random() * 80}ms`;
+        sparklesEl.appendChild(s);
+        setTimeout(() => s.remove(), 760);
+      }
+    }
+
+    let audioCtx = null;
+    function ensureAudio() {
+      if (!audioCtx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function beep(freq, duration, type = 'sine', gainValue = 0.05, when = 0) {
+      if (!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.value = gainValue;
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      const t = audioCtx.currentTime + when;
+      o.start(t);
+      g.gain.setValueAtTime(gainValue, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+      o.stop(t + duration);
+    }
+
+    function playGoodSound() {
+      ensureAudio();
+      beep(784, 0.12, 'triangle', 0.06, 0);
+      beep(988, 0.14, 'triangle', 0.05, 0.07);
+      beep(1318, 0.18, 'triangle', 0.05, 0.14);
+    }
+
+    function playBadSound() {
+      ensureAudio();
+      beep(260, 0.12, 'sawtooth', 0.05, 0);
+      beep(200, 0.18, 'sawtooth', 0.05, 0.08);
+    }
+
+    function rand1to6() { return Math.floor(Math.random() * 6) + 1; }
+    function sumArray(arr) { return arr.reduce((a,b) => a + b, 0); }
+    function toDieFace(n) { return ['⚀','⚁','⚂','⚃','⚄','⚅'][n - 1] || '⚀'; }
+
+    startCpuBtn.addEventListener('click', () => { ensureAudio(); startGame('cpu'); });
+    startSoloBtn.addEventListener('click', () => { ensureAudio(); startGame('solo'); });
+    retryBtn.addEventListener('click', () => startGame(state.mode));
+    toHomeBtn.addEventListener('click', () => showScreen('home'));
+    backHomeBtn.addEventListener('click', () => showScreen('home'));
+    submitBtn.addEventListener('click', submitHumanMove);
+    clearBtn.addEventListener('click', () => {
+      state.selected = [];
+      setMessage('Selection cleared');
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
