@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Water Sort Puzzle</title>
+<style>
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #101827;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+
+  .game {
+    width: 464px;
+    height: 825px;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: linear-gradient(180deg, #72d8ff 0%, #dff7ff 48%, #d6f2e4 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 22px 18px 18px;
+    color: #10243a;
+  }
+
+  .title {
+    text-align: center;
+    font-size: 34px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    text-shadow:
+      0 3px 0 #17476d,
+      2px 2px 0 #17476d,
+      -2px 2px 0 #17476d,
+      2px -2px 0 #17476d,
+      -2px -2px 0 #17476d;
+    margin-top: 4px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 8px;
+    color: #16405c;
+  }
+
+  .status {
+    margin: 16px auto 0;
+    width: 92%;
+    height: 42px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.68);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 18px;
+    font-weight: 900;
+    font-size: 17px;
+    box-shadow: 0 8px 20px rgba(20, 81, 120, 0.15);
+  }
+
+  .message {
+    color: #ff4e69;
+    min-width: 130px;
+    text-align: right;
+  }
+
+  .board {
+    width: 100%;
+    height: 520px;
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 238px;
+    gap: 20px 13px;
+    justify-items: center;
+    align-items: center;
+  }
+
+  .bottle-wrap {
+    width: 118px;
+    height: 224px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.16s ease;
+  }
+
+  .bottle-wrap.selected {
+    transform: translateY(-16px);
+  }
+
+  .bottle-wrap.selected::after {
+    content: "";
+    position: absolute;
+    bottom: -9px;
+    width: 88px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 214, 75, 0.8);
+    filter: blur(1px);
+  }
+
+  .bottle {
+    width: 78px;
+    height: 188px;
+    border: 6px solid rgba(18, 59, 91, 0.86);
+    border-top: 0;
+    border-radius: 0 0 28px 28px;
+    position: relative;
+    background: rgba(255,255,255,0.33);
+    overflow: hidden;
+    box-shadow:
+      inset 0 0 0 3px rgba(255,255,255,0.55),
+      0 10px 20px rgba(10, 58, 92, 0.16);
+  }
+
+  .bottle::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: -14px;
+    width: 96px;
+    height: 26px;
+    border: 6px solid rgba(18, 59, 91, 0.86);
+    border-bottom: 0;
+    border-radius: 22px 22px 0 0;
+    background: rgba(255,255,255,0.38);
+    z-index: 3;
+  }
+
+  .shine {
+    position: absolute;
+    top: 18px;
+    left: 12px;
+    width: 10px;
+    height: 128px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.38);
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .layer {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 25%;
+    border-top: 2px solid rgba(255,255,255,0.36);
+    transition: all 0.22s ease;
+  }
+
+  .layer::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 0;
+    width: 100%;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.18);
+  }
+
+  .controls {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 26px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  button {
+    height: 54px;
+    border: 0;
+    border-radius: 18px;
+    font-size: 16px;
+    font-weight: 900;
+    color: white;
+    background: linear-gradient(180deg, #2e9df5, #1369c8);
+    box-shadow: 0 7px 0 #0b4c93, 0 12px 20px rgba(14, 76, 139, 0.25);
+    cursor: pointer;
+  }
+
+  button:active {
+    transform: translateY(5px);
+    box-shadow: 0 2px 0 #0b4c93, 0 8px 14px rgba(14, 76, 139, 0.2);
+  }
+
+  .clear-screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background: rgba(6, 24, 43, 0.55);
+    z-index: 20;
+    color: white;
+    text-align: center;
+    backdrop-filter: blur(3px);
+  }
+
+  .clear-screen.show {
+    display: flex;
+  }
+
+  .clear-text {
+    font-size: 64px;
+    font-weight: 1000;
+    color: #fff45c;
+    text-shadow:
+      0 5px 0 #e87400,
+      3px 3px 0 #9b3700,
+      -3px 3px 0 #9b3700;
+    margin-bottom: 22px;
+  }
+
+  .clear-sub {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 24px;
+  }
+
+  .clear-screen button {
+    width: 190px;
+  }
+
+  .shake {
+    animation: shake 0.28s ease-in-out;
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    50% { transform: translateX(8px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+  }
+
+  .bubble {
+    position: absolute;
+    bottom: -20px;
+    width: 16px;
+    height: 16px;
+    background: rgba(255,255,255,0.38);
+    border-radius: 50%;
+    animation: floatUp 7s linear infinite;
+  }
+
+  @keyframes floatUp {
+    from { transform: translateY(0); opacity: 0; }
+    10% { opacity: 0.8; }
+    to { transform: translateY(-880px); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <div class="bubble" style="left:40px; animation-delay:0s;"></div>
+  <div class="bubble" style="left:110px; width:10px; height:10px; animation-delay:2s;"></div>
+  <div class="bubble" style="left:330px; animation-delay:1s;"></div>
+  <div class="bubble" style="left:405px; width:12px; height:12px; animation-delay:3.5s;"></div>
+
+  <div class="title">Water Sort Puzzle</div>
+  <div class="subtitle">Tap a bottle, then tap another bottle.</div>
+
+  <div class="status">
+    <div id="moves">Moves: 0</div>
+    <div id="message" class="message"></div>
+  </div>
+
+  <div id="board" class="board"></div>
+
+  <div class="controls">
+    <button onclick="restartLevel()">Restart</button>
+    <button onclick="undoMove()">Undo</button>
+    <button onclick="newPuzzle()">New Puzzle</button>
+  </div>
+
+  <div id="clearScreen" class="clear-screen">
+    <div class="clear-text">CLEAR!</div>
+    <div id="clearSub" class="clear-sub">Great job!</div>
+    <button onclick="newPuzzle()">Next Puzzle</button>
+  </div>
+</div>
+
+<script>
+const CAPACITY = 4;
+
+const COLOR_MAP = {
+  red: "#ff5a66",
+  blue: "#2f9bff",
+  green: "#2ed573",
+  yellow: "#ffd43b",
+  purple: "#a66cff",
+  orange: "#ff9f43"
+};
+
+const PUZZLES = [
+  [
+    ["red", "blue", "green", "yellow"],
+    ["blue", "green", "yellow", "red"],
+    ["green", "yellow", "red", "blue"],
+    ["yellow", "red", "blue", "green"],
+    [],
+    []
+  ],
+  [
+    ["red", "green", "blue", "red"],
+    ["yellow", "blue", "green", "yellow"],
+    ["green", "red", "yellow", "blue"],
+    ["blue", "yellow", "red", "green"],
+    [],
+    []
+  ],
+  [
+    ["purple", "red", "blue", "yellow"],
+    ["red", "blue", "yellow", "purple"],
+    ["blue", "yellow", "purple", "red"],
+    ["yellow", "purple", "red", "blue"],
+    [],
+    []
+  ],
+  [
+    ["orange", "green", "purple", "blue"],
+    ["green", "purple", "blue", "orange"],
+    ["purple", "blue", "orange", "green"],
+    ["blue", "orange", "green", "purple"],
+    [],
+    []
+  ]
+];
+
+let levelIndex = 0;
+let bottles = [];
+let initialBottles = [];
+let selected = null;
+let moves = 0;
+let history = [];
+
+const board = document.getElementById("board");
+const movesEl = document.getElementById("moves");
+const messageEl = document.getElementById("message");
+const clearScreen = document.getElementById("clearScreen");
+const clearSub = document.getElementById("clearSub");
+
+function cloneState(state) {
+  return state.map(b => [...b]);
+}
+
+function loadLevel(index) {
+  levelIndex = index % PUZZLES.length;
+  initialBottles = cloneState(PUZZLES[levelIndex]);
+  bottles = cloneState(initialBottles);
+  selected = null;
+  moves = 0;
+  history = [];
+  clearScreen.classList.remove("show");
+  setMessage("");
+  render();
+}
+
+function render() {
+  board.innerHTML = "";
+  bottles.forEach((bottle, index) => {
+    const wrap = document.createElement("div");
+    wrap.className = "bottle-wrap" + (selected === index ? " selected" : "");
+    wrap.onclick = () => tapBottle(index);
+
+    const bottleEl = document.createElement("div");
+    bottleEl.className = "bottle";
+
+    const shine = document.createElement("div");
+    shine.className = "shine";
+    bottleEl.appendChild(shine);
+
+    bottle.forEach((color, layerIndex) => {
+      const layer = document.createElement("div");
+      layer.className = "layer";
+      layer.style.background = COLOR_MAP[color];
+      layer.style.bottom = (layerIndex * 25) + "%";
+      bottleEl.appendChild(layer);
+    });
+
+    wrap.appendChild(bottleEl);
+    board.appendChild(wrap);
+  });
+
+  movesEl.textContent = "Moves: " + moves;
+}
+
+function tapBottle(index) {
+  if (clearScreen.classList.contains("show")) return;
+
+  if (selected === null) {
+    if (bottles[index].length === 0) {
+      invalid(index, "Empty");
+      return;
+    }
+    selected = index;
+    setMessage("");
+    render();
+    return;
+  }
+
+  if (selected === index) {
+    selected = null;
+    render();
+    return;
+  }
+
+  const from = selected;
+  const to = index;
+  const before = cloneState(bottles);
+  const moved = moveWater(from, to);
+
+  if (moved) {
+    history.push({ state: before, moves });
+    moves++;
+    selected = null;
+    setMessage("");
+    render();
+
+    if (isSolved()) {
+      setTimeout(() => {
+        clearSub.textContent = "Solved in " + moves + " moves!";
+        clearScreen.classList.add("show");
+      }, 250);
+    }
+  } else {
+    selected = null;
+    render();
+    invalid(to, "Invalid move");
+  }
+}
+
+function moveWater(from, to) {
+  if (from === to) return false;
+  if (bottles[from].length === 0) return false;
+  if (bottles[to].length >= CAPACITY) return false;
+
+  const sourceTop = topColor(from);
+  const targetTop = topColor(to);
+
+  if (bottles[to].length > 0 && sourceTop !== targetTop) {
+    return false;
+  }
+
+  const sameTopCount = countSameTopColor(from);
+  const space = CAPACITY - bottles[to].length;
+  const moveCount = Math.min(sameTopCount, space);
+
+  for (let i = 0; i < moveCount; i++) {
+    bottles[to].push(bottles[from].pop());
+  }
+  return true;
+}
+
+function topColor(index) {
+  const b = bottles[index];
+  return b[b.length - 1];
+}
+
+function countSameTopColor(index) {
+  const b = bottles[index];
+  if (b.length === 0) return 0;
+  const top = b[b.length - 1];
+  let count = 0;
+  for (let i = b.length - 1; i >= 0; i--) {
+    if (b[i] === top) count++;
+    else break;
+  }
+  return count;
+}
+
+function isSolved() {
+  return bottles.every(b => {
+    if (b.length === 0) return true;
+    if (b.length !== CAPACITY) return false;
+    return b.every(color => color === b[0]);
+  });
+}
+
+function invalid(index, text) {
+  setMessage(text);
+  const bottleWrap = board.children[index];
+  if (bottleWrap) {
+    bottleWrap.classList.add("shake");
+    setTimeout(() => bottleWrap.classList.remove("shake"), 300);
+  }
+}
+
+function setMessage(text) {
+  messageEl.textContent = text;
+  if (text) {
+    setTimeout(() => {
+      if (messageEl.textContent === text) messageEl.textContent = "";
+    }, 900);
+  }
+}
+
+function restartLevel() {
+  bottles = cloneState(initialBottles);
+  selected = null;
+  moves = 0;
+  history = [];
+  clearScreen.classList.remove("show");
+  setMessage("");
+  render();
+}
+
+function undoMove() {
+  if (history.length === 0) {
+    setMessage("No undo");
+    return;
+  }
+  const last = history.pop();
+  bottles = cloneState(last.state);
+  moves = Math.max(0, moves - 1);
+  selected = null;
+  clearScreen.classList.remove("show");
+  setMessage("");
+  render();
+}
+
+function newPuzzle() {
+  loadLevel((levelIndex + 1) % PUZZLES.length);
+}
+
+loadLevel(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Dots Connect</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #dfe7f1;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: none;
+      user-select: none;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #game {
+      position: relative;
+      width: 464px;
+      height: 825px;
+      background: linear-gradient(180deg, #f9fbff 0%, #eef4fb 100%);
+      border-radius: 28px;
+      box-shadow: 0 12px 32px rgba(40, 60, 90, 0.25);
+      overflow: hidden;
+    }
+    .top {
+      height: 142px;
+      padding: 24px 28px 10px;
+      text-align: center;
+    }
+    .title {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #334155;
+      line-height: 1;
+    }
+    .subtitle {
+      margin-top: 8px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #64748b;
+    }
+    .hud {
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .pill {
+      flex: 1;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(148,163,184,0.35);
+      border-radius: 18px;
+      padding: 9px 6px;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(70,90,120,0.08);
+    }
+    #boardWrap {
+      position: relative;
+      margin: 18px auto 0;
+      width: 390px;
+      height: 500px;
+      background: rgba(255,255,255,0.68);
+      border-radius: 30px;
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(70,90,120,0.09);
+      overflow: hidden;
+      touch-action: none;
+    }
+    #lineLayer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .dot {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      box-shadow: inset 0 -5px 0 rgba(0,0,0,0.12), 0 5px 12px rgba(40,60,90,0.16);
+      transition: transform .16s ease, opacity .16s ease, left .22s ease, top .22s ease;
+    }
+    .dot.selected {
+      transform: translate(-50%, -50%) scale(1.18);
+      box-shadow: inset 0 -5px 0 rgba(0,0,0,0.12), 0 0 0 8px rgba(255,255,255,.8), 0 8px 18px rgba(40,60,90,0.18);
+    }
+    .dot.pop {
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 0;
+    }
+    .bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 135px;
+      padding: 18px 28px 24px;
+      text-align: center;
+    }
+    #message {
+      height: 28px;
+      font-size: 19px;
+      font-weight: 900;
+      color: #475569;
+    }
+    .buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    button {
+      border: 0;
+      border-radius: 20px;
+      padding: 13px 22px;
+      font-size: 16px;
+      font-weight: 900;
+      color: white;
+      background: #475569;
+      box-shadow: 0 7px 16px rgba(40,60,90,0.22);
+      cursor: pointer;
+    }
+    button.secondary { background: #94a3b8; }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(248,250,252,0.9);
+      z-index: 10;
+      text-align: center;
+      padding: 36px;
+    }
+    #overlay.hidden { display: none; }
+    #overlay h1 {
+      margin: 0 0 12px;
+      font-size: 48px;
+      color: #334155;
+      line-height: 1;
+    }
+    #overlay p {
+      margin: 8px 0 22px;
+      font-size: 19px;
+      font-weight: 800;
+      color: #64748b;
+    }
+    .small {
+      position: absolute;
+      bottom: 12px;
+      width: 100%;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    @media (max-width: 464px), (max-height: 825px) {
+      #game {
+        transform: scale(min(calc(100vw / 464), calc(100vh / 825)));
+        transform-origin: center center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="game">
+    <section class="top">
+      <div class="title">TWO DOTS</div>
+      <div class="subtitle">Swipe to connect matching dots</div>
+      <div class="hud">
+        <div class="pill">Score: <span id="score">0</span></div>
+        <div class="pill">Moves: <span id="moves">20</span></div>
+        <div class="pill">Target: <span id="target">20</span></div>
+      </div>
+    </section>
+
+    <section id="boardWrap">
+      <svg id="lineLayer"></svg>
+      <div id="board"></div>
+    </section>
+
+    <section class="bottom">
+      <div id="message">Connect 2 or more dots</div>
+      <div class="buttons">
+        <button id="restartBtn">Restart</button>
+        <button id="relaxBtn" class="secondary">Relax</button>
+      </div>
+    </section>
+
+    <div id="overlay">
+      <h1>TWO DOTS</h1>
+      <p>Connect matching dots.<br>Clear 20 dots in 20 moves.</p>
+      <button id="startBtn">Start Game</button>
+      <div class="small">3secGames prototype</div>
+    </div>
+  </main>
+
+  <script>
+    const ROWS = 6;
+    const COLS = 5;
+    const DOT_SIZE = 46;
+    const GAP_X = 68;
+    const GAP_Y = 72;
+    const OFFSET_X = 59;
+    const OFFSET_Y = 70;
+    const COLORS = [
+      { name: 'blue', value: '#4A90E2' },
+      { name: 'red', value: '#FF6B6B' },
+      { name: 'yellow', value: '#FFD93D' },
+      { name: 'green', value: '#6BCB77' }
+    ];
+
+    const boardWrap = document.getElementById('boardWrap');
+    const board = document.getElementById('board');
+    const lineLayer = document.getElementById('lineLayer');
+    const scoreEl = document.getElementById('score');
+    const movesEl = document.getElementById('moves');
+    const targetEl = document.getElementById('target');
+    const messageEl = document.getElementById('message');
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const relaxBtn = document.getElementById('relaxBtn');
+
+    let grid = [];
+    let selected = [];
+    let dragging = false;
+    let currentColor = null;
+    let score = 0;
+    let moves = 20;
+    let target = 20;
+    let cleared = 0;
+    let relaxMode = false;
+    let locked = false;
+
+    function randColor() {
+      return COLORS[Math.floor(Math.random() * COLORS.length)];
+    }
+
+    function pos(row, col) {
+      return { x: OFFSET_X + col * GAP_X, y: OFFSET_Y + row * GAP_Y };
+    }
+
+    function initGame() {
+      score = 0;
+      moves = relaxMode ? 999 : 20;
+      target = relaxMode ? 999 : 20;
+      cleared = 0;
+      selected = [];
+      dragging = false;
+      currentColor = null;
+      locked = false;
+      grid = [];
+      board.innerHTML = '';
+      lineLayer.innerHTML = '';
+
+      for (let r = 0; r < ROWS; r++) {
+        grid[r] = [];
+        for (let c = 0; c < COLS; c++) {
+          grid[r][c] = createDot(r, c, randColor());
+        }
+      }
+      updateHud();
+      messageEl.textContent = relaxMode ? 'Relax mode: no move limit' : 'Connect 2 or more dots';
+      overlay.classList.add('hidden');
+    }
+
+    function createDot(row, col, color) {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.dataset.row = row;
+      dot.dataset.col = col;
+      dot.dataset.color = color.name;
+      dot.style.background = color.value;
+      const p = pos(row, col);
+      dot.style.left = p.x + 'px';
+      dot.style.top = p.y + 'px';
+      board.appendChild(dot);
+      return { row, col, color, el: dot };
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      movesEl.textContent = relaxMode ? '∞' : moves;
+      targetEl.textContent = relaxMode ? '∞' : Math.max(0, target - cleared);
+    }
+
+    function getBoardPoint(e) {
+      const rect = boardWrap.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function dotFromPoint(e) {
+      const p = getBoardPoint(e);
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const d = grid[r][c];
+          if (!d) continue;
+          const dp = pos(r, c);
+          const dist = Math.hypot(p.x - dp.x, p.y - dp.y);
+          if (dist <= DOT_SIZE * 0.72) return d;
+        }
+      }
+      return null;
+    }
+
+    function isAdjacent(a, b) {
+      const dr = Math.abs(a.row - b.row);
+      const dc = Math.abs(a.col - b.col);
+      return (dr + dc) === 1;
+    }
+
+    function selectDot(dot) {
+      if (!dot || locked) return;
+      if (selected.length === 0) {
+        selected.push(dot);
+        currentColor = dot.color.name;
+        dot.el.classList.add('selected');
+        drawLines();
+        return;
+      }
+      const last = selected[selected.length - 1];
+      const prev = selected[selected.length - 2];
+
+      if (prev && dot === prev) {
+        last.el.classList.remove('selected');
+        selected.pop();
+        drawLines();
+        return;
+      }
+      if (selected.includes(dot)) return;
+      if (dot.color.name !== currentColor) return;
+      if (!isAdjacent(last, dot)) return;
+
+      selected.push(dot);
+      dot.el.classList.add('selected');
+      drawLines();
+    }
+
+    function drawLines(tempPoint = null) {
+      lineLayer.innerHTML = '';
+      if (selected.length === 0) return;
+      const points = selected.map(d => pos(d.row, d.col));
+      if (tempPoint) points.push(tempPoint);
+      for (let i = 0; i < points.length - 1; i++) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', points[i].x);
+        line.setAttribute('y1', points[i].y);
+        line.setAttribute('x2', points[i + 1].x);
+        line.setAttribute('y2', points[i + 1].y);
+        line.setAttribute('stroke', selected[0].color.value);
+        line.setAttribute('stroke-width', '9');
+        line.setAttribute('stroke-linecap', 'round');
+        line.setAttribute('opacity', '0.72');
+        lineLayer.appendChild(line);
+      }
+    }
+
+    function clearSelectionVisual() {
+      selected.forEach(d => d.el.classList.remove('selected'));
+      selected = [];
+      currentColor = null;
+      lineLayer.innerHTML = '';
+    }
+
+    function endDrag() {
+      if (!dragging || locked) return;
+      dragging = false;
+      if (selected.length >= 2) {
+        removeSelected();
+      } else {
+        clearSelectionVisual();
+      }
+    }
+
+    function removeSelected() {
+      locked = true;
+      const count = selected.length;
+      const points = count === 2 ? 20 : count === 3 ? 50 : count === 4 ? 80 : 120 + (count - 5) * 30;
+      score += points;
+      cleared += count;
+      if (!relaxMode) moves--;
+      selected.forEach(d => {
+        d.el.classList.remove('selected');
+        d.el.classList.add('pop');
+        grid[d.row][d.col] = null;
+      });
+      lineLayer.innerHTML = '';
+      messageEl.textContent = `Nice! +${points}`;
+      updateHud();
+
+      setTimeout(() => {
+        selected.forEach(d => d.el.remove());
+        selected = [];
+        dropAndFill();
+        setTimeout(() => {
+          locked = false;
+          checkEnd();
+        }, 260);
+      }, 170);
+    }
+
+    function dropAndFill() {
+      for (let c = 0; c < COLS; c++) {
+        let stack = [];
+        for (let r = ROWS - 1; r >= 0; r--) {
+          if (grid[r][c]) stack.push(grid[r][c]);
+        }
+        for (let r = ROWS - 1; r >= 0; r--) {
+          const d = stack.shift();
+          if (d) {
+            grid[r][c] = d;
+            d.row = r;
+            d.col = c;
+            d.el.dataset.row = r;
+            d.el.dataset.col = c;
+            const p = pos(r, c);
+            d.el.style.left = p.x + 'px';
+            d.el.style.top = p.y + 'px';
+          } else {
+            const newDot = createDot(r, c, randColor());
+            const p = pos(r, c);
+            newDot.el.style.top = (p.y - 120) + 'px';
+            grid[r][c] = newDot;
+            requestAnimationFrame(() => {
+              newDot.el.style.top = p.y + 'px';
+            });
+          }
+        }
+      }
+    }
+
+    function checkEnd() {
+      if (!relaxMode && cleared >= target) {
+        showOverlay('Great!', 'You Win');
+        return;
+      }
+      if (!relaxMode && moves <= 0) {
+        showOverlay('Try Again', `Score: ${score}`);
+        return;
+      }
+      messageEl.textContent = relaxMode ? 'Keep connecting dots' : 'Connect 2 or more dots';
+    }
+
+    function showOverlay(title, text) {
+      overlay.querySelector('h1').textContent = title;
+      overlay.querySelector('p').innerHTML = text + '<br>Play again?';
+      startBtn.textContent = 'Play Again';
+      overlay.classList.remove('hidden');
+    }
+
+    boardWrap.addEventListener('pointerdown', e => {
+      if (locked) return;
+      e.preventDefault();
+      dragging = true;
+      clearSelectionVisual();
+      selectDot(dotFromPoint(e));
+      boardWrap.setPointerCapture(e.pointerId);
+    });
+
+    boardWrap.addEventListener('pointermove', e => {
+      if (!dragging || locked) return;
+      e.preventDefault();
+      const d = dotFromPoint(e);
+      if (d) selectDot(d);
+      if (selected.length > 0) drawLines(getBoardPoint(e));
+    });
+
+    boardWrap.addEventListener('pointerup', endDrag);
+    boardWrap.addEventListener('pointercancel', endDrag);
+
+    startBtn.addEventListener('click', initGame);
+    restartBtn.addEventListener('click', initGame);
+    relaxBtn.addEventListener('click', () => {
+      relaxMode = !relaxMode;
+      relaxBtn.textContent = relaxMode ? 'Classic' : 'Relax';
+      initGame();
+    });
+  </script>
+</body>
+</html>
