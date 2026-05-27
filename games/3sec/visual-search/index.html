@@ -181,20 +181,30 @@
     }
 
     .thumb.connect-dots::before {
-      inset: 18px 20px;
+      inset: 12px 14px;
+      border-radius: 14px;
       background:
-        radial-gradient(circle, #4a90e2 0 8px, transparent 9px) 0 0 / 44px 34px,
-        radial-gradient(circle, #ff6b6b 0 8px, transparent 9px) 18px 16px / 44px 34px;
+        radial-gradient(circle, #4a90e2 0 7px, transparent 8px) 16px 14px / 100% 100% no-repeat,
+        radial-gradient(circle, #ff6b6b 0 7px, transparent 8px) 48px 14px / 100% 100% no-repeat,
+        radial-gradient(circle, #ffd93d 0 7px, transparent 8px) 80px 14px / 100% 100% no-repeat,
+        radial-gradient(circle, #6bcb77 0 7px, transparent 8px) 112px 14px / 100% 100% no-repeat,
+        radial-gradient(circle, #4a90e2 0 7px, transparent 8px) 144px 14px / 100% 100% no-repeat,
+        radial-gradient(circle, #ff6b6b 0 7px, transparent 8px) 16px 40px / 100% 100% no-repeat,
+        radial-gradient(circle, #4a90e2 0 7px, transparent 8px) 48px 40px / 100% 100% no-repeat,
+        radial-gradient(circle, #6bcb77 0 7px, transparent 8px) 80px 40px / 100% 100% no-repeat,
+        radial-gradient(circle, #ffd93d 0 7px, transparent 8px) 112px 40px / 100% 100% no-repeat,
+        radial-gradient(circle, #ff6b6b 0 7px, transparent 8px) 144px 40px / 100% 100% no-repeat,
+        radial-gradient(circle, #ffd93d 0 7px, transparent 8px) 16px 66px / 100% 100% no-repeat,
+        radial-gradient(circle, #6bcb77 0 7px, transparent 8px) 48px 66px / 100% 100% no-repeat,
+        radial-gradient(circle, #4a90e2 0 7px, transparent 8px) 80px 66px / 100% 100% no-repeat,
+        radial-gradient(circle, #ff6b6b 0 7px, transparent 8px) 112px 66px / 100% 100% no-repeat,
+        radial-gradient(circle, #6bcb77 0 7px, transparent 8px) 144px 66px / 100% 100% no-repeat,
+        rgba(255,255,255,0.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 6px 18px rgba(70,90,120,0.12);
     }
 
     .thumb.connect-dots::after {
-      left: 32px;
-      top: 30px;
-      width: 96px;
-      height: 3px;
-      border-radius: 999px;
-      background: #4a90e2;
-      transform: rotate(18deg);
+      display: none;
     }
 
     .thumb.find-z,
