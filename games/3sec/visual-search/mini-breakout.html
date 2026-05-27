@@ -167,9 +167,13 @@
         flashTimer: 0,
         particles: [],
         powerUps: [],
+        lasers: [],
+        laserTimer: 0,
+        laserCooldown: 0,
         pointerX: W / 2,
         paddle: { x: W / 2 - 48, y: 735, w: 96, h: 16, targetX: W / 2 - 48, baseW: 96, growTimer: 0 },
         ball: { x: W / 2, y: 716, r: 7, vx: 0, vy: 0, speed: 5.2 },
+        balls: [],
         blocks: []
       };
 
@@ -177,7 +181,9 @@
       const powerColors = {
         wide: "#56f39a",
         slow: "#42e8ff",
-        life: "#ff5d9e"
+        life: "#ff5d9e",
+        multi: "#ffd166",
+        laser: "#ff7ad9"
       };
 
       function setSoundIcon() {
@@ -226,6 +232,8 @@
         game.ball.y = p.y - game.ball.r - 3;
         game.ball.vx = stickToPaddle ? 0 : rand(-2.4, 2.4);
         game.ball.vy = stickToPaddle ? 0 : -game.ball.speed;
+        game.balls.length = 0;
+        game.balls.push(game.ball);
       }
 
       function resetGame() {
@@ -239,6 +247,9 @@
         game.flashTimer = 0;
         game.particles.length = 0;
         game.powerUps.length = 0;
+        game.lasers.length = 0;
+        game.laserTimer = 0;
+        game.laserCooldown = 0;
         game.paddle.w = game.paddle.baseW;
         game.paddle.growTimer = 0;
         game.paddle.x = W / 2 - game.paddle.w / 2;
@@ -256,6 +267,9 @@
         game.flash = `Level ${game.level}`;
         game.flashTimer = 100;
         game.powerUps.length = 0;
+        game.lasers.length = 0;
+        game.laserTimer = 0;
+        game.laserCooldown = 0;
         game.paddle.w = Math.max(70, game.paddle.baseW - (game.level - 1) * 4);
         game.paddle.growTimer = 0;
         game.paddle.x = clamp(game.paddle.x, 8, W - game.paddle.w - 8);
@@ -344,6 +358,14 @@
           tone(880, 0.06, "triangle", 0.08, 0);
           tone(1320, 0.1, "triangle", 0.07, 0.06);
         }
+        if (name === "multi") {
+          tone(620, 0.06, "triangle", 0.07, 0);
+          tone(860, 0.08, "triangle", 0.065, 0.045);
+          tone(1120, 0.1, "triangle", 0.06, 0.09);
+        }
+        if (name === "laser") {
+          tone(1560, 0.035, "square", 0.045, 0, 980);
+        }
         if (name === "bomb") {
           tone(90, 0.16, "sawtooth", 0.13, 0, 48);
           noise(0.12, 0.07);
@@ -403,7 +425,7 @@
       }
 
       function spawnPowerUp(x, y, forcedType = null) {
-        const types = ["wide", "slow", "life"];
+        const types = ["wide", "slow", "multi", "laser", "wide", "slow", "life"];
         const type = forcedType || types[Math.floor(rand(0, types.length))];
         game.powerUps.push({
           x,
@@ -416,6 +438,27 @@
         });
       }
 
+      function splitBalls() {
+        const base = game.balls[0] || game.ball;
+        const speed = Math.max(base.speed, Math.hypot(base.vx, base.vy), 5.2);
+        const angles = [-2.45, -0.69, -1.24, -1.9];
+        const targetCount = Math.min(5, Math.max(3, game.balls.length + 2));
+        let angleIndex = 0;
+
+        while (game.balls.length < targetCount) {
+          const angle = angles[angleIndex % angles.length] + rand(-0.09, 0.09);
+          game.balls.push({
+            x: base.x + rand(-5, 5),
+            y: base.y + rand(-4, 4),
+            r: base.r,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            speed
+          });
+          angleIndex++;
+        }
+      }
+
       function applyPowerUp(type) {
         if (type === "wide") {
           const p = game.paddle;
@@ -425,19 +468,30 @@
           showFlash("Wide Paddle");
         }
         if (type === "slow") {
-          const b = game.ball;
           const scale = 0.78;
-          b.vx *= scale;
-          b.vy *= scale;
-          b.speed = Math.max(4.6, b.speed * 0.92);
+          for (const b of game.balls) {
+            b.vx *= scale;
+            b.vy *= scale;
+            b.speed = Math.max(4.6, b.speed * 0.92);
+          }
+          game.ball.speed = Math.max(4.6, game.ball.speed * 0.92);
           showFlash("Slow Ball");
         }
         if (type === "life") {
           game.lives = Math.min(5, game.lives + 1);
           showFlash("Extra Life");
         }
+        if (type === "multi") {
+          splitBalls();
+          showFlash("Multi Ball");
+        }
+        if (type === "laser") {
+          game.laserTimer = Math.max(game.laserTimer, 560);
+          game.laserCooldown = 0;
+          showFlash("Laser Paddle");
+        }
         spawnParticles(game.paddle.x + game.paddle.w / 2, game.paddle.y, powerColors[type], 18);
-        playSound("power");
+        playSound(type === "multi" ? "multi" : "power");
       }
 
       function destroyBlock(block, award = true) {
@@ -461,6 +515,85 @@
           const closeY = Math.abs((other.y + other.h / 2) - (block.y + block.h / 2)) < 52;
           if (closeX && closeY) {
             destroyBlock(other);
+          }
+        }
+      }
+
+      function damageBlock(block, sparkColor = "#ffffff") {
+        block.hits--;
+        game.shake = block.type === "bomb" ? 14 : 6;
+        if (block.hits <= 0) {
+          if (block.type === "bomb") {
+            triggerBomb(block);
+          } else {
+            destroyBlock(block);
+            playSound("block");
+          }
+          if (game.combo > 2) showFlash(`${game.combo} Combo`, 44);
+        } else {
+          game.score += 45;
+          block.pulse = Math.PI;
+          spawnParticles(block.x + block.w / 2, block.y + block.h / 2, sparkColor, 8);
+          playSound("wall");
+        }
+      }
+
+      function clearLevel() {
+        game.score += 1000 + game.level * 250;
+        game.state = "clear";
+        showFlash("Stage Clear", 90);
+        stopMusic();
+        playSound("clear");
+      }
+
+      function checkLevelClear() {
+        if (game.state === "playing" && !game.blocks.some(block => block.alive)) {
+          clearLevel();
+        }
+      }
+
+      function rectsOverlap(a, b) {
+        return a.x < b.x + b.w &&
+          a.x + a.w > b.x &&
+          a.y < b.y + b.h &&
+          a.y + a.h > b.y;
+      }
+
+      function fireLasers() {
+        if (game.laserTimer <= 0) return;
+        game.laserTimer--;
+        if (game.laserCooldown > 0) {
+          game.laserCooldown--;
+          return;
+        }
+
+        const p = game.paddle;
+        const spots = [p.x + 18, p.x + p.w - 18];
+        for (const x of spots) {
+          game.lasers.push({ x, y: p.y - 8, w: 4, h: 22, vy: -10.5, life: 82 });
+        }
+        game.laserCooldown = 15;
+        playSound("laser");
+      }
+
+      function updateLasers() {
+        for (let i = game.lasers.length - 1; i >= 0; i--) {
+          const laser = game.lasers[i];
+          laser.y += laser.vy;
+          laser.life--;
+          const laserRect = { x: laser.x - laser.w / 2, y: laser.y - laser.h, w: laser.w, h: laser.h };
+
+          let used = false;
+          for (const block of game.blocks) {
+            if (!block.alive || !rectsOverlap(laserRect, block)) continue;
+            damageBlock(block, "#ff7ad9");
+            spawnParticles(laser.x, laser.y, "#ff7ad9", 5);
+            used = true;
+            break;
+          }
+
+          if (used || laser.y + laser.h < 55 || laser.life <= 0) {
+            game.lasers.splice(i, 1);
           }
         }
       }
@@ -518,7 +651,6 @@
 
       function updatePlaying() {
         const p = game.paddle;
-        const b = game.ball;
 
         p.x += (p.targetX - p.x) * 0.32;
         if (p.growTimer > 0) {
@@ -529,90 +661,87 @@
           }
         }
 
-        b.x += b.vx;
-        b.y += b.vy;
+        fireLasers();
+        updateLasers();
+        checkLevelClear();
+        if (game.state !== "playing") return;
 
-        if (b.x - b.r < 0) {
-          b.x = b.r;
-          b.vx = Math.abs(b.vx);
-          playSound("wall");
-        }
-        if (b.x + b.r > W) {
-          b.x = W - b.r;
-          b.vx = -Math.abs(b.vx);
-          playSound("wall");
-        }
-        if (b.y - b.r < 56) {
-          b.y = 56 + b.r;
-          b.vy = Math.abs(b.vy);
-          playSound("wall");
-        }
+        for (let i = game.balls.length - 1; i >= 0; i--) {
+          const b = game.balls[i];
 
-        if (b.vy > 0 && circleRectHit(b, p)) {
-          const hit = ((b.x - (p.x + p.w / 2)) / (p.w / 2));
-          b.y = p.y - b.r - 1;
-          b.vx = hit * 5.2;
-          b.vy = -Math.sqrt(Math.max(10, b.speed * b.speed - b.vx * b.vx * 0.35));
-          game.combo = 0;
-          spawnParticles(b.x, p.y, "#42e8ff", 6);
-          playSound("paddle");
-        }
+          b.x += b.vx;
+          b.y += b.vy;
 
-        for (const block of game.blocks) {
-          if (!block.alive || !circleRectHit(b, block)) continue;
-          block.hits--;
-          game.shake = block.type === "bomb" ? 14 : 6;
-          if (block.hits <= 0) {
-            if (block.type === "bomb") {
-              triggerBomb(block);
-            } else {
-              destroyBlock(block);
-              playSound("block");
-            }
-            if (game.combo > 2) showFlash(`${game.combo} Combo`, 44);
-          } else {
-            game.score += 45;
-            block.pulse = Math.PI;
-            spawnParticles(block.x + block.w / 2, block.y + block.h / 2, "#ffffff", 8);
+          if (b.x - b.r < 0) {
+            b.x = b.r;
+            b.vx = Math.abs(b.vx);
+            playSound("wall");
+          }
+          if (b.x + b.r > W) {
+            b.x = W - b.r;
+            b.vx = -Math.abs(b.vx);
+            playSound("wall");
+          }
+          if (b.y - b.r < 56) {
+            b.y = 56 + b.r;
+            b.vy = Math.abs(b.vy);
             playSound("wall");
           }
 
-          const overlapLeft = Math.abs((b.x + b.r) - block.x);
-          const overlapRight = Math.abs((block.x + block.w) - (b.x - b.r));
-          const overlapTop = Math.abs((b.y + b.r) - block.y);
-          const overlapBottom = Math.abs((block.y + block.h) - (b.y - b.r));
-          const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-          if (minOverlap === overlapLeft || minOverlap === overlapRight) {
-            b.vx *= -1;
-          } else {
-            b.vy *= -1;
+          if (b.vy > 0 && circleRectHit(b, p)) {
+            const hit = ((b.x - (p.x + p.w / 2)) / (p.w / 2));
+            b.y = p.y - b.r - 1;
+            b.vx = hit * 5.2;
+            b.vy = -Math.sqrt(Math.max(10, b.speed * b.speed - b.vx * b.vx * 0.35));
+            game.combo = 0;
+            spawnParticles(b.x, p.y, "#42e8ff", 6);
+            playSound("paddle");
           }
-          break;
+
+          for (const block of game.blocks) {
+            if (!block.alive || !circleRectHit(b, block)) continue;
+            damageBlock(block);
+
+            const overlapLeft = Math.abs((b.x + b.r) - block.x);
+            const overlapRight = Math.abs((block.x + block.w) - (b.x - b.r));
+            const overlapTop = Math.abs((b.y + b.r) - block.y);
+            const overlapBottom = Math.abs((block.y + block.h) - (b.y - b.r));
+            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+            if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+              b.vx *= -1;
+            } else {
+              b.vy *= -1;
+            }
+            break;
+          }
+
+          if (b.y - b.r > H) {
+            if (game.balls.length > 1) {
+              game.balls.splice(i, 1);
+              game.ball = game.balls[0];
+              spawnParticles(b.x, H - 18, "#ffd166", 8);
+            } else {
+              game.lives--;
+              game.combo = 0;
+              game.shake = 12;
+              playSound("miss");
+              if (game.lives <= 0) {
+                game.state = "gameover";
+                stopMusic();
+                playSound("gameover");
+              } else {
+                game.state = "ready";
+                game.powerUps.length = 0;
+                game.lasers.length = 0;
+                game.laserTimer = 0;
+                game.laserCooldown = 0;
+                resetBall(true);
+              }
+            }
+          }
         }
 
-        if (!game.blocks.some(block => block.alive)) {
-          game.score += 1000 + game.level * 250;
-          game.state = "clear";
-          showFlash("Stage Clear", 90);
-          stopMusic();
-          playSound("clear");
-        }
-
-        if (b.y - b.r > H) {
-          game.lives--;
-          game.combo = 0;
-          game.shake = 12;
-          playSound("miss");
-          if (game.lives <= 0) {
-            game.state = "gameover";
-            stopMusic();
-            playSound("gameover");
-          } else {
-            game.state = "ready";
-            game.powerUps.length = 0;
-            resetBall(true);
-          }
-        }
+        checkLevelClear();
       }
 
       function updatePowerUps() {
@@ -717,6 +846,12 @@
           ctx.font = "800 15px system-ui, sans-serif";
           ctx.fillText(`${game.combo}x`, W - 18, 50);
         }
+        if (game.laserTimer > 0) {
+          ctx.fillStyle = "rgba(255,122,217,.25)";
+          ctx.fillRect(0, 53, W, 2);
+          ctx.fillStyle = "#ff7ad9";
+          ctx.fillRect(0, 53, W * clamp(game.laserTimer / 560, 0, 1), 2);
+        }
         ctx.restore();
       }
 
@@ -765,23 +900,49 @@
         ctx.fillStyle = "rgba(255,255,255,.35)";
         roundedRect(p.x + 9, p.y + 3, p.w - 18, 4, 2);
         ctx.fill();
+        if (game.laserTimer > 0) {
+          ctx.fillStyle = "#ff7ad9";
+          ctx.shadowColor = "#ff7ad9";
+          ctx.shadowBlur = 16;
+          roundedRect(p.x + 12, p.y - 5, 12, 8, 3);
+          ctx.fill();
+          roundedRect(p.x + p.w - 24, p.y - 5, 12, 8, 3);
+          ctx.fill();
+        }
         ctx.restore();
       }
 
       function drawBall() {
-        const b = game.ball;
-        ctx.save();
-        ctx.shadowColor = "#ffffff";
-        ctx.shadowBlur = 18;
-        const grd = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r + 3);
-        grd.addColorStop(0, "#ffffff");
-        grd.addColorStop(0.58, "#ffeaa1");
-        grd.addColorStop(1, "#ffd166");
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        for (const b of game.balls) {
+          ctx.save();
+          ctx.shadowColor = "#ffffff";
+          ctx.shadowBlur = 18;
+          const grd = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r + 3);
+          grd.addColorStop(0, "#ffffff");
+          grd.addColorStop(0.58, "#ffeaa1");
+          grd.addColorStop(1, "#ffd166");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawLasers() {
+        for (const laser of game.lasers) {
+          ctx.save();
+          ctx.shadowColor = "#ff7ad9";
+          ctx.shadowBlur = 18;
+          const grd = ctx.createLinearGradient(laser.x, laser.y, laser.x, laser.y - laser.h);
+          grd.addColorStop(0, "rgba(255,122,217,.1)");
+          grd.addColorStop(0.45, "#ff7ad9");
+          grd.addColorStop(1, "#ffffff");
+          ctx.fillStyle = grd;
+          roundedRect(laser.x - laser.w / 2, laser.y - laser.h, laser.w, laser.h, 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
 
       function drawPowerUps() {
@@ -800,7 +961,12 @@
           ctx.textBaseline = "middle";
           ctx.font = "800 13px system-ui, sans-serif";
           ctx.fillStyle = "#071019";
-          ctx.fillText(item.type === "wide" ? "W" : item.type === "slow" ? "S" : "1", 0, 1);
+          const label =
+            item.type === "wide" ? "W" :
+            item.type === "slow" ? "S" :
+            item.type === "life" ? "1" :
+            item.type === "multi" ? "M" : "L";
+          ctx.fillText(label, 0, 1);
           ctx.restore();
         }
       }
@@ -851,7 +1017,7 @@
           ctx.fillText("Tap to Start", W / 2, 438);
           ctx.font = "500 14px system-ui, sans-serif";
           ctx.fillStyle = "rgba(247,251,255,.72)";
-          ctx.fillText("* bomb  + item  number needs hits", W / 2, 469);
+          ctx.fillText("* bomb  M multi  L laser  number needs hits", W / 2, 469);
         }
 
         if (game.state === "clear") {
@@ -887,6 +1053,7 @@
         drawBackground();
         drawBlocks();
         drawPowerUps();
+        drawLasers();
         drawParticles();
         drawPaddle();
         drawBall();
