@@ -56,6 +56,33 @@
       user-select: none;
     }
 
+    .menu-back {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 999px;
+      background: rgba(12, 18, 30, .72);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
+
+    .menu-back:active {
+      transform: translateY(1px);
+    }
+
     canvas {
       display: block;
       width: 100%;
@@ -97,6 +124,7 @@
 </head>
 <body>
   <main class="phone" aria-label="Mini Breakout Challenge 464 by 825">
+    <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <canvas id="game" width="464" height="825"></canvas>
     <button id="soundButton" class="sound" type="button" aria-label="Sound on" title="Sound on">
       <svg id="soundIcon" viewBox="0 0 24 24" aria-hidden="true">

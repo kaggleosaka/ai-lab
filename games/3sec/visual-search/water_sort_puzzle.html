@@ -35,6 +35,33 @@
     color: #10243a;
   }
 
+  .menu-back {
+    position: absolute;
+    top: 22px;
+    left: 18px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    height: 38px;
+    padding: 0 14px;
+    border: 2px solid rgba(255,255,255,0.7);
+    border-radius: 999px;
+    background: rgba(23, 71, 109, 0.58);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    text-decoration: none;
+    text-shadow: 0 2px 0 #17476d;
+    box-shadow: 0 6px 16px rgba(20, 81, 120, 0.2);
+    backdrop-filter: blur(8px);
+  }
+
+  .menu-back:active {
+    transform: translateY(2px);
+  }
+
   .title {
     text-align: center;
     font-size: 34px;
@@ -276,6 +303,14 @@
       padding: 18px 12px;
     }
 
+    .menu-back {
+      top: 18px;
+      left: 12px;
+      height: 34px;
+      min-width: 64px;
+      font-size: 13px;
+    }
+
     .title {
       font-size: 28px;
     }
@@ -341,6 +376,7 @@
 </head>
 <body>
 <div class="game">
+  <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
   <div class="bubble" style="left:40px; animation-delay:0s;"></div>
   <div class="bubble" style="left:110px; width:10px; height:10px; animation-delay:2s;"></div>
   <div class="bubble" style="left:330px; animation-delay:1s;"></div>

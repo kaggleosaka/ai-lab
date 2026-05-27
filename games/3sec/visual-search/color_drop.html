@@ -15,25 +15,53 @@
     margin: 0;
     padding: 0;
     width: 100%;
-    min-height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
     background: #07111f;
     display: flex;
     justify-content: center;
-    align-items: center;
-    overflow: hidden;
+    align-items: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: Arial, Helvetica, sans-serif;
   }
 
   .game {
     width: 464px;
-    height: 825px;
+    min-height: 825px;
     max-width: 100vw;
-    max-height: 100vh;
     background: linear-gradient(180deg, #111827 0%, #07111f 62%, #020617 100%);
     position: relative;
     overflow: hidden;
     color: white;
     touch-action: manipulation;
+  }
+
+  .menu-back {
+    position: absolute;
+    top: 76px;
+    left: 18px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    height: 38px;
+    padding: 0 14px;
+    border: 2px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    background: rgba(7, 17, 31, 0.68);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    text-decoration: none;
+    text-shadow: 0 2px 0 #000;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+    backdrop-filter: blur(8px);
+  }
+
+  .menu-back:active {
+    transform: translateY(2px);
   }
 
   .top {
@@ -283,10 +311,84 @@
     color: rgba(255,255,255,0.74);
     z-index: 6;
   }
+
+  @media (max-width: 420px) {
+    .top {
+      top: 20px;
+      left: 14px;
+      right: 14px;
+      font-size: 19px;
+    }
+
+    .menu-back {
+      top: 64px;
+      left: 12px;
+      height: 34px;
+      min-width: 64px;
+      font-size: 13px;
+    }
+
+    .title {
+      top: 72px;
+      font-size: 31px;
+    }
+
+    .subtitle {
+      top: 116px;
+      font-size: 15px;
+    }
+
+    .play-area {
+      top: 150px;
+      bottom: 190px;
+    }
+
+    .drop-ball {
+      width: 74px;
+      height: 74px;
+    }
+
+    .buttons {
+      left: 12px;
+      right: 12px;
+      bottom: 48px;
+      gap: 8px;
+    }
+
+    .color-btn {
+      height: 76px;
+      border-radius: 18px;
+      border-width: 4px;
+    }
+
+    .message {
+      bottom: 134px;
+      font-size: 24px;
+    }
+
+    .footer {
+      bottom: 16px;
+      font-size: 13px;
+    }
+
+    .overlay h1 {
+      font-size: 44px;
+    }
+
+    .overlay p {
+      font-size: 19px;
+    }
+
+    .tap-start {
+      font-size: 21px;
+      padding: 14px 28px;
+    }
+  }
 </style>
 </head>
 <body>
 <div class="game" id="game">
+  <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
   <div class="top">
     <div id="score">Score: 0</div>
     <div id="best">Best: 0</div>

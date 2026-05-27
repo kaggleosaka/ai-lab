@@ -117,6 +117,11 @@
       transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
     }
 
+    .game-card.phone-card {
+      min-height: 176px;
+      padding: 14px;
+    }
+
     .game-card:hover,
     .game-card:focus-visible {
       transform: translateY(-3px);
@@ -131,6 +136,155 @@
       justify-content: space-between;
       gap: 22px;
       width: 100%;
+    }
+
+    .thumb {
+      position: relative;
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 72px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      background: #0b1020;
+    }
+
+    .thumb::before,
+    .thumb::after {
+      content: "";
+      position: absolute;
+      display: block;
+    }
+
+    .thumb.color-drop {
+      background:
+        linear-gradient(#ff3b8d 0 0) 18% 72% / 18% 34% no-repeat,
+        linear-gradient(#00d9ff 0 0) 42% 72% / 18% 34% no-repeat,
+        linear-gradient(#ffd93d 0 0) 66% 72% / 18% 34% no-repeat,
+        linear-gradient(#9b5cff 0 0) 90% 72% / 18% 34% no-repeat,
+        linear-gradient(180deg, #111827, #020617);
+    }
+
+    .thumb.color-drop::before {
+      width: 30px;
+      height: 30px;
+      left: 48%;
+      top: 18%;
+      border-radius: 50%;
+      background: #00d9ff;
+      box-shadow: 0 0 18px #00d9ff;
+    }
+
+    .thumb.connect-dots {
+      background: linear-gradient(180deg, #f8fbff, #dce8f5);
+    }
+
+    .thumb.connect-dots::before {
+      inset: 18px 20px;
+      background:
+        radial-gradient(circle, #4a90e2 0 8px, transparent 9px) 0 0 / 44px 34px,
+        radial-gradient(circle, #ff6b6b 0 8px, transparent 9px) 18px 16px / 44px 34px;
+    }
+
+    .thumb.connect-dots::after {
+      left: 32px;
+      top: 30px;
+      width: 96px;
+      height: 3px;
+      border-radius: 999px;
+      background: #4a90e2;
+      transform: rotate(18deg);
+    }
+
+    .thumb.find-z,
+    .thumb.find-o,
+    .thumb.find-3 {
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px) 0 0 / 20px 20px,
+        linear-gradient(0deg, rgba(255,255,255,0.08) 1px, transparent 1px) 0 0 / 20px 20px,
+        linear-gradient(180deg, #18243c, #0d1324);
+    }
+
+    .thumb.find-z::before,
+    .thumb.find-o::before,
+    .thumb.find-3::before {
+      left: 50%;
+      top: 50%;
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background: #facc15;
+      color: #111827;
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 48px;
+      text-align: center;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+    }
+
+    .thumb.find-z::before { content: "Z"; }
+    .thumb.find-o::before { content: "O"; }
+    .thumb.find-3::before { content: "3"; }
+
+    .thumb.breakout {
+      background:
+        linear-gradient(#ff5d7d 0 0) 12% 24% / 16% 13% no-repeat,
+        linear-gradient(#ff9a3c 0 0) 32% 24% / 16% 13% no-repeat,
+        linear-gradient(#ffd166 0 0) 52% 24% / 16% 13% no-repeat,
+        linear-gradient(#56f39a 0 0) 72% 24% / 16% 13% no-repeat,
+        linear-gradient(#42e8ff 0 0) 24% 44% / 16% 13% no-repeat,
+        linear-gradient(#7c5cff 0 0) 44% 44% / 16% 13% no-repeat,
+        linear-gradient(#ff5d9e 0 0) 64% 44% / 16% 13% no-repeat,
+        linear-gradient(180deg, #090d16, #111827);
+    }
+
+    .thumb.breakout::before {
+      width: 32px;
+      height: 7px;
+      left: 50%;
+      bottom: 18%;
+      border-radius: 999px;
+      background: #42e8ff;
+      transform: translateX(-50%);
+      box-shadow: 0 0 12px #42e8ff;
+    }
+
+    .thumb.breakout::after {
+      width: 13px;
+      height: 13px;
+      right: 31%;
+      bottom: 34%;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .thumb.water-sort {
+      background: linear-gradient(180deg, #72d8ff 0%, #dff7ff 52%, #d6f2e4 100%);
+    }
+
+    .thumb.water-sort::before {
+      inset: 16px 22px 14px;
+      background:
+        linear-gradient(180deg, transparent 0 18%, #ff5a66 18% 38%, #2f9bff 38% 58%, #2ed573 58% 78%, #ffd43b 78%) 0 0 / 28px 100% no-repeat,
+        linear-gradient(180deg, transparent 0 18%, #2f9bff 18% 38%, #ffd43b 38% 58%, #ff5a66 58% 78%, #2ed573 78%) 46px 0 / 28px 100% no-repeat,
+        linear-gradient(180deg, transparent 0 18%, rgba(255,255,255,0.42) 18%) 92px 0 / 28px 100% no-repeat;
+    }
+
+    .thumb.water-sort::after {
+      inset: 16px 22px 14px;
+      background:
+        linear-gradient(90deg, rgba(18,59,91,0.85) 0 5px, transparent 5px 23px, rgba(18,59,91,0.85) 23px 28px, transparent 28px 46px, rgba(18,59,91,0.85) 46px 51px, transparent 51px 69px, rgba(18,59,91,0.85) 69px 74px, transparent 74px 92px, rgba(18,59,91,0.85) 92px 97px, transparent 97px 115px, rgba(18,59,91,0.85) 115px 120px);
+      border-bottom: 5px solid rgba(18,59,91,0.85);
+      border-radius: 0 0 12px 12px;
+    }
+
+    .card-copy {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     .tag {
@@ -173,6 +327,27 @@
         padding: 17px;
       }
 
+      .game-card.phone-card {
+        min-height: 128px;
+        padding: 12px;
+      }
+
+      .game-card.phone-card .card-inner {
+        display: grid;
+        grid-template-columns: 116px 1fr;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .thumb {
+        min-height: 74px;
+      }
+
+      .card-copy {
+        display: grid;
+        gap: 12px;
+      }
+
       .section-header {
         display: grid;
       }
@@ -193,46 +368,67 @@
         <p class="note">Built for quick play on a phone.</p>
       </div>
       <div class="grid">
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/color_drop.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/color_drop.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Color Drop</span>
+            <span class="thumb color-drop" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Color Drop</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/dots-connect.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/connect-dots.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Dots Connect</span>
+            <span class="thumb connect-dots" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Connect Dots</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-Z.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-Z.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Find Z</span>
+            <span class="thumb find-z" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Find Z</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-O.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-O.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Find O</span>
+            <span class="thumb find-o" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Find O</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-3.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-3.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Find 3</span>
+            <span class="thumb find-3" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Find 3</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/mini-breakout.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/mini-breakout.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Mini Breakout</span>
+            <span class="thumb breakout" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Mini Breakout</span>
+            </span>
           </span>
         </a>
-        <a class="game-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/water_sort_puzzle.html">
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/water_sort_puzzle.html">
           <span class="card-inner">
-            <span class="tag">Phone</span>
-            <span class="title">Water Sort Puzzle</span>
+            <span class="thumb water-sort" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Water Sort Puzzle</span>
+            </span>
           </span>
         </a>
       </div>
