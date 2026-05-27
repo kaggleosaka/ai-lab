@@ -32,10 +32,10 @@
       overflow: hidden;
     }
     .menu-back {
-      position: absolute;
-      top: 20px;
-      left: 18px;
-      z-index: 20;
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 999;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -49,6 +49,8 @@
       font-weight: 900;
       text-decoration: none;
       box-shadow: 0 6px 16px rgba(40,60,90,0.22);
+      pointer-events: auto;
+      touch-action: manipulation;
     }
     .menu-back:active {
       transform: translateY(2px);
@@ -202,8 +204,8 @@
   </style>
 </head>
 <body>
+  <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
   <main id="game">
-    <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <section class="top">
       <div class="title">CONNECT DOTS</div>
       <div class="subtitle">Swipe to connect matching dots</div>
