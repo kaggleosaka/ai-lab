@@ -35,11 +35,16 @@
       color: var(--ink);
     }
 
+    .game-frame {
+      width: 464px;
+      height: 825px;
+    }
+
     .game {
       position: relative;
       width: 464px;
       height: 825px;
-      transform-origin: top center;
+      transform-origin: top left;
       overflow: hidden;
       padding: 20px 18px 18px;
       background:
@@ -544,6 +549,7 @@
   </style>
 </head>
 <body>
+  <div class="game-frame">
   <main class="game" aria-label="スマホでマンカラ">
     <header>
       <h1>MANCALA</h1>
@@ -614,6 +620,7 @@
       </div>
     </div>
   </main>
+  </div>
 
   <script>
     const PIT_COUNT = 6;
@@ -650,6 +657,7 @@
     const resultTitle = document.getElementById("resultTitle");
     const resultScore = document.getElementById("resultScore");
     const resultRestartBtn = document.getElementById("resultRestartBtn");
+    const gameFrame = document.querySelector(".game-frame");
     const gameElement = document.querySelector(".game");
     const difficultyButtons = document.querySelectorAll(".difficulty button");
     const bigGet = document.getElementById("bigGet");
@@ -663,6 +671,8 @@
     function fitGameToViewport() {
       const viewport = window.visualViewport || window;
       const scale = Math.min(viewport.width / 464, viewport.height / 825, 1);
+      gameFrame.style.width = `${464 * scale}px`;
+      gameFrame.style.height = `${825 * scale}px`;
       gameElement.style.transform = `scale(${scale})`;
     }
 
