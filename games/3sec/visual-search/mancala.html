@@ -36,12 +36,19 @@
     }
 
     .game-frame {
+      position: fixed;
+      top: 0;
+      left: 50%;
       width: 464px;
       height: 825px;
+      overflow: hidden;
+      transform: translateX(-50%);
     }
 
     .game {
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 464px;
       height: 825px;
       transform-origin: top left;
@@ -671,8 +678,11 @@
     function fitGameToViewport() {
       const viewport = window.visualViewport || window;
       const scale = Math.min(viewport.width / 464, viewport.height / 825, 1);
-      gameFrame.style.width = `${464 * scale}px`;
-      gameFrame.style.height = `${825 * scale}px`;
+      const frameWidth = Math.round(464 * scale * 1000) / 1000;
+      const frameHeight = Math.round(825 * scale * 1000) / 1000;
+      gameFrame.style.width = `${frameWidth}px`;
+      gameFrame.style.height = `${frameHeight}px`;
+      gameElement.style.left = "0px";
       gameElement.style.transform = `scale(${scale})`;
     }
 
