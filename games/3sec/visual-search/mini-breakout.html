@@ -172,6 +172,40 @@
       box-shadow: 0 0 22px rgba(66,232,255,.55), inset 0 2px 0 rgba(255,255,255,.48);
       pointer-events: none;
     }
+
+    .speed-button {
+      position: absolute;
+      right: 24px;
+      bottom: 70px;
+      z-index: 1;
+      min-width: 92px;
+      height: 38px;
+      padding: 0 16px;
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 209, 102, .96), rgba(255, 129, 74, .96));
+      color: #071019;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 0 22px rgba(255,209,102,.38), 0 5px 0 rgba(83, 36, 14, .48);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      touch-action: manipulation;
+    }
+
+    .speed-button.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .speed-button:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 18px rgba(255,209,102,.34), 0 1px 0 rgba(83, 36, 14, .48);
+    }
   </style>
 </head>
 <body>
@@ -179,6 +213,7 @@
     <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <canvas id="game" width="464" height="825"></canvas>
     <div id="controlPad" class="control-pad" role="slider" aria-label="Paddle control" aria-valuemin="0" aria-valuemax="464" aria-valuenow="232" tabindex="0">
+      <button id="speedButton" class="speed-button" type="button" aria-label="Speed up">SPEED</button>
       <div id="controlThumb" class="control-thumb"></div>
     </div>
     <button id="soundButton" class="sound" type="button" aria-label="Sound on" title="Sound on">
@@ -200,6 +235,7 @@
       const ctx = canvas.getContext("2d");
       const controlPad = document.getElementById("controlPad");
       const controlThumb = document.getElementById("controlThumb");
+      const speedButton = document.getElementById("speedButton");
       const soundButton = document.getElementById("soundButton");
       const soundIcon = document.getElementById("soundIcon");
 
@@ -319,6 +355,7 @@
         initBlocks();
         resetBall(true);
         updateControlThumb();
+        updateSpeedButton();
       }
 
       function nextLevel() {
@@ -339,6 +376,7 @@
         initBlocks();
         resetBall(true);
         updateControlThumb();
+        updateSpeedButton();
       }
 
       function startGame() {
@@ -484,6 +522,37 @@
       function showFlash(text, time = 80) {
         game.flash = text;
         game.flashTimer = time;
+      }
+
+      function aliveBlockCount() {
+        return game.blocks.reduce((count, block) => count + (block.alive ? 1 : 0), 0);
+      }
+
+      function updateSpeedButton() {
+        const show = game.state === "playing" && aliveBlockCount() === 1;
+        speedButton.classList.toggle("show", show);
+      }
+
+      function speedUpBalls() {
+        if (game.state !== "playing" || aliveBlockCount() !== 1) return;
+        const maxSpeed = 12.5;
+        let changed = false;
+
+        for (const b of game.balls) {
+          const current = Math.max(Math.hypot(b.vx, b.vy), b.speed, 0.1);
+          const next = Math.min(maxSpeed, Math.max(current * 1.22, b.speed + 0.9));
+          const scale = next / current;
+          b.vx *= scale;
+          b.vy *= scale;
+          b.speed = Math.max(b.speed, next);
+          changed = changed || next > current + 0.01;
+        }
+
+        game.ball.speed = Math.max(game.ball.speed, ...game.balls.map(b => b.speed));
+        if (changed) {
+          showFlash("Speed Up", 42);
+          playSound("tap");
+        }
       }
 
       function spawnPowerUp(x, y, forcedType = null) {
@@ -716,6 +785,13 @@
       controlPad.addEventListener("pointerup", handlePointerUp);
       controlPad.addEventListener("pointercancel", handlePointerUp);
 
+      speedButton.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        resumeAudio();
+        speedUpBalls();
+      });
+
       soundButton.addEventListener("pointerdown", event => {
         event.stopPropagation();
         resumeAudio();
@@ -875,6 +951,7 @@
         updateParticles();
         if (game.flashTimer > 0) game.flashTimer--;
         game.shake *= 0.84;
+        updateSpeedButton();
       }
 
       function roundedRect(x, y, w, h, r) {
