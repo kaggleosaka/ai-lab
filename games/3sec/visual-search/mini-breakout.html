@@ -206,13 +206,56 @@
       transform: translateY(4px);
       box-shadow: 0 0 18px rgba(255,209,102,.34), 0 1px 0 rgba(83, 36, 14, .48);
     }
+
+    .level-select {
+      position: absolute;
+      left: 24px;
+      bottom: 70px;
+      z-index: 1;
+      display: none;
+      grid-template-columns: repeat(3, 52px);
+      gap: 6px;
+    }
+
+    .level-select.show {
+      display: grid;
+    }
+
+    .level-button {
+      height: 38px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px;
+      background: rgba(12, 18, 30, .78);
+      color: #f7fbff;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: inset 0 -2px 0 rgba(255,255,255,.08);
+      touch-action: manipulation;
+    }
+
+    .level-button.active {
+      background: linear-gradient(180deg, rgba(66, 232, 255, .96), rgba(86, 243, 154, .92));
+      color: #071019;
+      box-shadow: 0 0 20px rgba(66,232,255,.36), inset 0 2px 0 rgba(255,255,255,.5);
+    }
+
+    .level-button:active {
+      transform: translateY(2px);
+    }
   </style>
 </head>
 <body>
   <main class="phone" aria-label="Mini Breakout Challenge 464 by 825">
     <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <canvas id="game" width="464" height="825"></canvas>
-    <div id="controlPad" class="control-pad" role="slider" aria-label="Paddle control" aria-valuemin="0" aria-valuemax="464" aria-valuenow="232" tabindex="0">
+    <div id="controlPad" class="control-pad" role="group" aria-label="Paddle controls">
+      <div id="levelSelect" class="level-select" aria-label="Start level">
+        <button class="level-button active" type="button" data-start-level="1">LV1</button>
+        <button class="level-button" type="button" data-start-level="2">LV2</button>
+        <button class="level-button" type="button" data-start-level="3">LV3</button>
+      </div>
       <button id="speedButton" class="speed-button" type="button" aria-label="Speed up">SPEED</button>
       <div id="controlThumb" class="control-thumb"></div>
     </div>
@@ -235,6 +278,8 @@
       const ctx = canvas.getContext("2d");
       const controlPad = document.getElementById("controlPad");
       const controlThumb = document.getElementById("controlThumb");
+      const levelSelect = document.getElementById("levelSelect");
+      const levelButtons = document.querySelectorAll(".level-button");
       const speedButton = document.getElementById("speedButton");
       const soundButton = document.getElementById("soundButton");
       const soundIcon = document.getElementById("soundIcon");
@@ -251,6 +296,7 @@
       let audioCtx = null;
       let musicTimer = null;
       let musicStep = 0;
+      let selectedStartLevel = 1;
 
       const game = {
         state: "ready",
@@ -332,11 +378,23 @@
         game.balls.push(game.ball);
       }
 
+      function applyLevelSettings(centerPaddle = false) {
+        game.paddle.w = Math.max(70, game.paddle.baseW - (game.level - 1) * 4);
+        game.paddle.growTimer = 0;
+        if (centerPaddle) {
+          game.paddle.x = W / 2 - game.paddle.w / 2;
+        } else {
+          game.paddle.x = clamp(game.paddle.x, 8, W - game.paddle.w - 8);
+        }
+        game.paddle.targetX = game.paddle.x;
+        game.ball.speed = Math.min(8.2, 5.2 + (game.level - 1) * 0.34);
+      }
+
       function resetGame() {
         game.state = "ready";
         game.score = 0;
         game.lives = 3;
-        game.level = 1;
+        game.level = selectedStartLevel;
         game.combo = 0;
         game.shake = 0;
         game.flash = "";
@@ -346,15 +404,12 @@
         game.lasers.length = 0;
         game.laserTimer = 0;
         game.laserCooldown = 0;
-        game.paddle.w = game.paddle.baseW;
-        game.paddle.growTimer = 0;
-        game.paddle.x = W / 2 - game.paddle.w / 2;
-        game.paddle.targetX = game.paddle.x;
-        game.ball.speed = 5.2;
         game.pointerX = W / 2;
+        applyLevelSettings(true);
         initBlocks();
         resetBall(true);
         updateControlThumb();
+        updateLevelSelect();
         updateSpeedButton();
       }
 
@@ -368,14 +423,11 @@
         game.lasers.length = 0;
         game.laserTimer = 0;
         game.laserCooldown = 0;
-        game.paddle.w = Math.max(70, game.paddle.baseW - (game.level - 1) * 4);
-        game.paddle.growTimer = 0;
-        game.paddle.x = clamp(game.paddle.x, 8, W - game.paddle.w - 8);
-        game.paddle.targetX = game.paddle.x;
-        game.ball.speed = Math.min(8.2, 5.2 + (game.level - 1) * 0.34);
+        applyLevelSettings(false);
         initBlocks();
         resetBall(true);
         updateControlThumb();
+        updateLevelSelect();
         updateSpeedButton();
       }
 
@@ -388,6 +440,7 @@
         }
         game.state = "playing";
         game.combo = 0;
+        updateLevelSelect();
         resetBall(false);
         playSound("start");
         startMusic();
@@ -531,6 +584,30 @@
       function updateSpeedButton() {
         const show = game.state === "playing" && aliveBlockCount() === 1;
         speedButton.classList.toggle("show", show);
+      }
+
+      function canChooseStartLevel() {
+        return game.state === "ready" && game.score === 0 && game.lives === 3;
+      }
+
+      function updateLevelSelect() {
+        levelSelect.classList.toggle("show", canChooseStartLevel());
+        levelButtons.forEach(button => {
+          const level = Number(button.dataset.startLevel);
+          button.classList.toggle("active", level === selectedStartLevel);
+        });
+      }
+
+      function chooseStartLevel(level) {
+        selectedStartLevel = clamp(level, 1, 3);
+        if (canChooseStartLevel()) {
+          game.level = selectedStartLevel;
+          applyLevelSettings(true);
+          initBlocks();
+          resetBall(true);
+          updateControlThumb();
+        }
+        updateLevelSelect();
       }
 
       function speedUpBalls() {
@@ -749,7 +826,6 @@
         const thumbX = clamp(game.pointerX, 36, W - 36);
         const percent = (thumbX / W) * 100;
         controlThumb.style.left = `${percent}%`;
-        controlPad.setAttribute("aria-valuenow", String(Math.round(game.pointerX)));
       }
 
       function handlePointerDown(event) {
@@ -784,6 +860,16 @@
       controlPad.addEventListener("pointermove", handlePointerMove);
       controlPad.addEventListener("pointerup", handlePointerUp);
       controlPad.addEventListener("pointercancel", handlePointerUp);
+
+      levelButtons.forEach(button => {
+        button.addEventListener("pointerdown", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          resumeAudio();
+          chooseStartLevel(Number(button.dataset.startLevel));
+          playSound("tap");
+        });
+      });
 
       speedButton.addEventListener("pointerdown", event => {
         event.preventDefault();
@@ -951,6 +1037,7 @@
         updateParticles();
         if (game.flashTimer > 0) game.flashTimer--;
         game.shake *= 0.84;
+        updateLevelSelect();
         updateSpeedButton();
       }
 
