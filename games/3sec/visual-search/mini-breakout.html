@@ -120,12 +120,54 @@
     .sound:active {
       transform: translateY(1px);
     }
+
+    .control-pad {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 4;
+      height: 122px;
+      touch-action: none;
+      cursor: grab;
+      background:
+        linear-gradient(180deg, rgba(8, 11, 18, 0), rgba(8, 11, 18, .82) 36%, rgba(8, 11, 18, .94)),
+        radial-gradient(circle at 50% 72%, rgba(66, 232, 255, .22), transparent 48%);
+    }
+
+    .control-pad::before {
+      content: "";
+      position: absolute;
+      left: 48px;
+      right: 48px;
+      bottom: 39px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(247, 251, 255, .12);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 0 24px rgba(66,232,255,.18);
+    }
+
+    .control-thumb {
+      position: absolute;
+      left: 50%;
+      bottom: 31px;
+      width: 72px;
+      height: 28px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, #8bf6ff, #42e8ff 54%, #56f39a);
+      box-shadow: 0 0 22px rgba(66,232,255,.55), inset 0 2px 0 rgba(255,255,255,.48);
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <main class="phone" aria-label="Mini Breakout Challenge 464 by 825">
     <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <canvas id="game" width="464" height="825"></canvas>
+    <div id="controlPad" class="control-pad" role="slider" aria-label="Paddle control" aria-valuemin="0" aria-valuemax="464" aria-valuenow="232" tabindex="0">
+      <div id="controlThumb" class="control-thumb"></div>
+    </div>
     <button id="soundButton" class="sound" type="button" aria-label="Sound on" title="Sound on">
       <svg id="soundIcon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
@@ -143,11 +185,16 @@
       const H = 825;
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
+      const controlPad = document.getElementById("controlPad");
+      const controlThumb = document.getElementById("controlThumb");
       const soundButton = document.getElementById("soundButton");
       const soundIcon = document.getElementById("soundIcon");
 
       const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
       const rand = (min, max) => min + Math.random() * (max - min);
+      const CONTROL_TOP = 703;
+      const PADDLE_Y = 657;
+      const MISS_Y = CONTROL_TOP + 44;
 
       const savedMute = localStorage.getItem("miniBreakoutMuted");
       let muted = savedMute === "1";
@@ -171,8 +218,8 @@
         laserTimer: 0,
         laserCooldown: 0,
         pointerX: W / 2,
-        paddle: { x: W / 2 - 48, y: 735, w: 96, h: 16, targetX: W / 2 - 48, baseW: 96, growTimer: 0 },
-        ball: { x: W / 2, y: 716, r: 7, vx: 0, vy: 0, speed: 5.2 },
+        paddle: { x: W / 2 - 48, y: PADDLE_Y, w: 96, h: 16, targetX: W / 2 - 48, baseW: 96, growTimer: 0 },
+        ball: { x: W / 2, y: PADDLE_Y - 19, r: 7, vx: 0, vy: 0, speed: 5.2 },
         balls: [],
         blocks: []
       };
@@ -258,6 +305,7 @@
         game.pointerX = W / 2;
         initBlocks();
         resetBall(true);
+        updateControlThumb();
       }
 
       function nextLevel() {
@@ -277,6 +325,7 @@
         game.ball.speed = Math.min(8.2, 5.2 + (game.level - 1) * 0.34);
         initBlocks();
         resetBall(true);
+        updateControlThumb();
       }
 
       function startGame() {
@@ -607,25 +656,52 @@
         const x = pointerToGameX(clientX);
         game.pointerX = clamp(x, 0, W);
         game.paddle.targetX = clamp(game.pointerX - game.paddle.w / 2, 8, W - game.paddle.w - 8);
+        updateControlThumb();
         if (game.state === "ready") {
           game.paddle.x = game.paddle.targetX;
           resetBall(true);
         }
       }
 
+      function updateControlThumb() {
+        const thumbX = clamp(game.pointerX, 36, W - 36);
+        const percent = (thumbX / W) * 100;
+        controlThumb.style.left = `${percent}%`;
+        controlPad.setAttribute("aria-valuenow", String(Math.round(game.pointerX)));
+      }
+
       function handlePointerDown(event) {
+        if (event.target === soundButton) return;
+        event.preventDefault();
         resumeAudio();
         movePaddle(event.clientX);
-        if (event.target === soundButton) return;
+        if (event.currentTarget === controlPad && controlPad.setPointerCapture) {
+          controlPad.setPointerCapture(event.pointerId);
+        }
         if (game.state !== "playing") startGame();
       }
 
       function handlePointerMove(event) {
+        event.preventDefault();
         movePaddle(event.clientX);
+      }
+
+      function handlePointerUp(event) {
+        if (event.currentTarget === controlPad && controlPad.releasePointerCapture) {
+          try {
+            controlPad.releasePointerCapture(event.pointerId);
+          } catch (_) {
+            // The pointer may already be released by the browser.
+          }
+        }
       }
 
       canvas.addEventListener("pointerdown", handlePointerDown);
       canvas.addEventListener("pointermove", handlePointerMove);
+      controlPad.addEventListener("pointerdown", handlePointerDown);
+      controlPad.addEventListener("pointermove", handlePointerMove);
+      controlPad.addEventListener("pointerup", handlePointerUp);
+      controlPad.addEventListener("pointercancel", handlePointerUp);
 
       soundButton.addEventListener("pointerdown", event => {
         event.stopPropagation();
@@ -715,11 +791,11 @@
             break;
           }
 
-          if (b.y - b.r > H) {
+          if (b.y - b.r > MISS_Y) {
             if (game.balls.length > 1) {
               game.balls.splice(i, 1);
               game.ball = game.balls[0];
-              spawnParticles(b.x, H - 18, "#ffd166", 8);
+              spawnParticles(b.x, MISS_Y, "#ffd166", 8);
             } else {
               game.lives--;
               game.combo = 0;
