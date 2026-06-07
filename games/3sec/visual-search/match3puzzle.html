@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Jewel Match 3 Puzzle</title>
+<style>
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    user-select: none;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(43, 220, 255, 0.22), transparent 28%),
+      radial-gradient(circle at 78% 86%, rgba(255, 221, 74, 0.18), transparent 25%),
+      linear-gradient(160deg, #09122b 0%, #18234d 44%, #071026 100%);
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  #game {
+    width: 464px;
+    height: 825px;
+    max-width: 100vw;
+    max-height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 16px 20px;
+    background:
+      linear-gradient(180deg, rgba(25, 46, 107, 0.96), rgba(11, 20, 51, 0.98)),
+      #111a3d;
+    border-left: 1px solid rgba(255,255,255,0.14);
+    border-right: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 0 40px rgba(0,0,0,0.45);
+  }
+
+  .topbar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 92px 92px;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .title {
+    min-width: 0;
+    padding: 8px 8px 7px 10px;
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    background: rgba(1, 10, 32, 0.45);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.24), 0 8px 20px rgba(0,0,0,0.18);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 25px;
+    line-height: 1;
+    letter-spacing: 0;
+    color: #fff7a8;
+    text-shadow: 0 3px 0 #5d2261, 0 0 12px rgba(255,255,255,0.4);
+    white-space: nowrap;
+  }
+
+  .sub {
+    margin-top: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #c8f6ff;
+    text-transform: uppercase;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 8px 6px;
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    background: rgba(4, 13, 38, 0.62);
+    box-shadow: inset 0 -4px 0 rgba(0,0,0,0.25), 0 8px 20px rgba(0,0,0,0.16);
+    text-align: center;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 900;
+    color: #99ecff;
+    text-transform: uppercase;
+  }
+
+  .value {
+    margin-top: 2px;
+    font-size: 23px;
+    line-height: 1;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 3px 0 rgba(0,0,0,0.48);
+  }
+
+  .message {
+    height: 44px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow: 0 2px 0 #000;
+  }
+
+  .board-wrap {
+    position: relative;
+    width: 432px;
+    height: 432px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vw - 32px);
+    flex: 0 0 auto;
+    border: 4px solid rgba(255,255,255,0.84);
+    border-radius: 8px;
+    padding: 0;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.14), transparent 28%),
+      repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0 8px, rgba(0,0,0,0.05) 8px 16px),
+      #243174;
+    box-shadow: 0 14px 0 #05091f, 0 24px 32px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(0,0,0,0.24);
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #board {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    gap: 0;
+    touch-action: none;
+  }
+
+  .cell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(4, 10, 32, 0.22);
+    touch-action: none;
+  }
+
+  .gem {
+    width: calc(100% - 8px);
+    height: calc(100% - 8px);
+    max-width: 45px;
+    max-height: 45px;
+    aspect-ratio: 1 / 1;
+    border: 0;
+    border-radius: 15px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.36);
+    cursor: pointer;
+    transform: translateZ(0);
+    transition: transform 130ms ease, opacity 150ms ease, filter 150ms ease;
+    touch-action: none;
+  }
+
+  .gem::before {
+    content: "";
+    position: absolute;
+    inset: 5px 7px auto 7px;
+    height: 13px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.55);
+    filter: blur(0.2px);
+  }
+
+  .gem::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    border: 2px solid rgba(255,255,255,0.3);
+    pointer-events: none;
+  }
+
+  .gem span {
+    position: relative;
+    z-index: 2;
+    transform: translateY(1px);
+  }
+
+  .gem.t0 {
+    background: radial-gradient(circle at 32% 22%, #ffb8c6, #fa3d72 48%, #a70d3d 100%);
+    box-shadow: inset 0 -7px 0 rgba(110,0,36,0.34), 0 5px 0 #720a31;
+  }
+
+  .gem.t1 {
+    border-radius: 50%;
+    background: radial-gradient(circle at 33% 22%, #b9f8ff, #17b7ff 48%, #0753b8 100%);
+    box-shadow: inset 0 -7px 0 rgba(0,50,130,0.34), 0 5px 0 #07377c;
+  }
+
+  .gem.t2 {
+    border-radius: 12px 22px 12px 22px;
+    background: radial-gradient(circle at 33% 22%, #fff5a5, #ffc83d 48%, #d16806 100%);
+    box-shadow: inset 0 -7px 0 rgba(139,66,0,0.34), 0 5px 0 #8a4200;
+  }
+
+  .gem.t3 {
+    border-radius: 8px;
+    transform: rotate(45deg) scale(0.86);
+    background: radial-gradient(circle at 32% 20%, #c8ffd4, #37d36b 48%, #08783b 100%);
+    box-shadow: inset 0 -7px 0 rgba(0,94,38,0.32), 4px 4px 0 #075d31;
+  }
+
+  .gem.t3 span {
+    transform: rotate(-45deg);
+  }
+
+  .gem.t4 {
+    clip-path: polygon(50% 4%, 93% 27%, 82% 87%, 18% 87%, 7% 27%);
+    border-radius: 10px;
+    background: radial-gradient(circle at 32% 20%, #e5c8ff, #a45cff 48%, #5c18b5 100%);
+    box-shadow: inset 0 -7px 0 rgba(72,0,120,0.34), 0 5px 0 #3a0d75;
+  }
+
+  .gem.t4::after {
+    clip-path: inherit;
+  }
+
+  .gem.t5 {
+    border-radius: 22px 8px 22px 8px;
+    background: radial-gradient(circle at 32% 20%, #ffe1cf, #ff8245 48%, #ba2d0d 100%);
+    box-shadow: inset 0 -7px 0 rgba(120,29,0,0.34), 0 5px 0 #772000;
+  }
+
+  .gem.bomb {
+    outline: 3px solid #ffffff;
+    outline-offset: -4px;
+    box-shadow: inset 0 -7px 0 rgba(0,0,0,0.32), 0 0 18px rgba(255,236,80,0.88), 0 5px 0 rgba(0,0,0,0.36);
+  }
+
+  .gem.rainbow {
+    border-radius: 50%;
+    background:
+      conic-gradient(#ff406d, #ffd243, #3ce074, #23c2ff, #9c67ff, #ff406d);
+    box-shadow: inset 0 -7px 0 rgba(0,0,0,0.22), 0 0 22px rgba(255,255,255,0.62), 0 5px 0 #27305f;
+  }
+
+  .gem.selected {
+    transform: translateY(-3px) scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(255,255,255,0.96));
+    outline: 4px solid #fff9a5;
+    outline-offset: 0;
+  }
+
+  .gem.t3.selected {
+    transform: rotate(45deg) translateY(-3px) scale(0.96);
+  }
+
+  .gem.pop {
+    animation: popGem 180ms ease forwards;
+  }
+
+  .gem.drop {
+    animation: dropGem 230ms cubic-bezier(.17,.84,.44,1.08);
+  }
+
+  .gem.swap {
+    animation: swapPulse 180ms ease;
+  }
+
+  .board-wrap.blast {
+    animation: blastBoard 240ms ease;
+  }
+
+  .combo {
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    z-index: 10;
+    transform: translate(-50%, -50%) scale(0.6);
+    padding: 6px 18px;
+    border: 3px solid #fff;
+    border-radius: 8px;
+    background: #ff3f7f;
+    color: #fffbe7;
+    font-size: 29px;
+    font-weight: 900;
+    text-shadow: 0 3px 0 #821144;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .combo.show {
+    animation: comboPop 620ms ease forwards;
+  }
+
+  .controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 25px;
+  }
+
+  button.action {
+    height: 58px;
+    border: 0;
+    border-radius: 8px;
+    color: #071026;
+    font-size: 20px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: inset 0 -6px 0 rgba(0,0,0,0.2), 0 8px 18px rgba(0,0,0,0.22);
+    touch-action: none;
+  }
+
+  #startBtn {
+    background: linear-gradient(180deg, #faff8a, #ffc647);
+  }
+
+  #resetBtn {
+    background: linear-gradient(180deg, #93f6ff, #45c8ff);
+  }
+
+  button.action:active {
+    transform: translateY(3px);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2), 0 5px 14px rgba(0,0,0,0.22);
+  }
+
+  .help {
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px 14px;
+    border: 2px solid rgba(255,255,255,0.16);
+    border-radius: 8px;
+    background: rgba(1, 10, 32, 0.43);
+    color: #e7f8ff;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 800;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    background: rgba(3, 7, 22, 0.72);
+    backdrop-filter: blur(7px);
+    text-align: center;
+  }
+
+  .overlay.show {
+    display: flex;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 354px;
+    padding: 24px 20px;
+    border: 3px solid rgba(255,255,255,0.8);
+    border-radius: 8px;
+    background: linear-gradient(180deg, #233486, #111947);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.42);
+  }
+
+  .modal h2 {
+    margin: 0 0 12px;
+    font-size: 36px;
+    line-height: 1;
+    color: #fff7a8;
+    text-shadow: 0 4px 0 #5d2261;
+  }
+
+  .modal p {
+    margin: 0 0 20px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #ffffff;
+  }
+
+  .again {
+    width: 100%;
+    height: 58px;
+    border: 0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #fff48a, #ffbd3d);
+    color: #111947;
+    font-size: 21px;
+    font-weight: 900;
+    box-shadow: inset 0 -6px 0 rgba(0,0,0,0.2), 0 8px 18px rgba(0,0,0,0.22);
+    touch-action: none;
+  }
+
+  @keyframes popGem {
+    to {
+      opacity: 0;
+      transform: scale(0.18) rotate(24deg);
+    }
+  }
+
+  @keyframes dropGem {
+    from {
+      transform: translateY(-24px) scale(0.9);
+      opacity: 0.45;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes swapPulse {
+    50% {
+      transform: scale(1.14);
+      filter: brightness(1.22);
+    }
+  }
+
+  @keyframes comboPop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.62) rotate(-5deg);
+    }
+    16% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.08) rotate(2deg);
+    }
+    76% {
+      opacity: 1;
+      transform: translate(-50%, -80%) scale(1) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -112%) scale(0.78) rotate(4deg);
+    }
+  }
+
+  @keyframes blastBoard {
+    40% {
+      filter: brightness(1.55);
+      transform: scale(1.015);
+    }
+    100% {
+      filter: brightness(1);
+      transform: scale(1);
+    }
+  }
+
+  @media (max-height: 824px) {
+    #game {
+      transform: scale(calc(100vh / 825));
+      transform-origin: center center;
+      max-width: 464px;
+      max-height: 825px;
+    }
+  }
+</style>
+</head>
+<body>
+<main id="game" aria-label="Jewel Match 3 Puzzle">
+  <section class="topbar" aria-label="Game status">
+    <div class="title">
+      <h1>JEWEL MATCH</h1>
+      <div class="sub">Match 3 Puzzle</div>
+    </div>
+    <div class="stat">
+      <div class="label">Score</div>
+      <div class="value" id="score">0</div>
+    </div>
+    <div class="stat">
+      <div class="label">Moves</div>
+      <div class="value" id="moves">30</div>
+    </div>
+  </section>
+
+  <div class="message" id="message">Connect 3+ matching jewels.</div>
+
+  <section class="board-wrap" id="boardWrap" aria-label="8 by 8 jewel board">
+    <div id="board"></div>
+    <div class="combo" id="comboText">Combo!</div>
+  </section>
+
+  <section class="controls" aria-label="Game controls">
+    <button class="action" id="startBtn" type="button">Start</button>
+    <button class="action" id="resetBtn" type="button">Reset</button>
+  </section>
+
+  <div class="help">Connect 3+ matching jewels vertically or horizontally. Match 4 to make a bomb, match 5+ to make a rainbow.</div>
+
+  <section class="overlay" id="overlay" aria-live="polite">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <p id="finalScore">Final Score: 0</p>
+      <button class="again" id="againBtn" type="button">もう一度遊ぶ</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  document.addEventListener("touchmove", function(e) {
+    e.preventDefault();
+  }, { passive: false });
+
+  const SIZE = 8;
+  const TYPES = 6;
+  const MAX_MOVES = 30;
+  const SWIPE_MIN = 20;
+  const SYMBOLS = ["◆", "●", "✦", "■", "⬟", "♥"];
+
+  const boardEl = document.getElementById("board");
+  const boardWrap = document.getElementById("boardWrap");
+  const scoreEl = document.getElementById("score");
+  const movesEl = document.getElementById("moves");
+  const messageEl = document.getElementById("message");
+  const comboText = document.getElementById("comboText");
+  const overlay = document.getElementById("overlay");
+  const finalScore = document.getElementById("finalScore");
+  const startBtn = document.getElementById("startBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const againBtn = document.getElementById("againBtn");
+
+  let board = [];
+  let score = 0;
+  let moves = MAX_MOVES;
+  let selected = null;
+  let busy = false;
+  let active = false;
+  let pointerStart = null;
+  let swapMarks = new Set();
+  let popMarks = new Set();
+  let dropMode = false;
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function key(r, c) {
+    return `${r},${c}`;
+  }
+
+  function inBounds(r, c) {
+    return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+  }
+
+  function randomGem() {
+    return {
+      type: Math.floor(Math.random() * TYPES),
+      special: null
+    };
+  }
+
+  function connectedCellsAt(r, c) {
+    const start = board[r][c];
+    if (!start || start.special === "rainbow") return [];
+
+    const cells = [];
+    const seen = new Set([key(r, c)]);
+    const queue = [{ r, c }];
+    const dirs = [
+      { r: -1, c: 0 },
+      { r: 1, c: 0 },
+      { r: 0, c: -1 },
+      { r: 0, c: 1 }
+    ];
+
+    while (queue.length) {
+      const current = queue.shift();
+      cells.push(current);
+      for (const dir of dirs) {
+        const nr = current.r + dir.r;
+        const nc = current.c + dir.c;
+        const item = key(nr, nc);
+        if (!inBounds(nr, nc) || seen.has(item)) continue;
+        const next = board[nr][nc];
+        if (!next || next.special === "rainbow" || next.type !== start.type) continue;
+        seen.add(item);
+        queue.push({ r: nr, c: nc });
+      }
+    }
+
+    return cells;
+  }
+
+  function createsConnectedMatch(r, c, gem) {
+    const previous = board[r][c];
+    board[r][c] = gem;
+    const matched = connectedCellsAt(r, c).length >= 3;
+    board[r][c] = previous;
+    return matched;
+  }
+
+  function makeSafeGem(r, c) {
+    for (let tries = 0; tries < 80; tries++) {
+      const gem = randomGem();
+      if (!createsConnectedMatch(r, c, gem)) return gem;
+    }
+    return randomGem();
+  }
+
+  function newBoard() {
+    let attempts = 0;
+    do {
+      board = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          board[r][c] = makeSafeGem(r, c);
+        }
+      }
+      attempts++;
+    } while (!hasPossibleMove() && attempts < 200);
+    if (!hasPossibleMove()) makeGuaranteedPlayableBoard();
+  }
+
+  function render() {
+    boardEl.innerHTML = "";
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
+        const gem = board[r][c];
+        if (gem) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = `gem ${gem.special === "rainbow" ? "rainbow" : `t${gem.type}`}`;
+          if (gem.special === "bomb") btn.classList.add("bomb");
+          if (selected && selected.r === r && selected.c === c) btn.classList.add("selected");
+          if (swapMarks.has(key(r, c))) btn.classList.add("swap");
+          if (popMarks.has(key(r, c))) btn.classList.add("pop");
+          if (dropMode) btn.classList.add("drop");
+          btn.dataset.row = String(r);
+          btn.dataset.col = String(c);
+          const label = document.createElement("span");
+          label.textContent = gem.special === "rainbow" ? "★" : gem.special === "bomb" ? "✹" : SYMBOLS[gem.type];
+          btn.appendChild(label);
+          cell.appendChild(btn);
+        }
+        boardEl.appendChild(cell);
+      }
+    }
+    scoreEl.textContent = String(score);
+    movesEl.textContent = String(moves);
+  }
+
+  function setMessage(text) {
+    messageEl.textContent = text;
+  }
+
+  function startGame() {
+    score = 0;
+    moves = MAX_MOVES;
+    selected = null;
+    busy = false;
+    active = true;
+    swapMarks.clear();
+    popMarks.clear();
+    dropMode = false;
+    overlay.classList.remove("show");
+    newBoard();
+    setMessage("Connect 3+ matching jewels.");
+    render();
+  }
+
+  function adjacent(a, b) {
+    return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+  }
+
+  function swapCells(a, b) {
+    const tmp = board[a.r][a.c];
+    board[a.r][a.c] = board[b.r][b.c];
+    board[b.r][b.c] = tmp;
+  }
+
+  function swapWouldClear(a, b) {
+    if (!inBounds(a.r, a.c) || !inBounds(b.r, b.c) || !adjacent(a, b)) return false;
+    const first = board[a.r][a.c];
+    const second = board[b.r][b.c];
+    if (!first || !second) return false;
+    if (first.special === "rainbow" || second.special === "rainbow") return true;
+
+    swapCells(a, b);
+    const clears = findMatches().length > 0;
+    swapCells(a, b);
+    return clears;
+  }
+
+  function hasPossibleMove() {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const here = { r, c };
+        const right = { r, c: c + 1 };
+        const down = { r: r + 1, c };
+        if (swapWouldClear(here, right) || swapWouldClear(here, down)) return true;
+      }
+    }
+    return false;
+  }
+
+  function shuffleArray(items) {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = items[i];
+      items[i] = items[j];
+      items[j] = temp;
+    }
+  }
+
+  function placeFlatBoard(items) {
+    let index = 0;
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        board[r][c] = items[index++];
+      }
+    }
+  }
+
+  function makeGuaranteedPlayableBoard() {
+    board = Array.from({ length: SIZE }, (_, r) =>
+      Array.from({ length: SIZE }, (_, c) => ({
+        type: 4 + ((r + c) % 2),
+        special: null
+      }))
+    );
+    board[0][0] = { type: 0, special: null };
+    board[0][1] = { type: 1, special: null };
+    board[0][2] = { type: 0, special: null };
+    board[1][0] = { type: 1, special: null };
+    board[1][1] = { type: 0, special: null };
+    board[1][2] = { type: 2, special: null };
+    board[2][0] = { type: 2, special: null };
+    board[2][1] = { type: 3, special: null };
+    board[2][2] = { type: 2, special: null };
+  }
+
+  function shuffleUntilPlayable() {
+    const gems = board.flat().filter(Boolean);
+    for (let tries = 0; tries < 300; tries++) {
+      shuffleArray(gems);
+      placeFlatBoard(gems);
+      if (findMatches().length === 0 && hasPossibleMove()) return;
+    }
+    newBoard();
+  }
+
+  async function ensurePlayableBoard() {
+    if (!active || moves <= 0 || hasPossibleMove()) return;
+    busy = true;
+    selected = null;
+    setMessage("No More Moves!");
+    render();
+    await wait(500);
+    shuffleUntilPlayable();
+    dropMode = true;
+    setMessage("Shuffled!");
+    render();
+    await wait(260);
+    dropMode = false;
+    busy = false;
+    setMessage("Connect 3+ matching jewels.");
+    render();
+  }
+
+  function findMatches() {
+    const groups = [];
+    const visited = new Set();
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const item = key(r, c);
+        const gem = board[r][c];
+        if (!gem || gem.special === "rainbow" || visited.has(item)) continue;
+        const cells = connectedCellsAt(r, c);
+        cells.forEach(cell => visited.add(key(cell.r, cell.c)));
+        if (cells.length >= 3) {
+          groups.push({
+            type: gem.type,
+            cells
+          });
+        }
+      }
+    }
+
+    return groups;
+  }
+
+  function scoreForLength(length) {
+    if (length >= 5) return 100;
+    if (length === 4) return 60;
+    return 30;
+  }
+
+  function pickCreationCell(group, origin) {
+    if (origin) {
+      const hit = group.cells.find(cell => cell.r === origin.r && cell.c === origin.c);
+      if (hit) return hit;
+    }
+    return group.cells[Math.floor(group.cells.length / 2)];
+  }
+
+  function showCombo(combo) {
+    comboText.textContent = combo > 1 ? `Combo x${combo}!` : "Combo!";
+    comboText.classList.remove("show");
+    void comboText.offsetWidth;
+    comboText.classList.add("show");
+  }
+
+  function expandBombs(clearSet) {
+    let changed = false;
+    do {
+      changed = false;
+      const keys = Array.from(clearSet);
+      for (const item of keys) {
+        const [r, c] = item.split(",").map(Number);
+        const gem = board[r][c];
+        if (!gem || gem.special !== "bomb") continue;
+        for (let rr = r - 1; rr <= r + 1; rr++) {
+          for (let cc = c - 1; cc <= c + 1; cc++) {
+            if (inBounds(rr, cc) && board[rr][cc] && !clearSet.has(key(rr, cc))) {
+              clearSet.add(key(rr, cc));
+              changed = true;
+            }
+          }
+        }
+      }
+    } while (changed);
+  }
+
+  async function clearGroups(groups, combo, origin) {
+    const multiplier = Math.min(combo, 3);
+    const clearSet = new Set();
+    const creations = new Map();
+    let bombTriggered = false;
+
+    for (const group of groups) {
+      score += scoreForLength(group.cells.length) * multiplier;
+      let creation = null;
+      if (group.cells.length >= 5) creation = "rainbow";
+      else if (group.cells.length === 4) creation = "bomb";
+
+      let creationKey = null;
+      if (creation) {
+        const chosen = pickCreationCell(group, origin);
+        creationKey = key(chosen.r, chosen.c);
+        creations.set(creationKey, { r: chosen.r, c: chosen.c, type: group.type, special: creation });
+      }
+
+      for (const cell of group.cells) {
+        const item = key(cell.r, cell.c);
+        if (item !== creationKey) clearSet.add(item);
+      }
+    }
+
+    expandBombs(clearSet);
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      if (board[r][c] && board[r][c].special === "bomb") bombTriggered = true;
+    }
+
+    if (clearSet.size > 0) {
+      showCombo(combo);
+      if (bombTriggered) {
+        boardWrap.classList.remove("blast");
+        void boardWrap.offsetWidth;
+        boardWrap.classList.add("blast");
+      }
+      popMarks = clearSet;
+      render();
+      await wait(190);
+      for (const item of clearSet) {
+        const [r, c] = item.split(",").map(Number);
+        board[r][c] = null;
+      }
+      for (const creation of creations.values()) {
+        board[creation.r][creation.c] = {
+          type: creation.special === "rainbow" ? 0 : creation.type,
+          special: creation.special
+        };
+      }
+      popMarks = new Set();
+      render();
+      await wait(90);
+    }
+  }
+
+  async function dropAndFill() {
+    for (let c = 0; c < SIZE; c++) {
+      const stack = [];
+      for (let r = SIZE - 1; r >= 0; r--) {
+        if (board[r][c]) stack.push(board[r][c]);
+      }
+      for (let r = SIZE - 1; r >= 0; r--) {
+        board[r][c] = stack.length ? stack.shift() : null;
+      }
+    }
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (!board[r][c]) board[r][c] = makeSafeGem(r, c);
+      }
+    }
+    dropMode = true;
+    render();
+    await wait(240);
+    dropMode = false;
+    render();
+  }
+
+  async function resolveBoard(origin) {
+    let combo = 1;
+    while (true) {
+      const groups = findMatches();
+      if (groups.length === 0) break;
+      setMessage(combo > 1 ? `Combo x${combo}!` : "Matched!");
+      await clearGroups(groups, combo, combo === 1 ? origin : null);
+      await dropAndFill();
+      combo++;
+    }
+    setMessage(moves > 0 ? "Connect 3+ matching jewels." : "No moves left!");
+  }
+
+  async function applyRainbowSwap(a, b) {
+    const first = board[a.r][a.c];
+    const second = board[b.r][b.c];
+    const rainbowCell = first.special === "rainbow" ? a : b;
+    const targetGem = first.special === "rainbow" ? second : first;
+    const clearSet = new Set([key(rainbowCell.r, rainbowCell.c)]);
+
+    if (targetGem.special === "rainbow") {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c]) clearSet.add(key(r, c));
+        }
+      }
+    } else {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] && board[r][c].special !== "rainbow" && board[r][c].type === targetGem.type) {
+            clearSet.add(key(r, c));
+          }
+        }
+      }
+      clearSet.add(key(b.r, b.c));
+      clearSet.add(key(a.r, a.c));
+    }
+
+    expandBombs(clearSet);
+    moves--;
+    score += clearSet.size * 10;
+    setMessage("Rainbow clear!");
+    popMarks = clearSet;
+    render();
+    await wait(220);
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      board[r][c] = null;
+    }
+    popMarks = new Set();
+    await dropAndFill();
+    await resolveBoard(null);
+    await ensurePlayableBoard();
+  }
+
+  async function attemptSwap(a, b) {
+    if (!active || busy || !inBounds(a.r, a.c) || !inBounds(b.r, b.c) || !adjacent(a, b)) return;
+    busy = true;
+    selected = null;
+
+    const first = board[a.r][a.c];
+    const second = board[b.r][b.c];
+    if (first.special === "rainbow" || second.special === "rainbow") {
+      await applyRainbowSwap(a, b);
+      busy = false;
+      checkGameOver();
+      return;
+    }
+
+    swapCells(a, b);
+    swapMarks = new Set([key(a.r, a.c), key(b.r, b.c)]);
+    setMessage("Swapping...");
+    render();
+    await wait(170);
+    swapMarks.clear();
+
+    const groups = findMatches();
+    if (groups.length === 0) {
+      swapCells(a, b);
+      swapMarks = new Set([key(a.r, a.c), key(b.r, b.c)]);
+      setMessage("No match!");
+      render();
+      await wait(210);
+      swapMarks.clear();
+      render();
+      busy = false;
+      return;
+    }
+
+    moves--;
+    await resolveBoard(b);
+    await ensurePlayableBoard();
+    busy = false;
+    checkGameOver();
+  }
+
+  function checkGameOver() {
+    render();
+    if (active && moves <= 0 && !busy) {
+      active = false;
+      selected = null;
+      setMessage("Game over!");
+      finalScore.textContent = `Final Score: ${score}`;
+      overlay.classList.add("show");
+    }
+  }
+
+  function cellFromEvent(event) {
+    const target = event.target.closest(".cell, .gem");
+    if (!target) return null;
+    const holder = target.classList.contains("cell") ? target : target.closest(".cell");
+    if (!holder) return null;
+    return {
+      r: Number(holder.dataset.row),
+      c: Number(holder.dataset.col)
+    };
+  }
+
+  function handleTap(cell) {
+    if (!active || busy || !board[cell.r][cell.c]) return;
+    if (!selected) {
+      selected = cell;
+      render();
+      return;
+    }
+    if (selected.r === cell.r && selected.c === cell.c) {
+      selected = null;
+      render();
+      return;
+    }
+    if (adjacent(selected, cell)) {
+      attemptSwap(selected, cell);
+      return;
+    }
+    selected = cell;
+    render();
+  }
+
+  boardEl.addEventListener("pointerdown", event => {
+    if (!active || busy) return;
+    event.preventDefault();
+    const cell = cellFromEvent(event);
+    if (!cell) return;
+    pointerStart = {
+      x: event.clientX,
+      y: event.clientY,
+      cell
+    };
+  });
+
+  boardEl.addEventListener("pointerup", event => {
+    if (!pointerStart || !active || busy) return;
+    event.preventDefault();
+    const dx = event.clientX - pointerStart.x;
+    const dy = event.clientY - pointerStart.y;
+    const start = pointerStart.cell;
+    pointerStart = null;
+
+    if (Math.max(Math.abs(dx), Math.abs(dy)) >= SWIPE_MIN) {
+      const target = { r: start.r, c: start.c };
+      if (Math.abs(dx) >= Math.abs(dy)) target.c += dx > 0 ? 1 : -1;
+      else target.r += dy > 0 ? 1 : -1;
+      if (inBounds(target.r, target.c)) attemptSwap(start, target);
+      return;
+    }
+
+    const tapped = cellFromEvent(event) || start;
+    handleTap(tapped);
+  });
+
+  boardEl.addEventListener("pointercancel", () => {
+    pointerStart = null;
+  });
+
+  document.addEventListener("gesturestart", event => {
+    event.preventDefault();
+  });
+
+  startBtn.addEventListener("click", startGame);
+  resetBtn.addEventListener("click", startGame);
+  againBtn.addEventListener("click", startGame);
+
+  startGame();
+})();
+</script>
+</body>
+</html>
