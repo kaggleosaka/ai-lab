@@ -15,6 +15,8 @@
     padding: 0;
     width: 100%;
     height: 100%;
+    height: 100svh;
+    height: 100dvh;
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: none;
@@ -23,7 +25,7 @@
 
   body {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     background:
       radial-gradient(circle at 18% 12%, rgba(43, 220, 255, 0.22), transparent 28%),
@@ -34,10 +36,9 @@
   }
 
   #game {
-    width: 464px;
-    height: 825px;
-    max-width: 100vw;
-    max-height: 100vh;
+    width: min(100vw, 464px);
+    height: min(100svh, 825px);
+    height: min(100dvh, 825px);
     overflow: hidden;
     touch-action: none;
     position: relative;
@@ -132,10 +133,9 @@
 
   .board-wrap {
     position: relative;
-    width: 432px;
-    height: 432px;
-    max-width: calc(100vw - 32px);
-    max-height: calc(100vw - 32px);
+    width: min(432px, 100%);
+    aspect-ratio: 1 / 1;
+    height: auto;
     flex: 0 0 auto;
     border: 4px solid rgba(255,255,255,0.84);
     border-radius: 8px;
@@ -288,7 +288,8 @@
   }
 
   .gem.pop {
-    animation: popGem 180ms ease forwards;
+    animation: chainPop 330ms cubic-bezier(.2,.82,.24,1) forwards;
+    animation-delay: var(--pop-delay, 0ms);
   }
 
   .gem.drop {
@@ -301,6 +302,14 @@
 
   .board-wrap.blast {
     animation: blastBoard 240ms ease;
+  }
+
+  .board-wrap.cascade {
+    animation: cascadeBoard 560ms ease;
+  }
+
+  .board-wrap.blast.cascade {
+    animation: cascadeBoard 560ms ease, blastBoard 260ms ease;
   }
 
   .combo {
@@ -322,13 +331,13 @@
   }
 
   .combo.show {
-    animation: comboPop 620ms ease forwards;
+    animation: comboPop 850ms ease forwards;
   }
 
   .controls {
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
     margin-top: 25px;
   }
@@ -354,22 +363,13 @@
     background: linear-gradient(180deg, #93f6ff, #45c8ff);
   }
 
+  #rulesBtn {
+    background: linear-gradient(180deg, #ffc7f4, #d787ff);
+  }
+
   button.action:active {
     transform: translateY(3px);
     box-shadow: inset 0 -3px 0 rgba(0,0,0,0.2), 0 5px 14px rgba(0,0,0,0.22);
-  }
-
-  .help {
-    width: 100%;
-    margin-top: 16px;
-    padding: 13px 14px;
-    border: 2px solid rgba(255,255,255,0.16);
-    border-radius: 8px;
-    background: rgba(1, 10, 32, 0.43);
-    color: #e7f8ff;
-    font-size: 14px;
-    line-height: 1.4;
-    font-weight: 800;
   }
 
   .overlay {
@@ -427,10 +427,21 @@
     touch-action: none;
   }
 
-  @keyframes popGem {
-    to {
+  @keyframes chainPop {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+      filter: brightness(1);
+    }
+    34% {
+      opacity: 1;
+      transform: scale(1.22) rotate(-7deg);
+      filter: brightness(1.75) saturate(1.35);
+    }
+    100% {
       opacity: 0;
-      transform: scale(0.18) rotate(24deg);
+      transform: scale(0.08) rotate(34deg);
+      filter: brightness(2.1) saturate(1.6);
     }
   }
 
@@ -471,6 +482,21 @@
     }
   }
 
+  @keyframes cascadeBoard {
+    0% {
+      filter: brightness(1);
+      transform: scale(1);
+    }
+    34% {
+      filter: brightness(1.32) saturate(1.2);
+      transform: scale(1.01);
+    }
+    100% {
+      filter: brightness(1);
+      transform: scale(1);
+    }
+  }
+
   @keyframes blastBoard {
     40% {
       filter: brightness(1.55);
@@ -482,12 +508,34 @@
     }
   }
 
-  @media (max-height: 824px) {
+  @media (max-width: 380px), (max-height: 720px) {
     #game {
-      transform: scale(calc(100vh / 825));
-      transform-origin: center center;
-      max-width: 464px;
-      max-height: 825px;
+      padding: 12px 12px 14px;
+    }
+
+    h1 {
+      font-size: 21px;
+    }
+
+    .message {
+      height: 34px;
+      font-size: 13px;
+    }
+
+    .controls {
+      margin-top: 16px;
+      gap: 8px;
+    }
+
+    button.action {
+      height: 52px;
+      font-size: 16px;
+    }
+  }
+
+  @media (min-height: 826px) {
+    body {
+      align-items: center;
     }
   }
 </style>
@@ -519,15 +567,22 @@
   <section class="controls" aria-label="Game controls">
     <button class="action" id="startBtn" type="button">Start</button>
     <button class="action" id="resetBtn" type="button">Reset</button>
+    <button class="action" id="rulesBtn" type="button">Rules</button>
   </section>
-
-  <div class="help">Connect 3+ matching jewels vertically or horizontally. Match 4 to make a bomb, match 5+ to make a rainbow.</div>
 
   <section class="overlay" id="overlay" aria-live="polite">
     <div class="modal">
       <h2>Game Over</h2>
       <p id="finalScore">Final Score: 0</p>
       <button class="again" id="againBtn" type="button">もう一度遊ぶ</button>
+    </div>
+  </section>
+
+  <section class="overlay" id="rulesOverlay" aria-live="polite">
+    <div class="modal">
+      <h2>Rules</h2>
+      <p>Swipe adjacent jewels. Connect 3+ to clear. Four makes a bomb. Five or more makes a rainbow. No moves will shuffle automatically.</p>
+      <button class="again" id="closeRulesBtn" type="button">Close</button>
     </div>
   </section>
 </main>
@@ -556,6 +611,9 @@
   const finalScore = document.getElementById("finalScore");
   const startBtn = document.getElementById("startBtn");
   const resetBtn = document.getElementById("resetBtn");
+  const rulesBtn = document.getElementById("rulesBtn");
+  const rulesOverlay = document.getElementById("rulesOverlay");
+  const closeRulesBtn = document.getElementById("closeRulesBtn");
   const againBtn = document.getElementById("againBtn");
 
   let board = [];
@@ -567,6 +625,7 @@
   let pointerStart = null;
   let swapMarks = new Set();
   let popMarks = new Set();
+  let popDelays = new Map();
   let dropMode = false;
 
   function wait(ms) {
@@ -667,6 +726,7 @@
           if (selected && selected.r === r && selected.c === c) btn.classList.add("selected");
           if (swapMarks.has(key(r, c))) btn.classList.add("swap");
           if (popMarks.has(key(r, c))) btn.classList.add("pop");
+          if (popDelays.has(key(r, c))) btn.style.setProperty("--pop-delay", `${popDelays.get(key(r, c))}ms`);
           if (dropMode) btn.classList.add("drop");
           btn.dataset.row = String(r);
           btn.dataset.col = String(c);
@@ -694,8 +754,10 @@
     active = true;
     swapMarks.clear();
     popMarks.clear();
+    popDelays.clear();
     dropMode = false;
     overlay.classList.remove("show");
+    rulesOverlay.classList.remove("show");
     newBoard();
     setMessage("Connect 3+ matching jewels.");
     render();
@@ -838,7 +900,7 @@
   }
 
   function showCombo(combo) {
-    comboText.textContent = combo > 1 ? `Combo x${combo}!` : "Combo!";
+    comboText.textContent = combo > 1 ? `Chain x${combo}!` : "Combo!";
     comboText.classList.remove("show");
     void comboText.offsetWidth;
     comboText.classList.add("show");
@@ -898,14 +960,29 @@
 
     if (clearSet.size > 0) {
       showCombo(combo);
+      boardWrap.classList.remove("cascade");
+      void boardWrap.offsetWidth;
+      boardWrap.classList.add("cascade");
       if (bombTriggered) {
         boardWrap.classList.remove("blast");
         void boardWrap.offsetWidth;
         boardWrap.classList.add("blast");
       }
+      let maxDelay = 0;
+      const ordered = Array.from(clearSet).sort((a, b) => {
+        const [ar, ac] = a.split(",").map(Number);
+        const [br, bc] = b.split(",").map(Number);
+        return (ar + ac) - (br + bc);
+      });
+      popDelays = new Map();
+      ordered.forEach((item, index) => {
+        const delay = Math.min(index * 30, 240);
+        popDelays.set(item, delay);
+        maxDelay = Math.max(maxDelay, delay);
+      });
       popMarks = clearSet;
       render();
-      await wait(190);
+      await wait(maxDelay + 340);
       for (const item of clearSet) {
         const [r, c] = item.split(",").map(Number);
         board[r][c] = null;
@@ -917,6 +994,7 @@
         };
       }
       popMarks = new Set();
+      popDelays.clear();
       render();
       await wait(90);
     }
@@ -1124,6 +1202,12 @@
 
   startBtn.addEventListener("click", startGame);
   resetBtn.addEventListener("click", startGame);
+  rulesBtn.addEventListener("click", () => {
+    rulesOverlay.classList.add("show");
+  });
+  closeRulesBtn.addEventListener("click", () => {
+    rulesOverlay.classList.remove("show");
+  });
   againBtn.addEventListener("click", startGame);
 
   startGame();
