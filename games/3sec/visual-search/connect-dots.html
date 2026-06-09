@@ -12,12 +12,15 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+      overscroll-behavior: none;
       background: #dfe7f1;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       touch-action: none;
       user-select: none;
     }
     body {
+      position: fixed;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -100,6 +103,11 @@
       border: 1px solid rgba(148,163,184,0.25);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(70,90,120,0.09);
       overflow: hidden;
+      touch-action: none;
+    }
+    #board,
+    #lineLayer,
+    .dot {
       touch-action: none;
     }
     #lineLayer {
@@ -264,6 +272,14 @@
     const restartBtn = document.getElementById('restartBtn');
     const relaxBtn = document.getElementById('relaxBtn');
 
+    document.addEventListener('touchmove', e => {
+      if (!e.target.closest('.menu-back')) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', e => {
+      e.preventDefault();
+    });
+
     let grid = [];
     let selected = [];
     let dragging = false;
@@ -329,7 +345,12 @@
 
     function getBoardPoint(e) {
       const rect = boardWrap.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const scaleX = rect.width / boardWrap.offsetWidth || 1;
+      const scaleY = rect.height / boardWrap.offsetHeight || 1;
+      return {
+        x: (e.clientX - rect.left) / scaleX,
+        y: (e.clientY - rect.top) / scaleY
+      };
     }
 
     function dotFromPoint(e) {
@@ -415,10 +436,14 @@
       }
     }
 
+    function scoreForChain(count) {
+      return count * count * 10;
+    }
+
     function removeSelected() {
       locked = true;
       const count = selected.length;
-      const points = count === 2 ? 20 : count === 3 ? 50 : count === 4 ? 80 : 120 + (count - 5) * 30;
+      const points = scoreForChain(count);
       score += points;
       cleared += count;
       if (!relaxMode) moves--;
@@ -428,7 +453,7 @@
         grid[d.row][d.col] = null;
       });
       lineLayer.innerHTML = '';
-      messageEl.textContent = `Nice! +${points}`;
+      messageEl.textContent = count >= 5 ? `Big chain! ${count} dots +${points}` : `Nice! ${count} dots +${points}`;
       updateHud();
 
       setTimeout(() => {
@@ -508,8 +533,17 @@
       if (selected.length > 0) drawLines(getBoardPoint(e));
     });
 
-    boardWrap.addEventListener('pointerup', endDrag);
+    boardWrap.addEventListener('pointerup', e => {
+      e.preventDefault();
+      endDrag();
+    });
     boardWrap.addEventListener('pointercancel', endDrag);
+    boardWrap.addEventListener('touchstart', e => {
+      e.preventDefault();
+    }, { passive: false });
+    boardWrap.addEventListener('touchmove', e => {
+      e.preventDefault();
+    }, { passive: false });
 
     startBtn.addEventListener('click', initGame);
     restartBtn.addEventListener('click', initGame);
