@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<title>Jewel Match 3 Puzzle</title>
+<title>Fruit Match 3 Puzzle</title>
 <style>
   * {
     box-sizing: border-box;
@@ -131,6 +131,69 @@
     text-shadow: 0 2px 0 #000;
   }
 
+  .special-guide {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .guide-item {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 8px;
+    align-items: center;
+    min-height: 48px;
+    padding: 6px 8px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(4, 13, 38, 0.58);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,0.22);
+  }
+
+  .guide-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.42);
+  }
+
+  .guide-icon.bomb-icon {
+    background: radial-gradient(circle at 32% 22%, #fff7a8, #ff8a45 48%, #a70d3d 100%);
+    outline: 2px solid rgba(255,255,255,0.92);
+    outline-offset: -3px;
+    box-shadow: 0 0 14px rgba(255,236,80,0.62);
+  }
+
+  .guide-icon.rainbow-icon {
+    border-radius: 50%;
+    background: conic-gradient(#ff406d, #ffd243, #3ce074, #23c2ff, #9c67ff, #ff406d);
+    box-shadow: 0 0 14px rgba(255,255,255,0.45);
+  }
+
+  .guide-copy {
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.18;
+    font-weight: 900;
+    color: #e8fbff;
+    text-align: left;
+  }
+
+  .guide-copy strong {
+    display: block;
+    color: #fff7a8;
+    font-size: 12px;
+    line-height: 1.1;
+  }
+
   .board-wrap {
     position: relative;
     width: min(432px, 100%);
@@ -177,16 +240,16 @@
     max-height: 45px;
     aspect-ratio: 1 / 1;
     border: 0;
-    border-radius: 15px;
+    border-radius: 18px;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 22px;
+    font-size: 25px;
     font-weight: 900;
     line-height: 1;
-    text-shadow: 0 2px 0 rgba(0,0,0,0.36);
+    text-shadow: 0 2px 0 rgba(0,0,0,0.26);
     cursor: pointer;
     transform: translateZ(0);
     transition: transform 130ms ease, opacity 150ms ease, filter 150ms ease;
@@ -215,52 +278,52 @@
   .gem span {
     position: relative;
     z-index: 2;
-    transform: translateY(1px);
+    transform: translateY(1px) scale(1.08);
   }
 
   .gem.t0 {
-    background: radial-gradient(circle at 32% 22%, #ffb8c6, #fa3d72 48%, #a70d3d 100%);
-    box-shadow: inset 0 -7px 0 rgba(110,0,36,0.34), 0 5px 0 #720a31;
+    background: radial-gradient(circle at 32% 20%, #ffe0e7, #ff5d8f 48%, #b80f42 100%);
+    box-shadow: inset 0 -7px 0 rgba(122,0,40,0.3), 0 5px 0 #7a1536;
   }
 
   .gem.t1 {
     border-radius: 50%;
-    background: radial-gradient(circle at 33% 22%, #b9f8ff, #17b7ff 48%, #0753b8 100%);
-    box-shadow: inset 0 -7px 0 rgba(0,50,130,0.34), 0 5px 0 #07377c;
+    background: radial-gradient(circle at 34% 22%, #fff0b8, #ff9f3f 48%, #c44908 100%);
+    box-shadow: inset 0 -7px 0 rgba(148,54,0,0.3), 0 5px 0 #8a3307;
   }
 
   .gem.t2 {
-    border-radius: 12px 22px 12px 22px;
-    background: radial-gradient(circle at 33% 22%, #fff5a5, #ffc83d 48%, #d16806 100%);
-    box-shadow: inset 0 -7px 0 rgba(139,66,0,0.34), 0 5px 0 #8a4200;
+    border-radius: 18px 24px 18px 24px;
+    background: radial-gradient(circle at 33% 22%, #fffbd0, #ffe35a 48%, #d89c07 100%);
+    box-shadow: inset 0 -7px 0 rgba(139,96,0,0.3), 0 5px 0 #8c6200;
   }
 
   .gem.t3 {
-    border-radius: 8px;
-    transform: rotate(45deg) scale(0.86);
-    background: radial-gradient(circle at 32% 20%, #c8ffd4, #37d36b 48%, #08783b 100%);
-    box-shadow: inset 0 -7px 0 rgba(0,94,38,0.32), 4px 4px 0 #075d31;
+    border-radius: 50%;
+    transform: scale(0.96);
+    background: radial-gradient(circle at 32% 20%, #dcffd0, #74d85d 48%, #1f8c31 100%);
+    box-shadow: inset 0 -7px 0 rgba(0,94,38,0.28), 0 5px 0 #146322;
   }
 
   .gem.t3 span {
-    transform: rotate(-45deg);
+    transform: translateY(1px) scale(1.08);
   }
 
   .gem.t4 {
-    clip-path: polygon(50% 4%, 93% 27%, 82% 87%, 18% 87%, 7% 27%);
-    border-radius: 10px;
-    background: radial-gradient(circle at 32% 20%, #e5c8ff, #a45cff 48%, #5c18b5 100%);
-    box-shadow: inset 0 -7px 0 rgba(72,0,120,0.34), 0 5px 0 #3a0d75;
+    clip-path: none;
+    border-radius: 22px;
+    background: radial-gradient(circle at 32% 20%, #f2d6ff, #b778ff 48%, #6820b8 100%);
+    box-shadow: inset 0 -7px 0 rgba(72,0,120,0.3), 0 5px 0 #4a1586;
   }
 
   .gem.t4::after {
-    clip-path: inherit;
+    clip-path: none;
   }
 
   .gem.t5 {
-    border-radius: 22px 8px 22px 8px;
-    background: radial-gradient(circle at 32% 20%, #ffe1cf, #ff8245 48%, #ba2d0d 100%);
-    box-shadow: inset 0 -7px 0 rgba(120,29,0,0.34), 0 5px 0 #772000;
+    border-radius: 24px 12px 24px 12px;
+    background: radial-gradient(circle at 32% 20%, #d9fff2, #40d7b9 48%, #05866e 100%);
+    box-shadow: inset 0 -7px 0 rgba(0,104,80,0.3), 0 5px 0 #075f50;
   }
 
   .gem.bomb {
@@ -284,7 +347,7 @@
   }
 
   .gem.t3.selected {
-    transform: rotate(45deg) translateY(-3px) scale(0.96);
+    transform: translateY(-3px) scale(1.06);
   }
 
   .gem.pop {
@@ -293,7 +356,9 @@
   }
 
   .gem.drop {
-    animation: dropGem 230ms cubic-bezier(.17,.84,.44,1.08);
+    animation: dropGem 420ms cubic-bezier(.2,.86,.24,1.12);
+    animation-delay: var(--drop-delay, 0ms);
+    animation-fill-mode: both;
   }
 
   .gem.swap {
@@ -332,6 +397,62 @@
 
   .combo.show {
     animation: comboPop 850ms ease forwards;
+  }
+
+  .fx-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .spark {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--spark-color, #fff7a8);
+    box-shadow: 0 0 8px var(--spark-color, #fff7a8);
+    transform: translate(-50%, -50%);
+    animation: sparkBurst 520ms ease-out forwards;
+    animation-delay: var(--delay, 0ms);
+  }
+
+  .score-float {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    min-width: 46px;
+    padding: 4px 8px;
+    border: 2px solid rgba(255,255,255,0.86);
+    border-radius: 8px;
+    background: rgba(8, 15, 45, 0.82);
+    color: #fff7a8;
+    font-size: 18px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.45);
+    transform: translate(-50%, -50%);
+    animation: scoreFly 780ms ease-out forwards;
+  }
+
+  .rainbow-beam {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    width: var(--len);
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,255,255,0), #fff, #23c2ff, #ff406d, rgba(255,255,255,0));
+    box-shadow: 0 0 13px rgba(255,255,255,0.78), 0 0 20px rgba(35,194,255,0.58);
+    transform: translateY(-50%) rotate(var(--angle));
+    transform-origin: left center;
+    animation: rainbowBeam 460ms ease-out forwards;
+    animation-delay: var(--delay, 0ms);
   }
 
   .controls {
@@ -446,11 +567,19 @@
   }
 
   @keyframes dropGem {
-    from {
-      transform: translateY(-24px) scale(0.9);
+    0% {
+      transform: translateY(-34px) scale(0.88);
       opacity: 0.45;
     }
-    to {
+    62% {
+      transform: translateY(5px) scale(1.06, 0.94);
+      opacity: 1;
+    }
+    82% {
+      transform: translateY(-3px) scale(0.96, 1.04);
+      opacity: 1;
+    }
+    100% {
       transform: translateY(0) scale(1);
       opacity: 1;
     }
@@ -508,6 +637,58 @@
     }
   }
 
+  @keyframes sparkBurst {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.25);
+    }
+    100% {
+      opacity: 0;
+      transform:
+        translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+        scale(0.2)
+        rotate(220deg);
+    }
+  }
+
+  @keyframes scoreFly {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -20%) scale(0.72);
+    }
+    16% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+    72% {
+      opacity: 1;
+      transform: translate(-50%, -128%) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -192%) scale(0.72);
+    }
+  }
+
+  @keyframes rainbowBeam {
+    0% {
+      opacity: 0;
+      transform: translateY(-50%) rotate(var(--angle)) scaleX(0.05);
+    }
+    26% {
+      opacity: 1;
+      transform: translateY(-50%) rotate(var(--angle)) scaleX(1.04);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-50%) rotate(var(--angle)) scaleX(1);
+    }
+  }
+
   @media (max-width: 380px), (max-height: 720px) {
     #game {
       padding: 12px 12px 14px;
@@ -520,6 +701,32 @@
     .message {
       height: 34px;
       font-size: 13px;
+    }
+
+    .special-guide {
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .guide-item {
+      grid-template-columns: 30px 1fr;
+      min-height: 42px;
+      padding: 5px 6px;
+      gap: 6px;
+    }
+
+    .guide-icon {
+      width: 30px;
+      height: 30px;
+      font-size: 18px;
+    }
+
+    .guide-copy {
+      font-size: 10px;
+    }
+
+    .guide-copy strong {
+      font-size: 11px;
     }
 
     .controls {
@@ -541,10 +748,10 @@
 </style>
 </head>
 <body>
-<main id="game" aria-label="Jewel Match 3 Puzzle">
+<main id="game" aria-label="Fruit Match 3 Puzzle">
   <section class="topbar" aria-label="Game status">
     <div class="title">
-      <h1>JEWEL MATCH</h1>
+      <h1>FRUIT MATCH</h1>
       <div class="sub">Match 3 Puzzle</div>
     </div>
     <div class="stat">
@@ -557,11 +764,23 @@
     </div>
   </section>
 
-  <div class="message" id="message">Connect 3+ matching jewels.</div>
+  <div class="message" id="message">Match 3+ juicy fruits.</div>
 
-  <section class="board-wrap" id="boardWrap" aria-label="8 by 8 jewel board">
+  <section class="special-guide" aria-label="Special fruit help">
+    <div class="guide-item">
+      <div class="guide-icon bomb-icon" aria-hidden="true">💥</div>
+      <div class="guide-copy"><strong>Bomb</strong>Swap with a neighbor for 3x3 blast.</div>
+    </div>
+    <div class="guide-item">
+      <div class="guide-icon rainbow-icon" aria-hidden="true">🌈</div>
+      <div class="guide-copy"><strong>Rainbow</strong>Swap with any fruit to clear that color.</div>
+    </div>
+  </section>
+
+  <section class="board-wrap" id="boardWrap" aria-label="8 by 8 fruit board">
     <div id="board"></div>
     <div class="combo" id="comboText">Combo!</div>
+    <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
   </section>
 
   <section class="controls" aria-label="Game controls">
@@ -581,7 +800,9 @@
   <section class="overlay" id="rulesOverlay" aria-live="polite">
     <div class="modal">
       <h2>Rules</h2>
-      <p>Swipe adjacent jewels. Connect 3+ to clear. Four makes a bomb. Five or more makes a rainbow. No moves will shuffle automatically.</p>
+      <p>Swipe adjacent fruits. Match 3+ to clear.</p>
+      <p>Four makes a bomb. Swap a bomb with any neighbor to blast a 3x3 area.</p>
+      <p>Five or more makes a rainbow. Swap a rainbow with any fruit to clear that color. Rainbow + rainbow clears all.</p>
       <button class="again" id="closeRulesBtn" type="button">Close</button>
     </div>
   </section>
@@ -599,7 +820,7 @@
   const TYPES = 6;
   const MAX_MOVES = 30;
   const SWIPE_MIN = 20;
-  const SYMBOLS = ["◆", "●", "✦", "■", "⬟", "♥"];
+  const SYMBOLS = ["🍓", "🍊", "🍋", "🍏", "🍇", "🍉"];
 
   const boardEl = document.getElementById("board");
   const boardWrap = document.getElementById("boardWrap");
@@ -607,6 +828,7 @@
   const movesEl = document.getElementById("moves");
   const messageEl = document.getElementById("message");
   const comboText = document.getElementById("comboText");
+  const fxLayer = document.getElementById("fxLayer");
   const overlay = document.getElementById("overlay");
   const finalScore = document.getElementById("finalScore");
   const startBtn = document.getElementById("startBtn");
@@ -626,6 +848,7 @@
   let swapMarks = new Set();
   let popMarks = new Set();
   let popDelays = new Map();
+  let dropDelays = new Map();
   let dropMode = false;
 
   function wait(ms) {
@@ -728,10 +951,11 @@
           if (popMarks.has(key(r, c))) btn.classList.add("pop");
           if (popDelays.has(key(r, c))) btn.style.setProperty("--pop-delay", `${popDelays.get(key(r, c))}ms`);
           if (dropMode) btn.classList.add("drop");
+          if (dropDelays.has(key(r, c))) btn.style.setProperty("--drop-delay", `${dropDelays.get(key(r, c))}ms`);
           btn.dataset.row = String(r);
           btn.dataset.col = String(c);
           const label = document.createElement("span");
-          label.textContent = gem.special === "rainbow" ? "★" : gem.special === "bomb" ? "✹" : SYMBOLS[gem.type];
+          label.textContent = gem.special === "rainbow" ? "🌈" : gem.special === "bomb" ? "💥" : SYMBOLS[gem.type];
           btn.appendChild(label);
           cell.appendChild(btn);
         }
@@ -755,11 +979,13 @@
     swapMarks.clear();
     popMarks.clear();
     popDelays.clear();
+    dropDelays.clear();
+    clearEffects();
     dropMode = false;
     overlay.classList.remove("show");
     rulesOverlay.classList.remove("show");
     newBoard();
-    setMessage("Connect 3+ matching jewels.");
+    setMessage("Match 3+ juicy fruits.");
     render();
   }
 
@@ -779,6 +1005,7 @@
     const second = board[b.r][b.c];
     if (!first || !second) return false;
     if (first.special === "rainbow" || second.special === "rainbow") return true;
+    if (first.special === "bomb" || second.special === "bomb") return true;
 
     swapCells(a, b);
     const clears = findMatches().length > 0;
@@ -906,6 +1133,101 @@
     comboText.classList.add("show");
   }
 
+  function cellPoint(cell) {
+    return {
+      x: ((cell.c + 0.5) / SIZE) * 100,
+      y: ((cell.r + 0.5) / SIZE) * 100
+    };
+  }
+
+  function gemColor(gem) {
+    if (!gem) return "#ffffff";
+    if (gem.special === "rainbow") return "#ffffff";
+    return ["#ff5d8f", "#ff965f", "#ffd243", "#74d85d", "#b778ff", "#40d7b9"][gem.type] || "#ffffff";
+  }
+
+  function clearEffects() {
+    fxLayer.innerHTML = "";
+  }
+
+  function removeAfter(node, ms) {
+    window.setTimeout(() => {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    }, ms);
+  }
+
+  function spawnSpark(cell, color, delay, angle, distance) {
+    const point = cellPoint(cell);
+    const spark = document.createElement("span");
+    spark.className = "spark";
+    spark.style.setProperty("--x", `${point.x}%`);
+    spark.style.setProperty("--y", `${point.y}%`);
+    spark.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    spark.style.setProperty("--spark-color", color);
+    spark.style.setProperty("--delay", `${delay}ms`);
+    fxLayer.appendChild(spark);
+    removeAfter(spark, delay + 600);
+  }
+
+  function spawnClearBursts(clearSet) {
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      const gem = board[r][c];
+      const color = gemColor(gem);
+      const delay = popDelays.get(item) || 0;
+      for (let i = 0; i < 4; i++) {
+        const angle = (Math.PI * 2 * i) / 4 + ((r + c) % 2) * 0.35;
+        spawnSpark({ r, c }, color, delay + i * 18, angle, 18 + i * 6);
+      }
+    }
+  }
+
+  function showFloatingScore(clearSet, amount, label = "") {
+    if (!clearSet.size || amount <= 0) return;
+    let totalR = 0;
+    let totalC = 0;
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      totalR += r;
+      totalC += c;
+    }
+    const cell = {
+      r: totalR / clearSet.size,
+      c: totalC / clearSet.size
+    };
+    const point = cellPoint(cell);
+    const float = document.createElement("span");
+    float.className = "score-float";
+    float.textContent = `${label}+${amount}`;
+    float.style.setProperty("--x", `${point.x}%`);
+    float.style.setProperty("--y", `${point.y}%`);
+    fxLayer.appendChild(float);
+    removeAfter(float, 860);
+  }
+
+  function showRainbowBeams(origin, clearSet) {
+    const start = cellPoint(origin);
+    const size = boardWrap.clientWidth || 1;
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      if (r === origin.r && c === origin.c) continue;
+      const dx = c - origin.c;
+      const dy = r - origin.r;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (!distance) continue;
+      const beam = document.createElement("span");
+      beam.className = "rainbow-beam";
+      beam.style.setProperty("--x", `${start.x}%`);
+      beam.style.setProperty("--y", `${start.y}%`);
+      beam.style.setProperty("--len", `${(distance * size) / SIZE}px`);
+      beam.style.setProperty("--angle", `${Math.atan2(dy, dx)}rad`);
+      beam.style.setProperty("--delay", `${Math.min(distance * 18, 150)}ms`);
+      fxLayer.appendChild(beam);
+      removeAfter(beam, 620);
+    }
+  }
+
   function expandBombs(clearSet) {
     let changed = false;
     do {
@@ -931,10 +1253,13 @@
     const multiplier = Math.min(combo, 3);
     const clearSet = new Set();
     const creations = new Map();
+    let earned = 0;
     let bombTriggered = false;
 
     for (const group of groups) {
-      score += scoreForLength(group.cells.length) * multiplier;
+      const groupScore = scoreForLength(group.cells.length) * multiplier;
+      score += groupScore;
+      earned += groupScore;
       let creation = null;
       if (group.cells.length >= 5) creation = "rainbow";
       else if (group.cells.length === 4) creation = "bomb";
@@ -981,6 +1306,8 @@
         maxDelay = Math.max(maxDelay, delay);
       });
       popMarks = clearSet;
+      spawnClearBursts(clearSet);
+      showFloatingScore(clearSet, earned);
       render();
       await wait(maxDelay + 340);
       for (const item of clearSet) {
@@ -1015,10 +1342,17 @@
         if (!board[r][c]) board[r][c] = makeSafeGem(r, c);
       }
     }
+    dropDelays = new Map();
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        dropDelays.set(key(r, c), Math.min(r * 18 + c * 8, 190));
+      }
+    }
     dropMode = true;
     render();
-    await wait(240);
+    await wait(620);
     dropMode = false;
+    dropDelays.clear();
     render();
   }
 
@@ -1032,7 +1366,7 @@
       await dropAndFill();
       combo++;
     }
-    setMessage(moves > 0 ? "Connect 3+ matching jewels." : "No moves left!");
+    setMessage(moves > 0 ? "Match 3+ juicy fruits." : "No moves left!");
   }
 
   async function applyRainbowSwap(a, b) {
@@ -1062,16 +1396,68 @@
 
     expandBombs(clearSet);
     moves--;
-    score += clearSet.size * 10;
+    const earned = clearSet.size * 10;
+    score += earned;
     setMessage("Rainbow clear!");
+    popDelays = new Map();
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      const distance = Math.abs(r - rainbowCell.r) + Math.abs(c - rainbowCell.c);
+      popDelays.set(item, Math.min(distance * 24, 180));
+    }
     popMarks = clearSet;
+    showRainbowBeams(rainbowCell, clearSet);
+    spawnClearBursts(clearSet);
+    showFloatingScore(clearSet, earned);
     render();
-    await wait(220);
+    await wait(520);
     for (const item of clearSet) {
       const [r, c] = item.split(",").map(Number);
       board[r][c] = null;
     }
     popMarks = new Set();
+    popDelays.clear();
+    await dropAndFill();
+    await resolveBoard(null);
+    await ensurePlayableBoard();
+  }
+
+  async function applyBombSwap(a, b) {
+    const first = board[a.r][a.c];
+    const bombCell = first.special === "bomb" ? a : b;
+    const clearSet = new Set();
+
+    for (let r = bombCell.r - 1; r <= bombCell.r + 1; r++) {
+      for (let c = bombCell.c - 1; c <= bombCell.c + 1; c++) {
+        if (inBounds(r, c) && board[r][c]) clearSet.add(key(r, c));
+      }
+    }
+
+    expandBombs(clearSet);
+    moves--;
+    const earned = clearSet.size * 12;
+    score += earned;
+    setMessage("Bomb blast!");
+    boardWrap.classList.remove("blast");
+    void boardWrap.offsetWidth;
+    boardWrap.classList.add("blast");
+    popDelays = new Map();
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      const distance = Math.abs(r - bombCell.r) + Math.abs(c - bombCell.c);
+      popDelays.set(item, Math.min(distance * 36, 180));
+    }
+    popMarks = clearSet;
+    spawnClearBursts(clearSet);
+    showFloatingScore(clearSet, earned, "BOMB ");
+    render();
+    await wait(520);
+    for (const item of clearSet) {
+      const [r, c] = item.split(",").map(Number);
+      board[r][c] = null;
+    }
+    popMarks = new Set();
+    popDelays.clear();
     await dropAndFill();
     await resolveBoard(null);
     await ensurePlayableBoard();
@@ -1086,6 +1472,13 @@
     const second = board[b.r][b.c];
     if (first.special === "rainbow" || second.special === "rainbow") {
       await applyRainbowSwap(a, b);
+      busy = false;
+      checkGameOver();
+      return;
+    }
+
+    if (first.special === "bomb" || second.special === "bomb") {
+      await applyBombSwap(a, b);
       busy = false;
       checkGameOver();
       return;
