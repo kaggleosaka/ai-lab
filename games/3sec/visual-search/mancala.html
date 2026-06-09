@@ -70,6 +70,33 @@
       pointer-events: none;
     }
 
+    .menu-back {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 12;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 66px;
+      height: 34px;
+      padding: 0 13px;
+      border: 2px solid rgba(255, 246, 224, 0.72);
+      border-radius: 999px;
+      background: rgba(69, 35, 15, 0.74);
+      color: #fff3d6;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      text-decoration: none;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+      box-shadow: 0 6px 14px rgba(62, 29, 9, 0.28);
+    }
+
+    .menu-back:active {
+      transform: translateY(2px);
+    }
+
     header {
       position: relative;
       z-index: 1;
@@ -558,6 +585,7 @@
 <body>
   <div class="game-frame">
   <main class="game" aria-label="スマホでマンカラ">
+    <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
     <header>
       <h1>MANCALA</h1>
       <div class="subtitle">スマホでマンカラ</div>

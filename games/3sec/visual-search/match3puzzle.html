@@ -54,6 +54,34 @@
     box-shadow: 0 0 40px rgba(0,0,0,0.45);
   }
 
+  .menu-back {
+    position: absolute;
+    top: 78px;
+    left: 18px;
+    z-index: 30;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 66px;
+    height: 34px;
+    padding: 0 13px;
+    border: 2px solid rgba(255,255,255,0.48);
+    border-radius: 999px;
+    background: rgba(4, 13, 38, 0.72);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.46);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.28);
+    backdrop-filter: blur(8px);
+  }
+
+  .menu-back:active {
+    transform: translateY(2px);
+  }
+
   .topbar {
     width: 100%;
     display: grid;
@@ -749,6 +777,7 @@
 </head>
 <body>
 <main id="game" aria-label="Fruit Match 3 Puzzle">
+  <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
   <section class="topbar" aria-label="Game status">
     <div class="title">
       <h1>FRUIT MATCH</h1>
