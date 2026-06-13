@@ -30,8 +30,11 @@
     body {
       width: 100%;
       height: 100%;
+      height: 100svh;
+      height: 100dvh;
       margin: 0;
       overflow: hidden;
+      overscroll-behavior: none;
       background:
         radial-gradient(circle at 50% 16%, rgba(255, 209, 102, .18), transparent 32%),
         linear-gradient(160deg, #141928, #0a111c 58%, #151721);
@@ -40,8 +43,9 @@
     }
 
     body {
-      display: grid;
-      place-items: center;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
 
     button {
@@ -82,19 +86,13 @@
 
     .phone {
       position: relative;
-      width: 464px;
-      height: 825px;
+      width: min(100vw, calc(100svh * 464 / 825), 464px);
+      width: min(100dvw, calc(100dvh * 464 / 825), 464px);
+      height: min(100svh, calc(100vw * 825 / 464), 825px);
+      height: min(100dvh, calc(100dvw * 825 / 464), 825px);
       overflow: hidden;
       background: #101827;
       box-shadow: 0 24px 80px rgba(0, 0, 0, .46);
-      transform: scale(var(--fit-scale, 1));
-      transform-origin: center;
-    }
-
-    @media (max-width: 463px), (max-height: 824px) {
-      .phone {
-        transform: scale(var(--fit-scale, 1));
-      }
     }
 
     @media (min-width: 465px), (min-height: 826px) {
@@ -107,8 +105,8 @@
     canvas {
       position: absolute;
       inset: 0;
-      width: 464px;
-      height: 825px;
+      width: 100%;
+      height: 100%;
       image-rendering: pixelated;
       background: #182334;
     }
@@ -776,11 +774,6 @@
         const m = Math.floor(sec / 60);
         const s = Math.floor(sec % 60);
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-      }
-
-      function fitScreen() {
-        const scale = Math.min(window.innerWidth / W, window.innerHeight / H, 1);
-        document.documentElement.style.setProperty("--fit-scale", String(scale));
       }
 
       function currentEnemyKey() {
@@ -1718,9 +1711,6 @@
 
       renderShop();
       refreshHud();
-      fitScreen();
-      window.addEventListener("resize", fitScreen);
-      window.addEventListener("orientationchange", fitScreen);
       draw();
       requestAnimationFrame(frame);
     })();
