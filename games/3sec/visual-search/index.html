@@ -362,6 +362,41 @@
       transform: translate(-50%, -50%);
     }
 
+    .thumb.monster-survivor {
+      background:
+        radial-gradient(circle at 50% 56%, rgba(255,209,102,0.18) 0 23%, transparent 24%),
+        linear-gradient(180deg, #243b54 0%, #246653 48%, #31452c 100%);
+    }
+
+    .thumb.monster-survivor::before {
+      left: 50%;
+      top: 55%;
+      width: 30px;
+      height: 44px;
+      border-radius: 7px 7px 4px 4px;
+      background:
+        linear-gradient(#e8475c 0 9px, transparent 9px),
+        linear-gradient(#f6d7b0 9px 22px, #244fc5 22px);
+      box-shadow:
+        -42px -20px 0 -5px #ff6a3d,
+        43px -16px 0 -5px #54c7ff,
+        -32px 34px 0 -4px #63df82,
+        30px 32px 0 -4px #b98cff,
+        0 12px 20px rgba(0,0,0,0.35);
+      transform: translate(-50%, -50%);
+    }
+
+    .thumb.monster-survivor::after {
+      right: 18%;
+      top: 22%;
+      width: 28px;
+      height: 28px;
+      background: #ff5d6c;
+      box-shadow:
+        -26px 30px 0 -4px #f0c84b,
+        -72px 12px 0 -6px #68e17b;
+    }
+
     .card-copy {
       display: flex;
       align-items: flex-end;
@@ -528,6 +563,15 @@
             <span class="card-copy">
               <span class="tag">Phone</span>
               <span class="title">Match 3 Puzzle</span>
+            </span>
+          </span>
+        </a>
+        <a class="game-card phone-card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/monster-survivor.html">
+          <span class="card-inner">
+            <span class="thumb monster-survivor" aria-hidden="true"></span>
+            <span class="card-copy">
+              <span class="tag">Phone</span>
+              <span class="title">Monster Survivor</span>
             </span>
           </span>
         </a>

@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Monster Survivor</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f8fbff;
+      --muted: #b9cae1;
+      --panel: rgba(11, 19, 34, .78);
+      --panel-strong: rgba(18, 32, 55, .92);
+      --line: rgba(255, 255, 255, .16);
+      --gold: #ffd166;
+      --green: #63df82;
+      --blue: #54c7ff;
+      --red: #ff5d6c;
+      --purple: #b98cff;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 16%, rgba(255, 209, 102, .18), transparent 32%),
+        linear-gradient(160deg, #141928, #0a111c 58%, #151721);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .menu-back {
+      position: absolute;
+      top: 108px;
+      left: 12px;
+      z-index: 20;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 66px;
+      height: 34px;
+      padding: 0 13px;
+      border: 2px solid rgba(255, 255, 255, .48);
+      border-radius: 999px;
+      background: rgba(4, 13, 25, .68);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      text-decoration: none;
+      text-shadow: 0 2px 0 rgba(0,0,0,.44);
+      box-shadow: 0 6px 16px rgba(0,0,0,.3);
+      backdrop-filter: blur(8px);
+      touch-action: manipulation;
+    }
+
+    .menu-back:active {
+      transform: translateY(2px);
+    }
+
+    .phone {
+      position: relative;
+      width: 464px;
+      height: 825px;
+      overflow: hidden;
+      background: #101827;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .46);
+      transform: scale(var(--fit-scale, 1));
+      transform-origin: center;
+    }
+
+    @media (max-width: 463px), (max-height: 824px) {
+      .phone {
+        transform: scale(var(--fit-scale, 1));
+      }
+    }
+
+    @media (min-width: 465px), (min-height: 826px) {
+      .phone {
+        border: 1px solid rgba(255, 255, 255, .15);
+        border-radius: 24px;
+      }
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 464px;
+      height: 825px;
+      image-rendering: pixelated;
+      background: #182334;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 4;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: 1.1fr .8fr .85fr 1fr;
+      gap: 7px;
+      padding: 12px 10px 8px;
+      pointer-events: none;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 7px 5px 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(5, 13, 24, .62);
+      text-align: center;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+      backdrop-filter: blur(8px);
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+      line-height: 1.1;
+      text-transform: uppercase;
+    }
+
+    .value {
+      display: block;
+      margin-top: 3px;
+      font-size: 18px;
+      font-weight: 950;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .roster {
+      position: absolute;
+      z-index: 4;
+      top: 66px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      min-height: 28px;
+      pointer-events: none;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 74px;
+      padding: 4px 6px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 7px;
+      background: rgba(5, 13, 24, .55);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .dot {
+      flex: 0 0 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      box-shadow: 0 0 9px currentColor;
+    }
+
+    .control-hint {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      width: 86px;
+      height: 86px;
+      margin-left: -43px;
+      margin-top: -43px;
+      border: 2px solid rgba(255, 255, 255, .2);
+      border-radius: 999px;
+      background: rgba(4, 8, 16, .16);
+      box-shadow: inset 0 0 18px rgba(255,255,255,.08);
+      opacity: 0;
+      transform: scale(.86);
+      pointer-events: none;
+      transition: opacity .12s, transform .12s;
+    }
+
+    .control-hint.active {
+      opacity: .8;
+      transform: scale(1);
+    }
+
+    .control-hint::after {
+      content: "";
+      position: absolute;
+      left: 31px;
+      top: 31px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: rgba(255, 209, 102, .86);
+      box-shadow: 0 0 18px rgba(255, 209, 102, .72);
+      transform: translate(var(--stick-x, 0px), var(--stick-y, 0px));
+    }
+
+    .bottom-bar {
+      position: absolute;
+      z-index: 5;
+      left: 10px;
+      right: 10px;
+      bottom: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 52px;
+      gap: 9px;
+    }
+
+    .action {
+      min-width: 0;
+      height: 52px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(35, 56, 86, .94), rgba(13, 22, 39, .96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .13), 0 8px 24px rgba(0, 0, 0, .28);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+
+    .action span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+      text-transform: none;
+    }
+
+    .action:active {
+      transform: translateY(2px);
+    }
+
+    .action.ready {
+      border-color: rgba(255, 209, 102, .84);
+      background: linear-gradient(180deg, #7b4f11, #33220d);
+      color: #fff8d9;
+    }
+
+    .action.warn {
+      border-color: rgba(99, 223, 130, .72);
+    }
+
+    .overlay {
+      position: absolute;
+      z-index: 9;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: rgba(4, 8, 16, .52);
+      backdrop-filter: blur(6px);
+    }
+
+    .overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-height: 760px;
+      overflow: hidden;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(23, 39, 66, .97), rgba(10, 17, 31, .98));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+    }
+
+    .modal h1,
+    .modal h2 {
+      margin: 0;
+      letter-spacing: 0;
+      line-height: 1.02;
+    }
+
+    .modal h1 {
+      font-size: 38px;
+    }
+
+    .modal h2 {
+      font-size: 26px;
+    }
+
+    .modal p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .primary,
+    .choice,
+    .shop-row,
+    .egg-row {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 10px;
+      padding: 11px 12px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .07);
+      color: var(--ink);
+      text-align: left;
+    }
+
+    .primary {
+      min-height: 56px;
+      margin-top: 16px;
+      background: linear-gradient(180deg, #2c8f5b, #145232);
+      text-align: center;
+      font-size: 16px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .choice strong,
+    .shop-row strong,
+    .egg-row strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 950;
+      line-height: 1.12;
+    }
+
+    .choice span,
+    .shop-row span,
+    .egg-row span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .choice:active,
+    .shop-row:active,
+    .egg-row:active,
+    .primary:active {
+      transform: translateY(2px);
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .tab {
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .07);
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .tab.active {
+      background: rgba(84, 199, 255, .22);
+      border-color: rgba(84, 199, 255, .52);
+    }
+
+    .panel {
+      display: none;
+      max-height: 455px;
+      overflow: hidden auto;
+      padding-right: 3px;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    .tiny {
+      margin-top: 10px;
+      color: #91a6bf;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <main class="phone" id="phone">
+    <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
+    <canvas id="game" width="464" height="825" aria-label="Monster Survivor game canvas"></canvas>
+
+    <section class="hud" aria-label="Game stats">
+      <div class="stat"><span class="label">Time</span><span class="value" id="timeText">00:00</span></div>
+      <div class="stat"><span class="label">Level</span><span class="value" id="levelText">1</span></div>
+      <div class="stat"><span class="label">Coins</span><span class="value" id="coinsText">0</span></div>
+      <div class="stat"><span class="label">HP</span><span class="value" id="hpText">100</span></div>
+    </section>
+
+    <div class="roster" id="roster"></div>
+    <div class="control-hint" id="controlHint" aria-hidden="true"></div>
+
+    <section class="bottom-bar" aria-label="Actions">
+      <button class="action" id="ultimateButton">Ultimate<span id="ultimateText">0%</span></button>
+      <button class="action" id="eggButton">Eggs<span id="eggText">0 ready</span></button>
+      <button class="action" id="pauseButton" aria-label="Pause">II</button>
+    </section>
+
+    <div class="overlay active" id="startOverlay">
+      <div class="modal">
+        <h1>Monster Survivor</h1>
+        <p>Drag anywhere below the trainer to move without hiding the character. Your monsters attack automatically. Hatch eggs, evolve your team, and defeat the Dark Lord.</p>
+        <button class="primary" id="startButton">Start Run</button>
+        <div class="tabs">
+          <button class="tab active" data-tab="shop">Shop</button>
+          <button class="tab" data-tab="guide">Guide</button>
+        </div>
+        <div class="panel active" id="shopPanel"></div>
+        <div class="panel" id="guidePanel">
+          <p>Collect 3 copies of the same monster to evolve it. A starter egg appears early, bosses guarantee eggs, and the final boss arrives at 15:00.</p>
+          <p>Ultimate clears pressure around the trainer and charges by defeating enemies.</p>
+          <p class="tiny">This single-file version keeps all visuals, audio, save data, and gameplay code inside this HTML file.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="levelOverlay">
+      <div class="modal">
+        <h2>Level Up</h2>
+        <p>Choose one upgrade.</p>
+        <div id="choiceList"></div>
+      </div>
+    </div>
+
+    <div class="overlay" id="eggOverlay">
+      <div class="modal">
+        <h2>Egg Inventory</h2>
+        <p id="eggStatus">Tap an egg to hatch it.</p>
+        <div id="eggList"></div>
+        <button class="primary" id="closeEggButton">Close</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="pauseOverlay">
+      <div class="modal">
+        <h2>Paused</h2>
+        <p id="pauseStats">Run in progress.</p>
+        <button class="primary" id="resumeButton">Resume</button>
+        <button class="choice" id="quitButton"><strong>End Run</strong><span>Return to title and keep permanent coins.</span></button>
+      </div>
+    </div>
+
+    <div class="overlay" id="endOverlay">
+      <div class="modal">
+        <h2 id="endTitle">Game Over</h2>
+        <p id="endText">Your team fought bravely.</p>
+        <button class="primary" id="restartButton">Back to Title</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const W = 464;
+      const H = 825;
+      const HUD_BOTTOM = 100;
+      const PLAY_BOTTOM = 746;
+      const SAVE_KEY = "monster-survivor-save-v1";
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+
+      const el = {
+        time: document.getElementById("timeText"),
+        level: document.getElementById("levelText"),
+        coins: document.getElementById("coinsText"),
+        hp: document.getElementById("hpText"),
+        roster: document.getElementById("roster"),
+        controlHint: document.getElementById("controlHint"),
+        ultimateButton: document.getElementById("ultimateButton"),
+        ultimateText: document.getElementById("ultimateText"),
+        eggButton: document.getElementById("eggButton"),
+        eggText: document.getElementById("eggText"),
+        pauseButton: document.getElementById("pauseButton"),
+        startOverlay: document.getElementById("startOverlay"),
+        startButton: document.getElementById("startButton"),
+        shopPanel: document.getElementById("shopPanel"),
+        levelOverlay: document.getElementById("levelOverlay"),
+        choiceList: document.getElementById("choiceList"),
+        eggOverlay: document.getElementById("eggOverlay"),
+        eggList: document.getElementById("eggList"),
+        eggStatus: document.getElementById("eggStatus"),
+        closeEggButton: document.getElementById("closeEggButton"),
+        pauseOverlay: document.getElementById("pauseOverlay"),
+        pauseStats: document.getElementById("pauseStats"),
+        resumeButton: document.getElementById("resumeButton"),
+        quitButton: document.getElementById("quitButton"),
+        endOverlay: document.getElementById("endOverlay"),
+        endTitle: document.getElementById("endTitle"),
+        endText: document.getElementById("endText"),
+        restartButton: document.getElementById("restartButton")
+      };
+
+      const monsterDefs = {
+        fire: {
+          name: "Fire Lizard",
+          evolved: "Fire Dragon",
+          short: "FIRE",
+          color: "#ff6a3d",
+          damage: 10,
+          rate: 1,
+          rarity: "Common",
+          attack: "fireball"
+        },
+        water: {
+          name: "Water Turtle",
+          evolved: "Tide Fortress",
+          short: "WATER",
+          color: "#54c7ff",
+          damage: 8,
+          rate: .8,
+          rarity: "Common",
+          attack: "splash"
+        },
+        grass: {
+          name: "Grass Beast",
+          evolved: "Forest Titan",
+          short: "GRASS",
+          color: "#63df82",
+          damage: 7,
+          rate: .75,
+          rarity: "Rare",
+          attack: "vine"
+        },
+        thunder: {
+          name: "Thunder Mouse",
+          evolved: "Storm Runner",
+          short: "BOLT",
+          color: "#ffd84d",
+          damage: 6,
+          rate: 1.8,
+          rarity: "Epic",
+          attack: "bolt"
+        },
+        ghost: {
+          name: "Ghost Spirit",
+          evolved: "Night Wraith",
+          short: "GHOST",
+          color: "#b98cff",
+          damage: 12,
+          rate: .7,
+          rarity: "Legendary",
+          attack: "orb"
+        }
+      };
+
+      const enemyDefs = {
+        slime: { name: "Slime", hp: 20, speed: 32, damage: 6, color: "#68e17b", xp: 6, coins: 1, size: 14 },
+        goblin: { name: "Goblin", hp: 40, speed: 48, damage: 9, color: "#f0c84b", xp: 12, coins: 2, size: 15 },
+        orc: { name: "Orc", hp: 80, speed: 52, damage: 13, color: "#ff8f4a", xp: 22, coins: 4, size: 18 },
+        dragon: { name: "Dragon", hp: 200, speed: 70, damage: 19, color: "#ff5d6c", xp: 52, coins: 8, size: 22 }
+      };
+
+      const bosses = [
+        { minute: 5, key: "goblinKing", name: "Goblin King", hp: 500, speed: 42, damage: 20, color: "#dca63a", xp: 120, coins: 45, size: 34, egg: "Rare" },
+        { minute: 10, key: "ancientDragon", name: "Ancient Dragon", hp: 1500, speed: 54, damage: 32, color: "#e85f42", xp: 260, coins: 110, size: 43, egg: "Epic" },
+        { minute: 15, key: "darkLord", name: "Dark Lord", hp: 5000, speed: 48, damage: 44, color: "#9d64ff", xp: 500, coins: 320, size: 52, egg: "Legendary" }
+      ];
+
+      const rarityWeights = {
+        Common: [["fire", 34], ["water", 30], ["grass", 18], ["thunder", 12], ["ghost", 6]],
+        Rare: [["fire", 18], ["water", 20], ["grass", 28], ["thunder", 22], ["ghost", 12]],
+        Epic: [["fire", 12], ["water", 14], ["grass", 20], ["thunder", 32], ["ghost", 22]],
+        Legendary: [["fire", 8], ["water", 10], ["grass", 16], ["thunder", 24], ["ghost", 42]]
+      };
+
+      const shopDefs = [
+        { key: "damage", label: "Damage +5%", max: 50, base: 25 },
+        { key: "hp", label: "HP +10", max: 50, base: 20 },
+        { key: "speed", label: "Move Speed +5%", max: 50, base: 25 },
+        { key: "xp", label: "XP Gain +5%", max: 50, base: 22 },
+        { key: "egg", label: "Egg Drop +2%", max: 50, base: 35 }
+      ];
+
+      let save = loadSave();
+      let audio = null;
+      let last = 0;
+      let state = createRun();
+
+      function loadSave() {
+        const fallback = { coins: 0, upgrades: { damage: 0, hp: 0, speed: 0, xp: 0, egg: 0 } };
+        try {
+          const parsed = JSON.parse(localStorage.getItem(SAVE_KEY));
+          if (!parsed || !parsed.upgrades) return fallback;
+          return {
+            coins: Math.max(0, Number(parsed.coins) || 0),
+            upgrades: { ...fallback.upgrades, ...parsed.upgrades }
+          };
+        } catch (error) {
+          return fallback;
+        }
+      }
+
+      function saveGame() {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+      }
+
+      function createRun() {
+        const hpBoost = save.upgrades.hp * 10;
+        const speedBoost = 1 + save.upgrades.speed * .05;
+        return {
+          mode: "title",
+          time: 0,
+          shake: 0,
+          flash: 0,
+          kills: 0,
+          runCoins: 0,
+          level: 1,
+          xp: 0,
+          xpNeed: 26,
+          critChance: .05,
+          damageMul: 1 + save.upgrades.damage * .05,
+          xpMul: 1 + save.upgrades.xp * .05,
+          eggDrop: .05 + save.upgrades.egg * .02,
+          maxSlots: 3,
+          maxPossibleSlots: 6,
+          ultimate: 0,
+          eggs: [],
+          hatching: null,
+          hatchTimer: 0,
+          control: { active: false, dx: 0, dy: 0, pointerId: null },
+          earlyEggGranted: false,
+          bossKeys: new Set(),
+          player: {
+            x: W / 2,
+            y: H / 2 + 80,
+            tx: W / 2,
+            ty: H / 2 + 80,
+            r: 15,
+            hp: 100 + hpBoost,
+            maxHp: 100 + hpBoost,
+            speed: 180 * speedBoost,
+            hurt: 0
+          },
+          monsters: [makeMonster("fire")],
+          enemies: [],
+          projectiles: [],
+          gems: [],
+          coins: [],
+          pops: [],
+          effects: [],
+          spawns: { timer: .45, interval: 1.4 }
+        };
+      }
+
+      function makeMonster(type) {
+        return { type, copies: 1, evolved: false, cooldown: Math.random() * .5, angle: Math.random() * Math.PI * 2 };
+      }
+
+      function setupAudio() {
+        if (audio) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ac = new AudioContext();
+        const master = ac.createGain();
+        master.gain.value = .2;
+        master.connect(ac.destination);
+        audio = { ac, master, nextBeat: 0 };
+      }
+
+      function tone(freq, duration, type = "square", gain = .08) {
+        if (!audio) return;
+        const ac = audio.ac;
+        const osc = ac.createOscillator();
+        const g = ac.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0, ac.currentTime);
+        g.gain.linearRampToValueAtTime(gain, ac.currentTime + .01);
+        g.gain.exponentialRampToValueAtTime(.001, ac.currentTime + duration);
+        osc.connect(g);
+        g.connect(audio.master);
+        osc.start();
+        osc.stop(ac.currentTime + duration + .02);
+      }
+
+      function play(name) {
+        if (!audio) return;
+        if (name === "attack") tone(480 + Math.random() * 160, .05, "square", .025);
+        if (name === "xp") tone(860, .08, "triangle", .04);
+        if (name === "level") {
+          tone(680, .1, "triangle", .06);
+          setTimeout(() => tone(1020, .13, "triangle", .06), 80);
+        }
+        if (name === "evolve") {
+          tone(360, .12, "sawtooth", .06);
+          setTimeout(() => tone(720, .2, "sawtooth", .05), 90);
+        }
+        if (name === "boss") tone(130, .45, "sawtooth", .09);
+        if (name === "hurt") tone(150, .08, "square", .05);
+        if (name === "victory") {
+          [520, 660, 780, 1040].forEach((f, i) => setTimeout(() => tone(f, .16, "triangle", .06), i * 110));
+        }
+      }
+
+      function updateMusic() {
+        if (!audio || state.mode !== "playing") return;
+        const ac = audio.ac;
+        if (ac.currentTime < audio.nextBeat) return;
+        audio.nextBeat = ac.currentTime + .44;
+        const notes = [196, 247, 294, 330, 294, 247];
+        const note = notes[Math.floor(state.time * 2.25) % notes.length];
+        tone(note, .07, "triangle", .012);
+      }
+
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+      }
+
+      function dist(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
+      }
+
+      function rand(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      function chooseWeighted(items) {
+        const total = items.reduce((sum, item) => sum + item[1], 0);
+        let roll = Math.random() * total;
+        for (const item of items) {
+          roll -= item[1];
+          if (roll <= 0) return item[0];
+        }
+        return items[items.length - 1][0];
+      }
+
+      function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+
+      function fitScreen() {
+        const scale = Math.min(window.innerWidth / W, window.innerHeight / H, 1);
+        document.documentElement.style.setProperty("--fit-scale", String(scale));
+      }
+
+      function currentEnemyKey() {
+        const m = state.time / 60;
+        if (m >= 12) return "dragon";
+        if (m >= 8) return "orc";
+        if (m >= 3) return "goblin";
+        return "slime";
+      }
+
+      function spawnEnemy(forceKey) {
+        const key = forceKey || currentEnemyKey();
+        const base = enemyDefs[key];
+        const side = Math.floor(Math.random() * 4);
+        const pos = [
+          { x: rand(-36, W + 36), y: HUD_BOTTOM - 46 },
+          { x: W + 36, y: rand(HUD_BOTTOM, PLAY_BOTTOM) },
+          { x: rand(-36, W + 36), y: PLAY_BOTTOM + 36 },
+          { x: -36, y: rand(HUD_BOTTOM, PLAY_BOTTOM) }
+        ][side];
+        const scale = 1 + state.time / 900;
+        state.enemies.push({
+          ...pos,
+          key,
+          name: base.name,
+          hp: base.hp * scale,
+          maxHp: base.hp * scale,
+          speed: base.speed * (1 + state.time / 1600),
+          damage: base.damage,
+          color: base.color,
+          xp: base.xp,
+          coins: base.coins,
+          r: base.size,
+          boss: false,
+          hit: 0,
+          attackCd: 0
+        });
+      }
+
+      function spawnBoss(boss) {
+        const scale = 1 + state.time / 1200;
+        state.enemies.push({
+          x: W / 2,
+          y: HUD_BOTTOM - 64,
+          key: boss.key,
+          name: boss.name,
+          hp: boss.hp * scale,
+          maxHp: boss.hp * scale,
+          speed: boss.speed,
+          damage: boss.damage,
+          color: boss.color,
+          xp: boss.xp,
+          coins: boss.coins,
+          r: boss.size,
+          boss: true,
+          bossEgg: boss.egg,
+          hit: 0,
+          attackCd: 0
+        });
+        state.shake = .45;
+        addPop(W / 2, 160, `${boss.name}!`, boss.color, 22);
+        play("boss");
+      }
+
+      function getNearestEnemy(from, range = Infinity) {
+        let best = null;
+        let bestDist = range;
+        for (const enemy of state.enemies) {
+          const d = Math.hypot(enemy.x - from.x, enemy.y - from.y);
+          if (d < bestDist) {
+            best = enemy;
+            bestDist = d;
+          }
+        }
+        return best;
+      }
+
+      function monsterStats(monster) {
+        const def = monsterDefs[monster.type];
+        const evolved = monster.evolved ? 1 : 0;
+        return {
+          damage: def.damage * state.damageMul * (evolved ? 2 : 1),
+          rate: def.rate * (evolved ? 1.5 : 1),
+          color: def.color,
+          size: evolved ? 1.3 : 1
+        };
+      }
+
+      function fireMonster(monster, origin) {
+        const def = monsterDefs[monster.type];
+        const stats = monsterStats(monster);
+        const target = getNearestEnemy(origin, def.attack === "vine" ? 150 : Infinity);
+        if (!target) return;
+        play("attack");
+        if (def.attack === "bolt") {
+          damageEnemy(target, stats.damage, true);
+          state.effects.push({ type: "line", x1: origin.x, y1: origin.y, x2: target.x, y2: target.y, color: def.color, life: .16, max: .16 });
+          return;
+        }
+        if (def.attack === "vine") {
+          state.effects.push({ type: "ring", x: target.x, y: target.y, r: 26, color: def.color, life: .24, max: .24 });
+          for (const enemy of state.enemies) {
+            if (Math.hypot(enemy.x - target.x, enemy.y - target.y) < 46) damageEnemy(enemy, stats.damage, false);
+          }
+          return;
+        }
+        const angle = Math.atan2(target.y - origin.y, target.x - origin.x);
+        state.projectiles.push({
+          x: origin.x,
+          y: origin.y,
+          vx: Math.cos(angle) * (def.attack === "splash" ? 230 : 310),
+          vy: Math.sin(angle) * (def.attack === "splash" ? 230 : 310),
+          r: def.attack === "splash" ? 8 : 6,
+          damage: stats.damage,
+          color: def.color,
+          life: 1.8,
+          pierce: def.attack === "orb" ? 3 : 1,
+          splash: def.attack === "splash" ? 38 : 0
+        });
+      }
+
+      function damageEnemy(enemy, amount, canCrit) {
+        const crit = canCrit && Math.random() < state.critChance;
+        const damage = amount * (crit ? 2 : 1);
+        enemy.hp -= damage;
+        enemy.hit = .1;
+        if (crit) addPop(enemy.x, enemy.y - enemy.r, "CRIT", "#ffd166", 13);
+      }
+
+      function killEnemy(enemy) {
+        state.kills += 1;
+        state.ultimate = clamp(state.ultimate + (enemy.boss ? 34 : 5), 0, 100);
+        dropGem(enemy.x, enemy.y, enemy.xp);
+        dropCoins(enemy.x, enemy.y, enemy.coins);
+        if (enemy.boss) {
+          state.eggs.push(enemy.bossEgg);
+          addPop(enemy.x, enemy.y - 24, `${enemy.bossEgg} Egg`, "#ffd166", 18);
+          if (enemy.key === "darkLord") return victory();
+        } else if (Math.random() < state.eggDrop) {
+          const rarity = rollEggRarity();
+          state.eggs.push(rarity);
+          addPop(enemy.x, enemy.y - 18, `${rarity} Egg`, "#fff2a6", 13);
+        }
+        state.effects.push({ type: "burst", x: enemy.x, y: enemy.y, color: enemy.color, life: .35, max: .35 });
+      }
+
+      function rollEggRarity() {
+        const m = state.time / 60;
+        const legendary = Math.min(.05, .006 + m * .002);
+        const epic = Math.min(.16, .025 + m * .006);
+        const rare = Math.min(.34, .12 + m * .012);
+        const roll = Math.random();
+        if (roll < legendary) return "Legendary";
+        if (roll < legendary + epic) return "Epic";
+        if (roll < legendary + epic + rare) return "Rare";
+        return "Common";
+      }
+
+      function dropGem(x, y, value) {
+        state.gems.push({ x, y, value: value * state.xpMul, r: 7, pull: 0 });
+      }
+
+      function dropCoins(x, y, count) {
+        const total = Math.max(1, Math.round(count));
+        for (let i = 0; i < Math.min(total, 8); i += 1) {
+          state.coins.push({ x: x + rand(-10, 10), y: y + rand(-10, 10), value: Math.ceil(total / Math.min(total, 8)), r: 5, pull: 0 });
+        }
+      }
+
+      function addPop(x, y, text, color = "#fff", size = 12) {
+        state.pops.push({ x, y, text, color, size, life: .9, max: .9 });
+      }
+
+      function gainXp(value) {
+        state.xp += value;
+        play("xp");
+        while (state.xp >= state.xpNeed) {
+          state.xp -= state.xpNeed;
+          state.level += 1;
+          state.xpNeed = Math.floor(state.xpNeed * 1.18 + 9);
+          openLevelUp();
+          play("level");
+        }
+      }
+
+      function openLevelUp() {
+        if (state.mode !== "playing") return;
+        clearDirectionalControl();
+        state.mode = "level";
+        const choices = buildChoices();
+        el.choiceList.innerHTML = "";
+        choices.forEach(choice => {
+          const button = document.createElement("button");
+          button.className = "choice";
+          button.innerHTML = `<strong>${choice.title}</strong><span>${choice.desc}</span>`;
+          button.addEventListener("click", () => {
+            choice.apply();
+            el.levelOverlay.classList.remove("active");
+            state.mode = "playing";
+            clearDirectionalControl();
+            refreshHud();
+          }, { once: true });
+          el.choiceList.appendChild(button);
+        });
+        el.levelOverlay.classList.add("active");
+      }
+
+      function buildChoices() {
+        const pool = [
+          {
+            title: "Fire Lizard Damage +20%",
+            desc: "All monster damage rises.",
+            apply: () => { state.damageMul *= 1.2; addPop(state.player.x, state.player.y - 30, "Damage Up", "#ff916f", 15); }
+          },
+          {
+            title: "Movement Speed +10%",
+            desc: "Trainer reaches taps faster.",
+            apply: () => { state.player.speed *= 1.1; addPop(state.player.x, state.player.y - 30, "Speed Up", "#54c7ff", 15); }
+          },
+          {
+            title: "New Monster Egg",
+            desc: "Add a Common Egg to inventory.",
+            apply: () => { state.eggs.push("Common"); addPop(state.player.x, state.player.y - 30, "Egg Get", "#fff2a6", 15); }
+          },
+          {
+            title: "Monster Slot +1",
+            desc: "Raise active monster slots by one.",
+            apply: () => { state.maxSlots = Math.min(state.maxSlots + 1, state.maxPossibleSlots); addPop(state.player.x, state.player.y - 30, "Slot Up", "#63df82", 15); }
+          },
+          {
+            title: "Critical Chance +5%",
+            desc: "Lightning and direct hits can spike harder.",
+            apply: () => { state.critChance += .05; addPop(state.player.x, state.player.y - 30, "Crit Up", "#ffd166", 15); }
+          },
+          {
+            title: "HP +20",
+            desc: "Heal now and raise max HP.",
+            apply: () => { state.player.maxHp += 20; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 20); addPop(state.player.x, state.player.y - 30, "HP Up", "#ff7f91", 15); }
+          }
+        ];
+        if (state.maxSlots >= state.maxPossibleSlots) pool.splice(3, 1);
+        const out = [];
+        while (out.length < 3 && pool.length) {
+          out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+        }
+        return out;
+      }
+
+      function hatchEgg(rarity) {
+        if (state.hatching) return;
+        const index = state.eggs.indexOf(rarity);
+        if (index < 0) return;
+        state.eggs.splice(index, 1);
+        state.hatching = rarity;
+        state.hatchTimer = 2;
+        el.eggStatus.textContent = `Hatching ${rarity} Egg...`;
+        renderEggPanel();
+      }
+
+      function finishHatch() {
+        const rarity = state.hatching;
+        state.hatching = null;
+        const type = chooseWeighted(rarityWeights[rarity]);
+        addMonsterCopy(type);
+        addPop(state.player.x, state.player.y - 42, monsterDefs[type].name, monsterDefs[type].color, 16);
+        play("evolve");
+        if (state.mode === "eggs") {
+          el.eggStatus.textContent = "Tap an egg to hatch it.";
+          renderEggPanel();
+        }
+      }
+
+      function addMonsterCopy(type) {
+        let monster = state.monsters.find(m => m.type === type && !m.evolved);
+        if (!monster && state.monsters.length < state.maxSlots) {
+          state.monsters.push(makeMonster(type));
+          return;
+        }
+        monster = monster || state.monsters.find(m => m.type === type) || state.monsters[0];
+        monster.copies += 1;
+        if (!monster.evolved && monster.copies >= 3) {
+          monster.evolved = true;
+          monster.copies = 1;
+          state.shake = .28;
+          addPop(state.player.x, state.player.y - 62, `${monsterDefs[type].evolved}!`, monsterDefs[type].color, 20);
+          play("evolve");
+        }
+      }
+
+      function update(dt) {
+        updateMusic();
+        if (state.mode !== "playing" && state.mode !== "eggs") {
+          updateVisuals(dt);
+          draw();
+          return;
+        }
+        if (state.mode === "playing") {
+          state.time += dt;
+          if (!state.earlyEggGranted && state.time >= 25) {
+            state.earlyEggGranted = true;
+            state.eggs.push("Common");
+            addPop(state.player.x, state.player.y - 42, "Starter Egg!", "#fff2a6", 17);
+          }
+          state.spawns.timer -= dt;
+          const pressure = Math.min(1.05, state.time / 900);
+          state.spawns.interval = clamp(1.35 - pressure * .7, .42, 1.35);
+          if (state.spawns.timer <= 0) {
+            const count = state.time > 480 ? 2 : 1;
+            for (let i = 0; i < count; i += 1) spawnEnemy();
+            state.spawns.timer = state.spawns.interval;
+          }
+          bosses.forEach(boss => {
+            if (state.time >= boss.minute * 60 && !state.bossKeys.has(boss.key)) {
+              state.bossKeys.add(boss.key);
+              spawnBoss(boss);
+            }
+          });
+          updatePlayer(dt);
+          updateMonsters(dt);
+          updateEnemies(dt);
+          updateProjectiles(dt);
+          updatePickups(dt);
+        }
+        if (state.hatching) {
+          state.hatchTimer -= dt;
+          if (state.hatchTimer <= 0) finishHatch();
+        }
+        updateVisuals(dt);
+        refreshHud();
+        draw();
+      }
+
+      function updatePlayer(dt) {
+        const p = state.player;
+        if (state.control.active) {
+          p.x += state.control.dx * p.speed * dt;
+          p.y += state.control.dy * p.speed * dt;
+          p.tx = p.x;
+          p.ty = p.y;
+        } else {
+          const dx = p.tx - p.x;
+          const dy = p.ty - p.y;
+          const d = Math.hypot(dx, dy);
+          if (d > 2) {
+            const step = Math.min(d, p.speed * dt);
+            p.x += dx / d * step;
+            p.y += dy / d * step;
+          }
+        }
+        p.x = clamp(p.x, 20, W - 20);
+        p.y = clamp(p.y, HUD_BOTTOM + 20, PLAY_BOTTOM - 20);
+        p.hurt = Math.max(0, p.hurt - dt);
+      }
+
+      function updateMonsters(dt) {
+        const count = state.monsters.length;
+        state.monsters.forEach((monster, i) => {
+          const stats = monsterStats(monster);
+          monster.angle += dt * (.9 + i * .08);
+          monster.cooldown -= dt;
+          const origin = monsterPos(monster, i, count);
+          if (monster.cooldown <= 0) {
+            fireMonster(monster, origin);
+            monster.cooldown = 1 / stats.rate;
+          }
+        });
+      }
+
+      function monsterPos(monster, i, count) {
+        const radius = 36 + (monster.evolved ? 7 : 0);
+        const angle = monster.angle + i / count * Math.PI * 2;
+        return {
+          x: state.player.x + Math.cos(angle) * radius,
+          y: state.player.y + Math.sin(angle) * radius
+        };
+      }
+
+      function updateEnemies(dt) {
+        const p = state.player;
+        for (const enemy of state.enemies) {
+          const dx = p.x - enemy.x;
+          const dy = p.y - enemy.y;
+          const d = Math.hypot(dx, dy) || 1;
+          enemy.x += dx / d * enemy.speed * dt;
+          enemy.y += dy / d * enemy.speed * dt;
+          enemy.hit = Math.max(0, enemy.hit - dt);
+          enemy.attackCd = Math.max(0, enemy.attackCd - dt);
+          if (d < enemy.r + p.r && enemy.attackCd <= 0) {
+            p.hp -= enemy.damage;
+            p.hurt = .18;
+            enemy.attackCd = .75;
+            state.shake = .12;
+            play("hurt");
+            addPop(p.x, p.y - 28, `-${enemy.damage}`, "#ff7f91", 13);
+            if (p.hp <= 0) gameOver();
+          }
+        }
+        for (let i = state.enemies.length - 1; i >= 0; i -= 1) {
+          if (state.enemies[i].hp <= 0) {
+            const enemy = state.enemies.splice(i, 1)[0];
+            killEnemy(enemy);
+          }
+        }
+      }
+
+      function updateProjectiles(dt) {
+        for (const p of state.projectiles) {
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+          for (const enemy of state.enemies) {
+            if (enemy._hitFrame === p) continue;
+            if (Math.hypot(enemy.x - p.x, enemy.y - p.y) < enemy.r + p.r) {
+              damageEnemy(enemy, p.damage, true);
+              if (p.splash) {
+                state.effects.push({ type: "ring", x: enemy.x, y: enemy.y, r: p.splash, color: p.color, life: .22, max: .22 });
+                for (const other of state.enemies) {
+                  if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) < p.splash) damageEnemy(other, p.damage * .6, false);
+                }
+              }
+              p.pierce -= 1;
+              enemy._hitFrame = p;
+              if (p.pierce <= 0) p.life = -1;
+            }
+          }
+        }
+        state.projectiles = state.projectiles.filter(p => p.life > 0 && p.x > -50 && p.x < W + 50 && p.y > HUD_BOTTOM - 80 && p.y < PLAY_BOTTOM + 80);
+        for (const enemy of state.enemies) delete enemy._hitFrame;
+      }
+
+      function updatePickups(dt) {
+        const p = state.player;
+        for (const gem of state.gems) {
+          const d = Math.hypot(p.x - gem.x, p.y - gem.y);
+          if (d < 96) gem.pull += dt * 3;
+          if (gem.pull > 0) {
+            gem.x += (p.x - gem.x) * dt * (2 + gem.pull * 4);
+            gem.y += (p.y - gem.y) * dt * (2 + gem.pull * 4);
+          }
+          if (d < p.r + 10) {
+            gem.dead = true;
+            gainXp(gem.value);
+          }
+        }
+        for (const coin of state.coins) {
+          const d = Math.hypot(p.x - coin.x, p.y - coin.y);
+          if (d < 88) coin.pull += dt * 3;
+          if (coin.pull > 0) {
+            coin.x += (p.x - coin.x) * dt * (2 + coin.pull * 4);
+            coin.y += (p.y - coin.y) * dt * (2 + coin.pull * 4);
+          }
+          if (d < p.r + 9) {
+            coin.dead = true;
+            state.runCoins += coin.value;
+            save.coins += coin.value;
+            saveGame();
+          }
+        }
+        state.gems = state.gems.filter(g => !g.dead);
+        state.coins = state.coins.filter(c => !c.dead);
+      }
+
+      function updateVisuals(dt) {
+        state.shake = Math.max(0, state.shake - dt);
+        state.flash = Math.max(0, state.flash - dt);
+        for (const pop of state.pops) {
+          pop.y -= dt * 34;
+          pop.life -= dt;
+        }
+        for (const effect of state.effects) effect.life -= dt;
+        state.pops = state.pops.filter(p => p.life > 0);
+        state.effects = state.effects.filter(e => e.life > 0);
+      }
+
+      function gameOver() {
+        clearDirectionalControl();
+        state.mode = "ended";
+        el.endTitle.textContent = "Game Over";
+        el.endText.textContent = `Survived ${formatTime(state.time)}. Defeated ${state.kills} enemies and earned ${state.runCoins} coins.`;
+        el.endOverlay.classList.add("active");
+      }
+
+      function victory() {
+        state.mode = "ended";
+        state.flash = .8;
+        play("victory");
+        el.endTitle.textContent = "Victory";
+        el.endText.textContent = `The Dark Lord fell at ${formatTime(state.time)}. Your monsters earned ${state.runCoins} coins.`;
+        el.endOverlay.classList.add("active");
+      }
+
+      function castUltimate() {
+        if (state.mode !== "playing" || state.ultimate < 100) return;
+        state.ultimate = 0;
+        state.shake = .35;
+        state.flash = .25;
+        state.effects.push({ type: "ring", x: state.player.x, y: state.player.y, r: 168, color: "#ffd166", life: .38, max: .38 });
+        for (const enemy of state.enemies) {
+          const d = Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y);
+          if (d < 180) damageEnemy(enemy, 180 * state.damageMul, true);
+        }
+        addPop(state.player.x, state.player.y - 40, "ULTIMATE", "#ffd166", 20);
+      }
+
+      function draw() {
+        ctx.save();
+        if (state.shake > 0) ctx.translate(rand(-4, 4) * state.shake * 4, rand(-4, 4) * state.shake * 4);
+        drawWorld();
+        drawPickups();
+        drawMonsters();
+        drawEnemies();
+        drawProjectiles();
+        drawPlayer();
+        drawEffects();
+        drawPops();
+        ctx.restore();
+        drawBars();
+        if (state.mode === "title") drawTitleScene();
+        if (state.flash > 0) {
+          ctx.fillStyle = `rgba(255, 241, 190, ${state.flash})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      function drawWorld() {
+        const t = state.time * .05;
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, "#243b54");
+        grad.addColorStop(.45, "#246653");
+        grad.addColorStop(1, "#31452c");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "rgba(255,255,255,.05)";
+        for (let y = 104; y < PLAY_BOTTOM; y += 48) {
+          for (let x = -30; x < W + 40; x += 58) {
+            const ox = Math.sin(y * .05 + t) * 12;
+            ctx.fillRect(Math.floor(x + ox), y, 18, 4);
+            ctx.fillRect(Math.floor(x + ox + 8), y - 7, 4, 18);
+          }
+        }
+        ctx.fillStyle = "rgba(0,0,0,.18)";
+        ctx.fillRect(0, PLAY_BOTTOM, W, H - PLAY_BOTTOM);
+      }
+
+      function drawPlayer() {
+        const p = state.player;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.fillStyle = "rgba(0,0,0,.22)";
+        ctx.fillRect(-13, 16, 26, 6);
+        ctx.fillStyle = p.hurt > 0 ? "#fff" : "#f6d7b0";
+        ctx.fillRect(-9, -15, 18, 18);
+        ctx.fillStyle = "#e8475c";
+        ctx.fillRect(-12, -23, 24, 10);
+        ctx.fillStyle = "#244fc5";
+        ctx.fillRect(-11, 2, 22, 24);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-5, -9, 3, 3);
+        ctx.fillRect(4, -9, 3, 3);
+        ctx.fillStyle = "#182338";
+        ctx.fillRect(-12, 23, 8, 9);
+        ctx.fillRect(4, 23, 8, 9);
+        ctx.restore();
+
+        if (!state.control.active) {
+          ctx.strokeStyle = "rgba(255,255,255,.28)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.tx, p.ty, 9, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      function drawMonsters() {
+        const count = state.monsters.length;
+        state.monsters.forEach((monster, i) => {
+          const def = monsterDefs[monster.type];
+          const stats = monsterStats(monster);
+          const pos = monsterPos(monster, i, count);
+          const s = 13 * stats.size;
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.fillStyle = "rgba(0,0,0,.2)";
+          ctx.fillRect(-s, s, s * 2, 5);
+          ctx.fillStyle = def.color;
+          ctx.fillRect(-s, -s, s * 2, s * 2);
+          ctx.fillStyle = "rgba(255,255,255,.8)";
+          ctx.fillRect(-s + 4, -s + 4, 4, 4);
+          ctx.fillRect(s - 8, -s + 4, 4, 4);
+          if (monster.evolved) {
+            ctx.strokeStyle = "#fff0a8";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(-s - 2, -s - 2, s * 2 + 4, s * 2 + 4);
+          }
+          ctx.restore();
+        });
+      }
+
+      function drawEnemies() {
+        for (const enemy of state.enemies) {
+          const r = enemy.r;
+          ctx.save();
+          ctx.translate(enemy.x, enemy.y);
+          ctx.fillStyle = "rgba(0,0,0,.24)";
+          ctx.fillRect(-r, r - 1, r * 2, 7);
+          ctx.fillStyle = enemy.hit > 0 ? "#fff" : enemy.color;
+          if (enemy.boss) {
+            ctx.fillRect(-r, -r, r * 2, r * 2);
+            ctx.fillStyle = "rgba(0,0,0,.25)";
+            ctx.fillRect(-r + 8, -r - 8, r * 2 - 16, 8);
+          } else {
+            ctx.fillRect(-r, -r, r * 2, r * 2);
+          }
+          ctx.fillStyle = "#101827";
+          ctx.fillRect(-r + 5, -r + 7, 4, 4);
+          ctx.fillRect(r - 9, -r + 7, 4, 4);
+          ctx.restore();
+
+          const w = enemy.boss ? 74 : 34;
+          ctx.fillStyle = "rgba(0,0,0,.45)";
+          ctx.fillRect(enemy.x - w / 2, enemy.y - r - 13, w, 5);
+          ctx.fillStyle = enemy.boss ? "#ff5d6c" : "#63df82";
+          ctx.fillRect(enemy.x - w / 2, enemy.y - r - 13, w * clamp(enemy.hp / enemy.maxHp, 0, 1), 5);
+        }
+      }
+
+      function drawProjectiles() {
+        for (const p of state.projectiles) {
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 12;
+          ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      function drawPickups() {
+        for (const gem of state.gems) {
+          ctx.fillStyle = "#72e9ff";
+          ctx.shadowColor = "#72e9ff";
+          ctx.shadowBlur = 10;
+          ctx.fillRect(gem.x - 5, gem.y - 7, 10, 14);
+          ctx.shadowBlur = 0;
+        }
+        for (const coin of state.coins) {
+          ctx.fillStyle = "#ffd166";
+          ctx.shadowColor = "#ffd166";
+          ctx.shadowBlur = 10;
+          ctx.fillRect(coin.x - 5, coin.y - 5, 10, 10);
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      function drawEffects() {
+        for (const e of state.effects) {
+          const a = clamp(e.life / e.max, 0, 1);
+          if (e.type === "ring") {
+            ctx.strokeStyle = hexAlpha(e.color, a);
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.r * (1.1 - a * .25), 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          if (e.type === "line") {
+            ctx.strokeStyle = hexAlpha(e.color, a);
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(e.x1, e.y1);
+            ctx.lineTo(e.x2, e.y2);
+            ctx.stroke();
+          }
+          if (e.type === "burst") {
+            ctx.fillStyle = hexAlpha(e.color, a);
+            for (let i = 0; i < 8; i += 1) {
+              const ang = i / 8 * Math.PI * 2;
+              const d = (1 - a) * 32;
+              ctx.fillRect(e.x + Math.cos(ang) * d - 3, e.y + Math.sin(ang) * d - 3, 6, 6);
+            }
+          }
+        }
+      }
+
+      function drawPops() {
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        for (const pop of state.pops) {
+          const a = clamp(pop.life / pop.max, 0, 1);
+          ctx.globalAlpha = a;
+          ctx.fillStyle = pop.color;
+          ctx.font = `900 ${pop.size}px system-ui, sans-serif`;
+          ctx.strokeStyle = "rgba(0,0,0,.6)";
+          ctx.lineWidth = 4;
+          ctx.strokeText(pop.text, pop.x, pop.y);
+          ctx.fillText(pop.text, pop.x, pop.y);
+          ctx.globalAlpha = 1;
+        }
+      }
+
+      function drawBars() {
+        const xp = clamp(state.xp / state.xpNeed, 0, 1);
+        ctx.fillStyle = "rgba(4, 8, 16, .82)";
+        ctx.fillRect(10, 95, W - 20, 9);
+        ctx.fillStyle = "#72e9ff";
+        ctx.fillRect(10, 95, (W - 20) * xp, 9);
+        if (state.hatching) {
+          ctx.fillStyle = "rgba(4, 8, 16, .75)";
+          ctx.fillRect(84, 114, W - 168, 18);
+          ctx.fillStyle = "#ffd166";
+          ctx.fillRect(84, 114, (W - 168) * (1 - state.hatchTimer / 2), 18);
+          ctx.fillStyle = "#101827";
+          ctx.font = "900 11px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("HATCHING", W / 2, 128);
+        }
+      }
+
+      function drawTitleScene() {
+        ctx.fillStyle = "rgba(5, 10, 18, .34)";
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      function hexAlpha(hex, alpha) {
+        const n = parseInt(hex.slice(1), 16);
+        const r = (n >> 16) & 255;
+        const g = (n >> 8) & 255;
+        const b = n & 255;
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function refreshHud() {
+        el.time.textContent = formatTime(state.time);
+        el.level.textContent = String(state.level);
+        el.coins.textContent = String(save.coins);
+        el.hp.textContent = `${Math.max(0, Math.ceil(state.player.hp))}/${state.player.maxHp}`;
+        el.ultimateText.textContent = `${Math.floor(state.ultimate)}%`;
+        el.ultimateButton.classList.toggle("ready", state.ultimate >= 100);
+        const readyEggs = state.eggs.length;
+        el.eggText.textContent = state.hatching ? "hatching" : `${readyEggs} ready`;
+        el.eggButton.classList.toggle("warn", readyEggs > 0 || !!state.hatching);
+        el.roster.innerHTML = "";
+        state.monsters.forEach(monster => {
+          const def = monsterDefs[monster.type];
+          const chip = document.createElement("div");
+          chip.className = "chip";
+          chip.innerHTML = `<span class="dot" style="color:${def.color};background:${def.color}"></span>${monster.evolved ? "EVO" : def.short} x${monster.copies}`;
+          el.roster.appendChild(chip);
+        });
+      }
+
+      function renderEggPanel() {
+        el.eggList.innerHTML = "";
+        if (!state.eggs.length) {
+          const row = document.createElement("button");
+          row.className = "egg-row";
+          row.disabled = true;
+          row.innerHTML = "<strong>No eggs yet</strong><span>Bosses guarantee eggs. Normal enemies can drop them too.</span>";
+          el.eggList.appendChild(row);
+          return;
+        }
+        ["Common", "Rare", "Epic", "Legendary"].forEach(rarity => {
+          const count = state.eggs.filter(e => e === rarity).length;
+          if (!count) return;
+          const row = document.createElement("button");
+          row.className = "egg-row";
+          row.disabled = !!state.hatching;
+          row.innerHTML = `<strong>${rarity} Egg x${count}</strong><span>Hatch for a monster copy. Three copies evolve.</span>`;
+          row.addEventListener("click", () => hatchEgg(rarity));
+          el.eggList.appendChild(row);
+        });
+      }
+
+      function renderShop() {
+        el.shopPanel.innerHTML = "";
+        shopDefs.forEach(def => {
+          const level = save.upgrades[def.key] || 0;
+          const cost = shopCost(def, level);
+          const row = document.createElement("button");
+          row.className = "shop-row";
+          row.disabled = level >= def.max;
+          row.innerHTML = `<strong>${def.label} Lv ${level}/${def.max}</strong><span>${level >= def.max ? "Max level" : `${cost} coins to upgrade`}</span>`;
+          row.addEventListener("click", () => {
+            if (level >= def.max || save.coins < cost) return;
+            save.coins -= cost;
+            save.upgrades[def.key] += 1;
+            saveGame();
+            renderShop();
+            refreshHud();
+          });
+          el.shopPanel.appendChild(row);
+        });
+      }
+
+      function shopCost(def, level) {
+        return Math.floor(def.base * Math.pow(1.15, level));
+      }
+
+      function openEggs() {
+        if (!["playing", "eggs"].includes(state.mode)) return;
+        if (state.mode === "eggs") {
+          state.mode = "playing";
+          el.eggOverlay.classList.remove("active");
+          return;
+        }
+        state.mode = "eggs";
+        el.eggStatus.textContent = state.hatching ? `Hatching ${state.hatching} Egg...` : "Tap an egg to hatch it.";
+        renderEggPanel();
+        el.eggOverlay.classList.add("active");
+      }
+
+      function pauseRun() {
+        if (state.mode !== "playing") return;
+        clearDirectionalControl();
+        state.mode = "paused";
+        el.pauseStats.textContent = `Time ${formatTime(state.time)} / Level ${state.level} / KOs ${state.kills} / Coins +${state.runCoins}`;
+        el.pauseOverlay.classList.add("active");
+      }
+
+      function startRun() {
+        setupAudio();
+        if (audio && audio.ac.state === "suspended") audio.ac.resume();
+        state = createRun();
+        state.mode = "playing";
+        el.startOverlay.classList.remove("active");
+        el.endOverlay.classList.remove("active");
+        el.levelOverlay.classList.remove("active");
+        el.eggOverlay.classList.remove("active");
+        el.pauseOverlay.classList.remove("active");
+        refreshHud();
+      }
+
+      function backToTitle() {
+        state = createRun();
+        state.mode = "title";
+        renderShop();
+        refreshHud();
+        el.startOverlay.classList.add("active");
+        el.endOverlay.classList.remove("active");
+        el.levelOverlay.classList.remove("active");
+        el.eggOverlay.classList.remove("active");
+        el.pauseOverlay.classList.remove("active");
+      }
+
+      function getCanvasPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (W / rect.width),
+          y: (event.clientY - rect.top) * (H / rect.height)
+        };
+      }
+
+      function setDirectionalControl(event) {
+        const point = getCanvasPoint(event);
+        if (point.y > PLAY_BOTTOM) return;
+        const p = state.player;
+        const anchorY = p.y + 58;
+        const dx = point.x - p.x;
+        const dy = point.y - anchorY;
+        const len = Math.hypot(dx, dy);
+        if (len < 8) {
+          state.control.dx = 0;
+          state.control.dy = 0;
+        } else {
+          state.control.dx = dx / len;
+          state.control.dy = dy / len;
+        }
+        el.controlHint.style.left = `${p.x}px`;
+        el.controlHint.style.top = `${anchorY}px`;
+        el.controlHint.style.setProperty("--stick-x", `${clamp(dx, -28, 28)}px`);
+        el.controlHint.style.setProperty("--stick-y", `${clamp(dy, -28, 28)}px`);
+      }
+
+      function clearDirectionalControl() {
+        if (!state.control) return;
+        state.control.active = false;
+        state.control.pointerId = null;
+        state.control.dx = 0;
+        state.control.dy = 0;
+        el.controlHint.classList.remove("active");
+      }
+
+      canvas.addEventListener("pointerdown", event => {
+        if (state.mode !== "playing") return;
+        const point = getCanvasPoint(event);
+        if (point.y > PLAY_BOTTOM) return;
+        canvas.setPointerCapture(event.pointerId);
+        state.control.active = true;
+        state.control.pointerId = event.pointerId;
+        el.controlHint.classList.add("active");
+        setDirectionalControl(event);
+      });
+
+      canvas.addEventListener("pointermove", event => {
+        if (state.mode !== "playing" || !state.control.active || state.control.pointerId !== event.pointerId) return;
+        setDirectionalControl(event);
+      });
+
+      canvas.addEventListener("pointerup", clearDirectionalControl);
+      canvas.addEventListener("pointercancel", clearDirectionalControl);
+      canvas.addEventListener("lostpointercapture", clearDirectionalControl);
+
+      document.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
+      document.addEventListener("gesturestart", event => event.preventDefault());
+
+      el.startButton.addEventListener("click", startRun);
+      el.ultimateButton.addEventListener("click", castUltimate);
+      el.eggButton.addEventListener("click", openEggs);
+      el.closeEggButton.addEventListener("click", () => {
+        if (state.mode === "eggs") state.mode = "playing";
+        el.eggOverlay.classList.remove("active");
+      });
+      el.pauseButton.addEventListener("click", pauseRun);
+      el.resumeButton.addEventListener("click", () => {
+        state.mode = "playing";
+        el.pauseOverlay.classList.remove("active");
+      });
+      el.quitButton.addEventListener("click", backToTitle);
+      el.restartButton.addEventListener("click", backToTitle);
+
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          document.getElementById(`${tab.dataset.tab}Panel`).classList.add("active");
+        });
+      });
+
+      function frame(ts) {
+        const now = ts / 1000;
+        const dt = Math.min(.033, now - last || .016);
+        last = now;
+        update(dt);
+        requestAnimationFrame(frame);
+      }
+
+      renderShop();
+      refreshHud();
+      fitScreen();
+      window.addEventListener("resize", fitScreen);
+      window.addEventListener("orientationchange", fitScreen);
+      draw();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
