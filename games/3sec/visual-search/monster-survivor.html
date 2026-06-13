@@ -43,9 +43,8 @@
     }
 
     body {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
+      position: fixed;
+      inset: 0;
     }
 
     button {
@@ -85,14 +84,17 @@
     }
 
     .phone {
-      position: relative;
-      width: min(100vw, calc(100svh * 464 / 825), 464px);
-      width: min(100dvw, calc(100dvh * 464 / 825), 464px);
-      height: min(100svh, calc(100vw * 825 / 464), 825px);
-      height: min(100dvh, calc(100dvw * 825 / 464), 825px);
+      position: fixed;
+      top: 0;
+      left: 50%;
+      margin-left: -232px;
+      width: 464px;
+      height: 825px;
       overflow: hidden;
       background: #101827;
       box-shadow: 0 24px 80px rgba(0, 0, 0, .46);
+      transform: scale(var(--fit-scale, 1));
+      transform-origin: top center;
     }
 
     @media (min-width: 465px), (min-height: 826px) {
@@ -105,8 +107,8 @@
     canvas {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
+      width: 464px;
+      height: 825px;
       image-rendering: pixelated;
       background: #182334;
     }
@@ -774,6 +776,14 @@
         const m = Math.floor(sec / 60);
         const s = Math.floor(sec % 60);
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+
+      function fitScreen() {
+        const viewport = window.visualViewport;
+        const width = viewport ? viewport.width : window.innerWidth;
+        const height = viewport ? viewport.height : window.innerHeight;
+        const scale = Math.min(width / W, height / H, 1);
+        document.documentElement.style.setProperty("--fit-scale", String(scale));
       }
 
       function currentEnemyKey() {
@@ -1711,6 +1721,13 @@
 
       renderShop();
       refreshHud();
+      fitScreen();
+      window.addEventListener("resize", fitScreen);
+      window.addEventListener("orientationchange", fitScreen);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", fitScreen);
+        window.visualViewport.addEventListener("scroll", fitScreen);
+      }
       draw();
       requestAnimationFrame(frame);
     })();
