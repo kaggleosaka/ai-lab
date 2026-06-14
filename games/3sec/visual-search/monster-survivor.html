@@ -159,19 +159,37 @@
       position: absolute;
       z-index: 4;
       top: 66px;
-      left: 10px;
+      left: 84px;
       right: 10px;
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
       min-height: 28px;
       pointer-events: none;
+    }
+
+    .team-slots {
+      position: absolute;
+      z-index: 4;
+      top: 66px;
+      left: 10px;
+      padding: 6px 8px;
+      border: 1px solid rgba(255, 255, 255, .15);
+      border-radius: 7px;
+      background: rgba(5, 13, 24, .68);
+      color: #fff2bd;
+      font-size: 11px;
+      font-weight: 950;
+      line-height: 1;
+      pointer-events: none;
+      white-space: nowrap;
     }
 
     .chip {
       display: flex;
       align-items: center;
       gap: 4px;
-      max-width: 74px;
+      max-width: 78px;
       padding: 4px 6px;
       border: 1px solid rgba(255, 255, 255, .15);
       border-radius: 7px;
@@ -328,6 +346,43 @@
       line-height: 1.45;
     }
 
+    .subtitle {
+      margin-top: 6px;
+      color: #fff2bd;
+      font-size: 17px;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .version {
+      margin-top: 6px;
+      color: #91a6bf;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    #pauseStats,
+    #endText,
+    #eggStatus {
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    .egg-team-progress {
+      margin-top: 8px;
+      padding: 8px 9px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .05);
+      color: #d7e5f7;
+      font-size: 12px;
+      font-weight: 850;
+      line-height: 1.35;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
     .primary,
     .choice,
     .shop-row,
@@ -433,6 +488,7 @@
       <div class="stat"><span class="label">HP</span><span class="value" id="hpText">100</span></div>
     </section>
 
+    <div class="team-slots" id="teamSlots">Team 1/2</div>
     <div class="roster" id="roster"></div>
     <div class="control-hint" id="controlHint" aria-hidden="true"></div>
 
@@ -445,7 +501,9 @@
     <div class="overlay active" id="startOverlay">
       <div class="modal">
         <h1>Monster Survivor</h1>
-        <p>Drag anywhere below the trainer to move without hiding the character. Your monsters attack automatically. Hatch eggs, evolve your team, and defeat the Dark Lord.</p>
+        <div class="subtitle">Hatch. Evolve. Survive.</div>
+        <div class="version">v0.2 prototype</div>
+        <p>Survive 15 minutes, hatch monster eggs, evolve your team, and defeat the Dark Lord.</p>
         <button class="primary" id="startButton">Start Run</button>
         <div class="tabs">
           <button class="tab active" data-tab="shop">Shop</button>
@@ -453,9 +511,11 @@
         </div>
         <div class="panel active" id="shopPanel"></div>
         <div class="panel" id="guidePanel">
-          <p>Collect 3 copies of the same monster to evolve it. A starter egg appears early, bosses guarantee eggs, and the final boss arrives at 15:00.</p>
-          <p>Ultimate clears pressure around the trainer and charges by defeating enemies.</p>
-          <p class="tiny">This single-file version keeps all visuals, audio, save data, and gameplay code inside this HTML file.</p>
+          <p>Mobile: drag below the trainer to move. PC: WASD or Arrow keys move, Space uses Ultimate, E opens Egg Inventory, and Esc pauses or resumes.</p>
+          <p>Hatch eggs to collect monsters. Three copies evolve a monster into its stronger form.</p>
+          <p>Bosses appear at 5, 10, and 15 minutes. Enemy waves grow stronger as your team grows.</p>
+          <p>Permanent shop upgrades carry across runs.</p>
+          <p class="tiny">Build a team, survive the waves, and bring down the Dark Lord.</p>
         </div>
       </div>
     </div>
@@ -472,6 +532,7 @@
       <div class="modal">
         <h2>Egg Inventory</h2>
         <p id="eggStatus">Tap an egg to hatch it.</p>
+        <div class="egg-team-progress" id="eggTeamProgress"></div>
         <div id="eggList"></div>
         <button class="primary" id="closeEggButton">Close</button>
       </div>
@@ -506,12 +567,16 @@
       const SAVE_KEY = "monster-survivor-save-v1";
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
+      const keyboard = { up: false, down: false, left: false, right: false };
+      const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]);
+      const blockedDefaultKeys = new Set(["Space", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]);
 
       const el = {
         time: document.getElementById("timeText"),
         level: document.getElementById("levelText"),
         coins: document.getElementById("coinsText"),
         hp: document.getElementById("hpText"),
+        teamSlots: document.getElementById("teamSlots"),
         roster: document.getElementById("roster"),
         controlHint: document.getElementById("controlHint"),
         ultimateButton: document.getElementById("ultimateButton"),
@@ -527,6 +592,7 @@
         eggOverlay: document.getElementById("eggOverlay"),
         eggList: document.getElementById("eggList"),
         eggStatus: document.getElementById("eggStatus"),
+        eggTeamProgress: document.getElementById("eggTeamProgress"),
         closeEggButton: document.getElementById("closeEggButton"),
         pauseOverlay: document.getElementById("pauseOverlay"),
         pauseStats: document.getElementById("pauseStats"),
@@ -569,6 +635,26 @@
           rarity: "Rare",
           attack: "vine"
         },
+        ice: {
+          name: "Ice Penguin",
+          evolved: "Frost Emperor",
+          short: "ICE",
+          color: "#9fe8ff",
+          damage: 7,
+          rate: 1,
+          rarity: "Rare",
+          attack: "ice"
+        },
+        rock: {
+          name: "Rock Golem",
+          evolved: "Mountain Giant",
+          short: "ROCK",
+          color: "#9a8064",
+          damage: 16,
+          rate: .55,
+          rarity: "Rare",
+          attack: "rock"
+        },
         thunder: {
           name: "Thunder Mouse",
           evolved: "Storm Runner",
@@ -578,6 +664,16 @@
           rate: 1.8,
           rarity: "Epic",
           attack: "bolt"
+        },
+        poison: {
+          name: "Poison Snake",
+          evolved: "Venom Hydra",
+          short: "TOXIN",
+          color: "#82df5c",
+          damage: 5,
+          rate: 1.1,
+          rarity: "Epic",
+          attack: "poison"
         },
         ghost: {
           name: "Ghost Spirit",
@@ -593,7 +689,9 @@
 
       const enemyDefs = {
         slime: { name: "Slime", hp: 20, speed: 32, damage: 6, color: "#68e17b", xp: 6, coins: 1, size: 14 },
+        bat: { name: "Bat", hp: 18, speed: 82, damage: 5, color: "#8e68d8", xp: 7, coins: 1, size: 11 },
         goblin: { name: "Goblin", hp: 40, speed: 48, damage: 9, color: "#f0c84b", xp: 12, coins: 2, size: 15 },
+        skeleton: { name: "Skeleton", hp: 65, speed: 45, damage: 14, color: "#e8e1ca", xp: 18, coins: 3, size: 16 },
         orc: { name: "Orc", hp: 80, speed: 52, damage: 13, color: "#ff8f4a", xp: 22, coins: 4, size: 18 },
         dragon: { name: "Dragon", hp: 200, speed: 70, damage: 19, color: "#ff5d6c", xp: 52, coins: 8, size: 22 }
       };
@@ -605,11 +703,13 @@
       ];
 
       const rarityWeights = {
-        Common: [["fire", 34], ["water", 30], ["grass", 18], ["thunder", 12], ["ghost", 6]],
-        Rare: [["fire", 18], ["water", 20], ["grass", 28], ["thunder", 22], ["ghost", 12]],
-        Epic: [["fire", 12], ["water", 14], ["grass", 20], ["thunder", 32], ["ghost", 22]],
-        Legendary: [["fire", 8], ["water", 10], ["grass", 16], ["thunder", 24], ["ghost", 42]]
+        Common: [["fire", 30], ["water", 28], ["grass", 16], ["thunder", 10], ["ghost", 4], ["ice", 5], ["rock", 5], ["poison", 2]],
+        Rare: [["fire", 12], ["water", 14], ["grass", 22], ["ice", 22], ["rock", 20], ["thunder", 6], ["ghost", 2], ["poison", 2]],
+        Epic: [["fire", 8], ["water", 8], ["grass", 12], ["ice", 12], ["rock", 10], ["thunder", 24], ["poison", 18], ["ghost", 8]],
+        Legendary: [["ice", 8], ["rock", 8], ["grass", 8], ["poison", 20], ["thunder", 22], ["ghost", 34]]
       };
+
+      const eggCoinValues = { Common: 8, Rare: 15, Epic: 30, Legendary: 60 };
 
       const shopDefs = [
         { key: "damage", label: "Damage +5%", max: 50, base: 25 },
@@ -659,7 +759,7 @@
           damageMul: 1 + save.upgrades.damage * .05,
           xpMul: 1 + save.upgrades.xp * .05,
           eggDrop: .05 + save.upgrades.egg * .02,
-          maxSlots: 3,
+          maxSlots: 2,
           maxPossibleSlots: 6,
           ultimate: 0,
           eggs: [],
@@ -788,10 +888,23 @@
 
       function currentEnemyKey() {
         const m = state.time / 60;
-        if (m >= 12) return "dragon";
-        if (m >= 8) return "orc";
-        if (m >= 3) return "goblin";
-        return "slime";
+        let table = [["slime", 100]];
+        if (m >= 12) table = [["dragon", 36], ["orc", 28], ["skeleton", 24], ["bat", 12]];
+        else if (m >= 8) table = [["orc", 42], ["skeleton", 34], ["goblin", 24]];
+        else if (m >= 6) table = [["goblin", 42], ["skeleton", 30], ["bat", 28]];
+        else if (m >= 3) table = [["slime", 46], ["goblin", 34], ["bat", 20]];
+        else if (m >= 2) table = [["slime", 76], ["bat", 24]];
+        return weightedEnemyKey(table);
+      }
+
+      function weightedEnemyKey(table) {
+        const total = table.reduce((sum, entry) => sum + entry[1], 0);
+        let roll = Math.random() * total;
+        for (const [key, weight] of table) {
+          roll -= weight;
+          if (roll <= 0) return key;
+        }
+        return table[0][0];
       }
 
       function spawnEnemy(forceKey) {
@@ -804,36 +917,49 @@
           { x: rand(-36, W + 36), y: PLAY_BOTTOM + 36 },
           { x: -36, y: rand(HUD_BOTTOM, PLAY_BOTTOM) }
         ][side];
-        const scale = 1 + state.time / 900;
+        const timeScale = 1 + state.time / 900;
+        const teamPower = getTeamPower();
+        const hpScale = timeScale * (1 + teamPower * .06);
+        const damageScale = 1 + teamPower * .03;
         state.enemies.push({
           ...pos,
           key,
           name: base.name,
-          hp: base.hp * scale,
-          maxHp: base.hp * scale,
+          hp: base.hp * hpScale,
+          maxHp: base.hp * hpScale,
           speed: base.speed * (1 + state.time / 1600),
-          damage: base.damage,
+          damage: Math.max(base.damage, Math.round(base.damage * damageScale)),
           color: base.color,
           xp: base.xp,
           coins: base.coins,
           r: base.size,
           boss: false,
           hit: 0,
+          knockbackX: 0,
+          knockbackY: 0,
+          slowTimer: 0,
+          slowMul: 1,
+          poisonTimer: 0,
+          poisonDps: 0,
+          poisonTick: 0,
           attackCd: 0
         });
       }
 
       function spawnBoss(boss) {
-        const scale = 1 + state.time / 1200;
+        const timeScale = 1 + state.time / 1200;
+        const teamPower = getTeamPower();
+        const bossHpScale = timeScale * (1 + teamPower * .12);
+        const bossDamageScale = 1 + teamPower * .04;
         state.enemies.push({
           x: W / 2,
           y: HUD_BOTTOM - 64,
           key: boss.key,
           name: boss.name,
-          hp: boss.hp * scale,
-          maxHp: boss.hp * scale,
+          hp: boss.hp * bossHpScale,
+          maxHp: boss.hp * bossHpScale,
           speed: boss.speed,
-          damage: boss.damage,
+          damage: Math.max(boss.damage, Math.round(boss.damage * bossDamageScale)),
           color: boss.color,
           xp: boss.xp,
           coins: boss.coins,
@@ -841,6 +967,13 @@
           boss: true,
           bossEgg: boss.egg,
           hit: 0,
+          knockbackX: 0,
+          knockbackY: 0,
+          slowTimer: 0,
+          slowMul: 1,
+          poisonTimer: 0,
+          poisonDps: 0,
+          poisonTick: 0,
           attackCd: 0
         });
         state.shake = .45;
@@ -879,38 +1012,55 @@
         if (!target) return;
         play("attack");
         if (def.attack === "bolt") {
-          damageEnemy(target, stats.damage, true);
+          damageEnemy(target, stats.damage, true, origin);
           state.effects.push({ type: "line", x1: origin.x, y1: origin.y, x2: target.x, y2: target.y, color: def.color, life: .16, max: .16 });
           return;
         }
         if (def.attack === "vine") {
           state.effects.push({ type: "ring", x: target.x, y: target.y, r: 26, color: def.color, life: .24, max: .24 });
           for (const enemy of state.enemies) {
-            if (Math.hypot(enemy.x - target.x, enemy.y - target.y) < 46) damageEnemy(enemy, stats.damage, false);
+            if (Math.hypot(enemy.x - target.x, enemy.y - target.y) < 46) damageEnemy(enemy, stats.damage, false, target);
           }
           return;
         }
         const angle = Math.atan2(target.y - origin.y, target.x - origin.x);
+        const projectile = projectileStats(def.attack, stats);
         state.projectiles.push({
           x: origin.x,
           y: origin.y,
-          vx: Math.cos(angle) * (def.attack === "splash" ? 230 : 310),
-          vy: Math.sin(angle) * (def.attack === "splash" ? 230 : 310),
-          r: def.attack === "splash" ? 8 : 6,
+          vx: Math.cos(angle) * projectile.speed,
+          vy: Math.sin(angle) * projectile.speed,
+          r: projectile.r,
           damage: stats.damage,
           color: def.color,
+          trail: [],
           life: 1.8,
-          pierce: def.attack === "orb" ? 3 : 1,
-          splash: def.attack === "splash" ? 38 : 0
+          pierce: projectile.pierce,
+          splash: projectile.splash,
+          status: projectile.status,
+          poisonDps: projectile.poisonDps,
+          poisonTimer: projectile.poisonTimer,
+          heavy: projectile.heavy
         });
       }
 
-      function damageEnemy(enemy, amount, canCrit) {
+      function projectileStats(attack, stats) {
+        if (attack === "splash") return { speed: 230, r: 8, pierce: 1, splash: 38 };
+        if (attack === "orb") return { speed: 310, r: 6, pierce: 3, splash: 0 };
+        if (attack === "ice") return { speed: 280, r: 7, pierce: 1, splash: 0, status: "ice" };
+        if (attack === "rock") return { speed: 190, r: 10, pierce: 1, splash: 44, heavy: true };
+        if (attack === "poison") return { speed: 260, r: 7, pierce: 1, splash: 0, status: "poison", poisonDps: stats.damage * .55, poisonTimer: 2.4 };
+        return { speed: 310, r: 6, pierce: 1, splash: 0 };
+      }
+
+      function damageEnemy(enemy, amount, canCrit, source) {
         const crit = canCrit && Math.random() < state.critChance;
         const damage = amount * (crit ? 2 : 1);
         enemy.hp -= damage;
         enemy.hit = .1;
-        if (crit) addPop(enemy.x, enemy.y - enemy.r, "CRIT", "#ffd166", 13);
+        addDamagePop(enemy, damage, crit);
+        applyKnockback(enemy, source, crit ? 86 : 48);
+        if (crit || damage >= 45) state.shake = Math.max(state.shake, crit ? .16 : .08);
       }
 
       function killEnemy(enemy) {
@@ -918,6 +1068,17 @@
         state.ultimate = clamp(state.ultimate + (enemy.boss ? 34 : 5), 0, 100);
         dropGem(enemy.x, enemy.y, enemy.xp);
         dropCoins(enemy.x, enemy.y, enemy.coins);
+        state.effects.push({
+          type: "burst",
+          x: enemy.x,
+          y: enemy.y,
+          color: enemy.color,
+          life: enemy.boss ? .58 : .38,
+          max: enemy.boss ? .58 : .38,
+          count: enemy.boss ? 10 : 7,
+          size: enemy.boss ? 8 : 5,
+          distance: enemy.boss ? 58 : 34
+        });
         if (enemy.boss) {
           state.eggs.push(enemy.bossEgg);
           addPop(enemy.x, enemy.y - 24, `${enemy.bossEgg} Egg`, "#ffd166", 18);
@@ -927,7 +1088,6 @@
           state.eggs.push(rarity);
           addPop(enemy.x, enemy.y - 18, `${rarity} Egg`, "#fff2a6", 13);
         }
-        state.effects.push({ type: "burst", x: enemy.x, y: enemy.y, color: enemy.color, life: .35, max: .35 });
       }
 
       function rollEggRarity() {
@@ -955,6 +1115,39 @@
 
       function addPop(x, y, text, color = "#fff", size = 12) {
         state.pops.push({ x, y, text, color, size, life: .9, max: .9 });
+      }
+
+      function addDamagePop(enemy, damage, crit) {
+        if (!crit && state.pops.length > 54) return;
+        const text = crit ? `CRIT ${Math.ceil(damage)}` : `${Math.ceil(damage)}`;
+        const color = crit ? "#ffd166" : "#fff4d6";
+        const size = crit ? 17 : 11;
+        const offset = (state.pops.length % 5 - 2) * 5;
+        addPop(enemy.x + offset, enemy.y - enemy.r - (crit ? 12 : 6), text, color, size);
+      }
+
+      function applyKnockback(enemy, source, strength) {
+        if (!source) return;
+        const dx = enemy.x - source.x;
+        const dy = enemy.y - source.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const scale = enemy.boss ? .18 : 1;
+        enemy.knockbackX = (enemy.knockbackX || 0) + dx / d * strength * scale;
+        enemy.knockbackY = (enemy.knockbackY || 0) + dy / d * strength * scale;
+      }
+
+      function applyProjectileStatus(enemy, projectile) {
+        if (projectile.status === "ice") {
+          enemy.slowTimer = Math.max(enemy.slowTimer || 0, enemy.boss ? .75 : 1.2);
+          enemy.slowMul = enemy.boss ? .82 : .62;
+          state.effects.push({ type: "ring", x: enemy.x, y: enemy.y, r: enemy.r + 10, color: projectile.color, life: .2, max: .2, width: 3 });
+        }
+        if (projectile.status === "poison") {
+          enemy.poisonTimer = Math.max(enemy.poisonTimer || 0, (projectile.poisonTimer || 2.4) * (enemy.boss ? .7 : 1));
+          enemy.poisonDps = Math.max(enemy.poisonDps || 0, (projectile.poisonDps || projectile.damage * .45) * (enemy.boss ? .45 : 1));
+          enemy.poisonTick = Math.min(enemy.poisonTick || 0, .2);
+          state.effects.push({ type: "ring", x: enemy.x, y: enemy.y, r: enemy.r + 7, color: "#9d64ff", life: .22, max: .22, width: 3 });
+        }
       }
 
       function gainXp(value) {
@@ -1009,9 +1202,9 @@
             apply: () => { state.eggs.push("Common"); addPop(state.player.x, state.player.y - 30, "Egg Get", "#fff2a6", 15); }
           },
           {
-            title: "Monster Slot +1",
-            desc: "Raise active monster slots by one.",
-            apply: () => { state.maxSlots = Math.min(state.maxSlots + 1, state.maxPossibleSlots); addPop(state.player.x, state.player.y - 30, "Slot Up", "#63df82", 15); }
+            title: "Team Slot +1",
+            desc: "Add one more active monster to your team.",
+            apply: () => { state.maxSlots = Math.min(state.maxSlots + 1, state.maxPossibleSlots); addPop(state.player.x, state.player.y - 30, "Slot Up", "#63df82", 15); refreshHud(); }
           },
           {
             title: "Critical Chance +5%",
@@ -1024,7 +1217,7 @@
             apply: () => { state.player.maxHp += 20; state.player.hp = Math.min(state.player.maxHp, state.player.hp + 20); addPop(state.player.x, state.player.y - 30, "HP Up", "#ff7f91", 15); }
           }
         ];
-        if (state.maxSlots >= state.maxPossibleSlots) pool.splice(3, 1);
+        if (state.level < 3 || state.maxSlots >= state.maxPossibleSlots || Math.random() >= .45) pool.splice(3, 1);
         const out = [];
         while (out.length < 3 && pool.length) {
           out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
@@ -1047,30 +1240,61 @@
         const rarity = state.hatching;
         state.hatching = null;
         const type = chooseWeighted(rarityWeights[rarity]);
-        addMonsterCopy(type);
-        addPop(state.player.x, state.player.y - 42, monsterDefs[type].name, monsterDefs[type].color, 16);
+        const result = addMonsterCopy(type);
+        if (result.messages) {
+          result.messages.forEach((message, i) => addPop(state.player.x, state.player.y - 42 - i * 20, message, result.color, i ? 13 : 16));
+        } else {
+          addPop(state.player.x, state.player.y - 42, result.message, result.color, result.size || 16);
+        }
         play("evolve");
         if (state.mode === "eggs") {
-          el.eggStatus.textContent = "Tap an egg to hatch it.";
+          el.eggStatus.textContent = result.status || "Tap an egg to hatch it.";
           renderEggPanel();
         }
       }
 
+      function eggConvertCoins(rarity) {
+        return eggCoinValues[rarity] || 8;
+      }
+
       function addMonsterCopy(type) {
+        const def = monsterDefs[type];
         let monster = state.monsters.find(m => m.type === type && !m.evolved);
         if (!monster && state.monsters.length < state.maxSlots) {
           state.monsters.push(makeMonster(type));
-          return;
+          refreshHud();
+          return { message: `${def.name} joined!`, status: `${def.name} joined!`, color: def.color };
         }
-        monster = monster || state.monsters.find(m => m.type === type) || state.monsters[0];
+        monster = monster || state.monsters.find(m => m.type === type);
+        if (!monster) {
+          const coins = eggConvertCoins(def.rarity);
+          const slotText = `Team ${state.monsters.length}/${state.maxSlots}`;
+          state.runCoins += coins;
+          save.coins += coins;
+          saveGame();
+          refreshHud();
+          return {
+            messages: [`No empty team slot! ${slotText}`, `${def.name} converted to ${coins} coins.`],
+            status: `No empty team slot! ${slotText}\n${def.name} converted to ${coins} coins.`,
+            color: "#ffd166"
+          };
+        }
         monster.copies += 1;
         if (!monster.evolved && monster.copies >= 3) {
           monster.evolved = true;
           monster.copies = 1;
           state.shake = .28;
-          addPop(state.player.x, state.player.y - 62, `${monsterDefs[type].evolved}!`, monsterDefs[type].color, 20);
+          addPop(state.player.x, state.player.y - 62, `${def.evolved}!`, def.color, 20);
           play("evolve");
+          refreshHud();
+          return { message: `${def.evolved} evolved!`, status: `${def.evolved} evolved!`, color: def.color, size: 18 };
         }
+        refreshHud();
+        return {
+          message: `${monster.evolved ? def.evolved : def.name} copy +1`,
+          status: `${monster.evolved ? def.evolved : def.name} copy +1`,
+          color: def.color
+        };
       }
 
       function update(dt) {
@@ -1091,7 +1315,7 @@
           const pressure = Math.min(1.05, state.time / 900);
           state.spawns.interval = clamp(1.35 - pressure * .7, .42, 1.35);
           if (state.spawns.timer <= 0) {
-            const count = state.time > 480 ? 2 : 1;
+            const count = spawnWaveCount();
             for (let i = 0; i < count; i += 1) spawnEnemy();
             state.spawns.timer = state.spawns.interval;
           }
@@ -1121,6 +1345,14 @@
         if (state.control.active) {
           p.x += state.control.dx * p.speed * dt;
           p.y += state.control.dy * p.speed * dt;
+          p.tx = p.x;
+          p.ty = p.y;
+        } else if (keyboard.up || keyboard.down || keyboard.left || keyboard.right) {
+          const dx = (keyboard.right ? 1 : 0) - (keyboard.left ? 1 : 0);
+          const dy = (keyboard.down ? 1 : 0) - (keyboard.up ? 1 : 0);
+          const len = Math.hypot(dx, dy) || 1;
+          p.x += dx / len * p.speed * dt;
+          p.y += dy / len * p.speed * dt;
           p.tx = p.x;
           p.ty = p.y;
         } else {
@@ -1164,11 +1396,40 @@
       function updateEnemies(dt) {
         const p = state.player;
         for (const enemy of state.enemies) {
+          if (enemy.slowTimer > 0) {
+            enemy.slowTimer = Math.max(0, enemy.slowTimer - dt);
+            if (enemy.slowTimer <= 0) enemy.slowMul = 1;
+          }
+          if (enemy.poisonTimer > 0) {
+            const poisonDamage = (enemy.poisonDps || 0) * dt;
+            enemy.hp -= poisonDamage;
+            enemy.poisonTimer = Math.max(0, enemy.poisonTimer - dt);
+            enemy.poisonTick = (enemy.poisonTick || 0) - dt;
+            if (enemy.poisonTick <= 0 && poisonDamage > 0) {
+              addDamagePop(enemy, (enemy.poisonDps || 0) * .5, false);
+              enemy.poisonTick = .5;
+            }
+            if (enemy.poisonTimer <= 0) enemy.poisonDps = 0;
+          }
           const dx = p.x - enemy.x;
           const dy = p.y - enemy.y;
           const d = Math.hypot(dx, dy) || 1;
-          enemy.x += dx / d * enemy.speed * dt;
-          enemy.y += dy / d * enemy.speed * dt;
+          const speedMul = enemy.slowTimer > 0 ? enemy.slowMul || 1 : 1;
+          enemy.x += dx / d * enemy.speed * speedMul * dt;
+          enemy.y += dy / d * enemy.speed * speedMul * dt;
+          const hadKnockback = enemy.knockbackX || enemy.knockbackY;
+          if (hadKnockback) {
+            enemy.x += enemy.knockbackX * dt;
+            enemy.y += enemy.knockbackY * dt;
+            enemy.knockbackX *= Math.pow(.04, dt);
+            enemy.knockbackY *= Math.pow(.04, dt);
+            if (Math.hypot(enemy.knockbackX, enemy.knockbackY) < 2) {
+              enemy.knockbackX = 0;
+              enemy.knockbackY = 0;
+            }
+            enemy.x = clamp(enemy.x, -32, W + 32);
+            enemy.y = clamp(enemy.y, HUD_BOTTOM - 70, PLAY_BOTTOM + 32);
+          }
           enemy.hit = Math.max(0, enemy.hit - dt);
           enemy.attackCd = Math.max(0, enemy.attackCd - dt);
           if (d < enemy.r + p.r && enemy.attackCd <= 0) {
@@ -1191,17 +1452,21 @@
 
       function updateProjectiles(dt) {
         for (const p of state.projectiles) {
+          p.trail = p.trail || [];
+          p.trail.unshift({ x: p.x, y: p.y });
+          if (p.trail.length > 5) p.trail.length = 5;
           p.x += p.vx * dt;
           p.y += p.vy * dt;
           p.life -= dt;
           for (const enemy of state.enemies) {
             if (enemy._hitFrame === p) continue;
             if (Math.hypot(enemy.x - p.x, enemy.y - p.y) < enemy.r + p.r) {
-              damageEnemy(enemy, p.damage, true);
+              damageEnemy(enemy, p.damage, true, { x: p.x - p.vx * .03, y: p.y - p.vy * .03 });
+              applyProjectileStatus(enemy, p);
               if (p.splash) {
                 state.effects.push({ type: "ring", x: enemy.x, y: enemy.y, r: p.splash, color: p.color, life: .22, max: .22 });
                 for (const other of state.enemies) {
-                  if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) < p.splash) damageEnemy(other, p.damage * .6, false);
+                  if (other !== enemy && Math.hypot(other.x - enemy.x, other.y - enemy.y) < p.splash) damageEnemy(other, p.damage * .6, false, enemy);
                 }
               }
               p.pierce -= 1;
@@ -1258,11 +1523,57 @@
         state.effects = state.effects.filter(e => e.life > 0);
       }
 
+      function getTeamSummary() {
+        if (!state.monsters.length) return "No monsters";
+        const names = state.monsters.map(monster => {
+          const def = monsterDefs[monster.type];
+          return monster.evolved ? def.evolved : def.name;
+        });
+        if (names.length <= 4) return names.join(", ");
+        return `${names.slice(0, 4).join(", ")}, +${names.length - 4} more`;
+      }
+
+      function getEvolvedCount() {
+        return state.monsters.filter(monster => monster.evolved).length;
+      }
+
+      function getTeamProgressText() {
+        if (!state.monsters.length) return "Team: empty";
+        return state.monsters.map(monster => {
+          const def = monsterDefs[monster.type];
+          if (monster.evolved) return `${def.evolved} evolved`;
+          return `${def.name} x${monster.copies}/3`;
+        }).join("\n");
+      }
+
+      function getTeamPower() {
+        return state.monsters.length + getEvolvedCount() + Math.floor(state.level / 5);
+      }
+
+      function spawnWaveCount() {
+        let count = 1;
+        if (state.time >= 720) count = Math.random() < .45 ? 3 : 2;
+        else if (state.time >= 480) count = Math.random() < .78 ? 2 : 1;
+        else if (state.time >= 180) count = Math.random() < .35 ? 2 : 1;
+        const teamPower = getTeamPower();
+        if (state.time >= 180 && teamPower >= 5 && Math.random() < Math.min(.32, .1 + teamPower * .025)) count += 1;
+        return Math.min(count, state.time >= 720 ? 4 : 3);
+      }
+
+      function getRunSummary(resultText) {
+        return `${resultText}
+KOs: ${state.kills}
+Coins earned: ${state.runCoins}
+Team: ${getTeamSummary()}
+Evolved monsters: ${getEvolvedCount()}`;
+      }
+
       function gameOver() {
         clearDirectionalControl();
         state.mode = "ended";
         el.endTitle.textContent = "Game Over";
-        el.endText.textContent = `Survived ${formatTime(state.time)}. Defeated ${state.kills} enemies and earned ${state.runCoins} coins.`;
+        el.endText.textContent = getRunSummary(`Survived ${formatTime(state.time)}.
+Your team fought bravely.`);
         el.endOverlay.classList.add("active");
       }
 
@@ -1271,21 +1582,24 @@
         state.flash = .8;
         play("victory");
         el.endTitle.textContent = "Victory";
-        el.endText.textContent = `The Dark Lord fell at ${formatTime(state.time)}. Your monsters earned ${state.runCoins} coins.`;
+        el.endText.textContent = getRunSummary(`Victory at ${formatTime(state.time)}!
+The Dark Lord was defeated.`);
         el.endOverlay.classList.add("active");
       }
 
       function castUltimate() {
         if (state.mode !== "playing" || state.ultimate < 100) return;
         state.ultimate = 0;
-        state.shake = .35;
-        state.flash = .25;
-        state.effects.push({ type: "ring", x: state.player.x, y: state.player.y, r: 168, color: "#ffd166", life: .38, max: .38 });
+        state.shake = .45;
+        state.flash = .42;
+        state.effects.push({ type: "ring", x: state.player.x, y: state.player.y, r: 184, color: "#ffd166", life: .46, max: .46, width: 9 });
+        state.effects.push({ type: "ring", x: state.player.x, y: state.player.y, r: 118, color: "#fff4d6", life: .32, max: .32, width: 5 });
+        state.effects.push({ type: "burst", x: state.player.x, y: state.player.y, color: "#ffd166", life: .42, max: .42, count: 12, size: 6, distance: 92 });
         for (const enemy of state.enemies) {
           const d = Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y);
-          if (d < 180) damageEnemy(enemy, 180 * state.damageMul, true);
+          if (d < 180) damageEnemy(enemy, 180 * state.damageMul, true, state.player);
         }
-        addPop(state.player.x, state.player.y - 40, "ULTIMATE", "#ffd166", 20);
+        addPop(state.player.x, state.player.y - 48, "ULTIMATE!", "#ffd166", 26);
       }
 
       function draw() {
@@ -1330,22 +1644,41 @@
 
       function drawPlayer() {
         const p = state.player;
+        const bob = Math.sin(state.time * 10) * (state.control.active || keyboard.up || keyboard.down || keyboard.left || keyboard.right ? 2 : .7);
         ctx.save();
-        ctx.translate(p.x, p.y);
+        ctx.translate(Math.round(p.x), Math.round(p.y + bob));
         ctx.fillStyle = "rgba(0,0,0,.22)";
-        ctx.fillRect(-13, 16, 26, 6);
-        ctx.fillStyle = p.hurt > 0 ? "#fff" : "#f6d7b0";
-        ctx.fillRect(-9, -15, 18, 18);
+        ctx.fillRect(-15, 18, 30, 6);
+        ctx.fillStyle = "#151d2c";
+        ctx.fillRect(-8, -14, 16, 4);
+        ctx.fillStyle = p.hurt > 0 ? "#ffffff" : "#f2c19a";
+        ctx.fillRect(-10, -17, 20, 18);
+        ctx.fillStyle = "#1a2638";
+        ctx.fillRect(-8, -18, 16, 5);
         ctx.fillStyle = "#e8475c";
-        ctx.fillRect(-12, -23, 24, 10);
-        ctx.fillStyle = "#244fc5";
-        ctx.fillRect(-11, 2, 22, 24);
+        ctx.fillRect(-13, -25, 26, 9);
+        ctx.fillRect(-6, -30, 18, 6);
+        ctx.fillStyle = "#ffd166";
+        ctx.fillRect(4, -24, 8, 3);
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(-5, -9, 3, 3);
-        ctx.fillRect(4, -9, 3, 3);
-        ctx.fillStyle = "#182338";
-        ctx.fillRect(-12, 23, 8, 9);
-        ctx.fillRect(4, 23, 8, 9);
+        ctx.fillRect(-6, -10, 4, 4);
+        ctx.fillRect(4, -10, 4, 4);
+        ctx.fillStyle = "#162133";
+        ctx.fillRect(-5, -9, 2, 2);
+        ctx.fillRect(5, -9, 2, 2);
+        ctx.fillStyle = "#284fc5";
+        ctx.fillRect(-12, 0, 24, 20);
+        ctx.fillStyle = "#f4f8ff";
+        ctx.fillRect(-4, 0, 8, 19);
+        ctx.fillStyle = "#e8475c";
+        ctx.fillRect(-15, 4, 5, 15);
+        ctx.fillRect(10, 4, 5, 15);
+        ctx.fillStyle = "#111827";
+        ctx.fillRect(-12, 19, 9, 9);
+        ctx.fillRect(3, 19, 9, 9);
+        ctx.fillStyle = "#2b3548";
+        ctx.fillRect(-14, 27, 12, 5);
+        ctx.fillRect(2, 27, 12, 5);
         ctx.restore();
 
         if (!state.control.active) {
@@ -1355,6 +1688,13 @@
           ctx.arc(p.tx, p.ty, 9, 0, Math.PI * 2);
           ctx.stroke();
         }
+      }
+
+      function drawPixelEye(x, y, size = 3) {
+        ctx.fillStyle = "#fffaf2";
+        ctx.fillRect(x, y, size + 1, size);
+        ctx.fillStyle = "#101827";
+        ctx.fillRect(x + size - 1, y + 1, 2, 2);
       }
 
       function drawMonsters() {
@@ -1367,19 +1707,220 @@
           ctx.save();
           ctx.translate(pos.x, pos.y);
           ctx.fillStyle = "rgba(0,0,0,.2)";
-          ctx.fillRect(-s, s, s * 2, 5);
-          ctx.fillStyle = def.color;
-          ctx.fillRect(-s, -s, s * 2, s * 2);
-          ctx.fillStyle = "rgba(255,255,255,.8)";
-          ctx.fillRect(-s + 4, -s + 4, 4, 4);
-          ctx.fillRect(s - 8, -s + 4, 4, 4);
+          ctx.fillRect(-s, s + 2, s * 2, 5);
           if (monster.evolved) {
+            ctx.shadowColor = def.color;
+            ctx.shadowBlur = 12;
             ctx.strokeStyle = "#fff0a8";
             ctx.lineWidth = 3;
-            ctx.strokeRect(-s - 2, -s - 2, s * 2 + 4, s * 2 + 4);
+            ctx.strokeRect(-s - 4, -s - 4, s * 2 + 8, s * 2 + 8);
           }
+          ctx.shadowBlur = 0;
+          drawMonsterShape(monster, def, s);
           ctx.restore();
         });
+      }
+
+      function drawMonsterShape(monster, def, s) {
+        const evo = monster.evolved;
+        ctx.fillStyle = def.color;
+        ctx.strokeStyle = "#101827";
+        ctx.lineWidth = 2;
+        if (monster.type === "fire") {
+          ctx.beginPath();
+          ctx.ellipse(0, 1, s * .95, s * .62, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffb347";
+          ctx.beginPath();
+          ctx.moveTo(-s * .9, 0);
+          ctx.lineTo(-s * 1.45, -s * .35);
+          ctx.lineTo(-s * 1.18, s * .22);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffd166";
+          ctx.fillRect(s * .45, -s * .58, s * .36, s * .24);
+          if (evo) {
+            ctx.fillStyle = "#fff0a8";
+            ctx.fillRect(-s * .25, -s * .95, s * .16, s * .45);
+            ctx.fillRect(s * .15, -s * .95, s * .16, s * .45);
+          }
+          drawPixelEye(s * .24, -s * .2, 3);
+        } else if (monster.type === "water") {
+          ctx.fillStyle = "#4bd19b";
+          ctx.beginPath();
+          ctx.ellipse(0, 2, s * .95, s * .7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = def.color;
+          ctx.beginPath();
+          ctx.ellipse(0, -1, s * .62, s * .46, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(255,255,255,.55)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(-s * .35, -s * .34);
+          ctx.lineTo(s * .35, s * .32);
+          ctx.moveTo(s * .35, -s * .34);
+          ctx.lineTo(-s * .35, s * .32);
+          ctx.stroke();
+          if (evo) {
+            ctx.fillStyle = "#eaffff";
+            for (let x = -1; x <= 1; x += 1) {
+              ctx.beginPath();
+              ctx.moveTo(x * s * .32, -s * .75);
+              ctx.lineTo(x * s * .32 - 4, -s * .42);
+              ctx.lineTo(x * s * .32 + 4, -s * .42);
+              ctx.closePath();
+              ctx.fill();
+            }
+          }
+          drawPixelEye(s * .4, -s * .26, 3);
+        } else if (monster.type === "ice") {
+          ctx.fillStyle = "#26384c";
+          ctx.beginPath();
+          ctx.ellipse(0, 1, s * .68, s * .88, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = def.color;
+          ctx.beginPath();
+          ctx.ellipse(0, 4, s * .46, s * .55, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#ffb35c";
+          ctx.beginPath();
+          ctx.moveTo(s * .55, -s * .08);
+          ctx.lineTo(s * .95, s * .08);
+          ctx.lineTo(s * .55, s * .2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = "#bdf5ff";
+          ctx.fillRect(-s * .72, s * .3, s * .28, s * .18);
+          ctx.fillRect(s * .42, s * .3, s * .28, s * .18);
+          if (evo) {
+            ctx.fillStyle = "#fff6b8";
+            ctx.fillRect(-s * .25, -s * 1.16, s * .12, s * .34);
+            ctx.fillRect(-s * .06, -s * 1.28, s * .12, s * .46);
+            ctx.fillRect(s * .13, -s * 1.16, s * .12, s * .34);
+            ctx.strokeStyle = "#e8fbff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, 0, s * 1.05, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          drawPixelEye(-s * .26, -s * .28, 3);
+          drawPixelEye(s * .1, -s * .28, 3);
+        } else if (monster.type === "grass") {
+          ctx.fillStyle = "#8a5c38";
+          ctx.fillRect(-s * .45, -s * .2, s * .9, s * .82);
+          ctx.strokeRect(-s * .45, -s * .2, s * .9, s * .82);
+          ctx.fillStyle = def.color;
+          for (let j = -1; j <= 1; j += 1) {
+            ctx.beginPath();
+            ctx.ellipse(j * s * .34, -s * .48, s * .34, s * .55, j * .45, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+          if (evo) {
+            ctx.fillStyle = "#fff0a8";
+            ctx.fillRect(-s * .08, -s * 1.08, s * .16, s * .44);
+          }
+          drawPixelEye(-s * .22, -s * .02, 3);
+          drawPixelEye(s * .12, -s * .02, 3);
+        } else if (monster.type === "rock") {
+          ctx.fillStyle = "#6f5d4f";
+          ctx.fillRect(-s * .72, -s * .52, s * 1.44, s * 1.12);
+          ctx.strokeRect(-s * .72, -s * .52, s * 1.44, s * 1.12);
+          ctx.fillStyle = def.color;
+          ctx.fillRect(-s * .45, -s * .88, s * .9, s * .56);
+          ctx.strokeRect(-s * .45, -s * .88, s * .9, s * .56);
+          ctx.fillRect(-s * .98, -s * .18, s * .34, s * .52);
+          ctx.fillRect(s * .64, -s * .18, s * .34, s * .52);
+          if (evo) {
+            ctx.fillStyle = "#d2c2a6";
+            for (let j = -1; j <= 1; j += 1) {
+              ctx.beginPath();
+              ctx.moveTo(j * s * .34, -s * 1.2);
+              ctx.lineTo(j * s * .34 - s * .14, -s * .78);
+              ctx.lineTo(j * s * .34 + s * .14, -s * .78);
+              ctx.closePath();
+              ctx.fill();
+              ctx.stroke();
+            }
+          }
+          drawPixelEye(-s * .24, -s * .65, 3);
+          drawPixelEye(s * .12, -s * .65, 3);
+        } else if (monster.type === "thunder") {
+          ctx.fillStyle = def.color;
+          ctx.beginPath();
+          ctx.ellipse(0, 1, s * .72, s * .68, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(-s * .48, -s * .52, s * .32, 0, Math.PI * 2);
+          ctx.arc(s * .48, -s * .52, s * .32, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ff9f43";
+          ctx.fillRect(s * .5, -s * .02, s * .52, s * .2);
+          if (evo) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(-s * .12, -s * 1.04, s * .22, s * .5);
+            ctx.fillRect(-s * .02, -s * .78, s * .34, s * .2);
+          }
+          drawPixelEye(-s * .28, -s * .1, 3);
+          drawPixelEye(s * .14, -s * .1, 3);
+        } else if (monster.type === "poison") {
+          ctx.strokeStyle = "#101827";
+          ctx.lineWidth = 2;
+          ctx.fillStyle = "#6fe45a";
+          ctx.beginPath();
+          ctx.ellipse(-s * .25, s * .2, s * .62, s * .34, -.35, 0, Math.PI * 2);
+          ctx.ellipse(s * .25, -s * .08, s * .62, s * .34, -.35, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#9d64ff";
+          ctx.beginPath();
+          ctx.ellipse(s * .55, -s * .28, s * .42, s * .36, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#f4efe3";
+          ctx.fillRect(s * .55, -s * .05, s * .1, s * .3);
+          ctx.fillRect(s * .78, -s * .08, s * .1, s * .3);
+          if (evo) {
+            ctx.fillStyle = "#9d64ff";
+            ctx.beginPath();
+            ctx.ellipse(-s * .55, -s * .34, s * .34, s * .28, -.4, 0, Math.PI * 2);
+            ctx.ellipse(s * .02, -s * .62, s * .34, s * .28, .25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          }
+          drawPixelEye(s * .42, -s * .36, 3);
+          drawPixelEye(s * .7, -s * .38, 3);
+        } else {
+          ctx.fillStyle = def.color;
+          ctx.beginPath();
+          ctx.moveTo(-s * .75, -s * .3);
+          ctx.quadraticCurveTo(0, -s * 1.02, s * .75, -s * .3);
+          ctx.lineTo(s * .62, s * .55);
+          ctx.lineTo(s * .25, s * .25);
+          ctx.lineTo(0, s * .62);
+          ctx.lineTo(-s * .25, s * .25);
+          ctx.lineTo(-s * .62, s * .55);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          if (evo) {
+            ctx.fillStyle = "#f2e8ff";
+            ctx.beginPath();
+            ctx.ellipse(-s * .72, -s * .08, s * .36, s * .18, -.7, 0, Math.PI * 2);
+            ctx.ellipse(s * .72, -s * .08, s * .36, s * .18, .7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawPixelEye(-s * .32, -s * .28, 4);
+          drawPixelEye(s * .14, -s * .28, 4);
+        }
       }
 
       function drawEnemies() {
@@ -1389,33 +1930,209 @@
           ctx.translate(enemy.x, enemy.y);
           ctx.fillStyle = "rgba(0,0,0,.24)";
           ctx.fillRect(-r, r - 1, r * 2, 7);
-          ctx.fillStyle = enemy.hit > 0 ? "#fff" : enemy.color;
-          if (enemy.boss) {
-            ctx.fillRect(-r, -r, r * 2, r * 2);
-            ctx.fillStyle = "rgba(0,0,0,.25)";
-            ctx.fillRect(-r + 8, -r - 8, r * 2 - 16, 8);
-          } else {
-            ctx.fillRect(-r, -r, r * 2, r * 2);
-          }
-          ctx.fillStyle = "#101827";
-          ctx.fillRect(-r + 5, -r + 7, 4, 4);
-          ctx.fillRect(r - 9, -r + 7, 4, 4);
+          if (enemy.boss) drawBossShape(enemy, r);
+          else drawEnemyShape(enemy, r);
           ctx.restore();
 
-          const w = enemy.boss ? 74 : 34;
+          const w = enemy.boss ? 82 : 34;
+          const barY = enemy.boss ? Math.max(106, enemy.y - r - 24) : enemy.y - r - 13;
+          if (enemy.boss) {
+            ctx.font = "900 11px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.strokeStyle = "rgba(0,0,0,.75)";
+            ctx.lineWidth = 4;
+            ctx.strokeText(enemy.name, enemy.x, barY - 3);
+            ctx.fillStyle = "#fff4d6";
+            ctx.fillText(enemy.name, enemy.x, barY - 3);
+          }
           ctx.fillStyle = "rgba(0,0,0,.45)";
-          ctx.fillRect(enemy.x - w / 2, enemy.y - r - 13, w, 5);
+          ctx.fillRect(enemy.x - w / 2, barY, w, enemy.boss ? 7 : 5);
           ctx.fillStyle = enemy.boss ? "#ff5d6c" : "#63df82";
-          ctx.fillRect(enemy.x - w / 2, enemy.y - r - 13, w * clamp(enemy.hp / enemy.maxHp, 0, 1), 5);
+          ctx.fillRect(enemy.x - w / 2, barY, w * clamp(enemy.hp / enemy.maxHp, 0, 1), enemy.boss ? 7 : 5);
         }
+      }
+
+      function drawEnemyShape(enemy, r) {
+        const color = enemy.hit > 0 ? "#ffffff" : enemy.color;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#101827";
+        ctx.lineWidth = 2;
+        if (enemy.key === "slime") {
+          ctx.beginPath();
+          ctx.ellipse(0, 3, r * .95, r * .75, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "rgba(255,255,255,.45)";
+          ctx.fillRect(-r * .35, -r * .26, r * .45, r * .18);
+        } else if (enemy.key === "goblin") {
+          ctx.fillRect(-r * .55, -r * .35, r * 1.1, r * 1.08);
+          ctx.strokeRect(-r * .55, -r * .35, r * 1.1, r * 1.08);
+          ctx.beginPath();
+          ctx.moveTo(-r * .55, -r * .18);
+          ctx.lineTo(-r * 1.05, -r * .52);
+          ctx.lineTo(-r * .58, -r * .62);
+          ctx.moveTo(r * .55, -r * .18);
+          ctx.lineTo(r * 1.05, -r * .52);
+          ctx.lineTo(r * .58, -r * .62);
+          ctx.fill();
+          ctx.stroke();
+        } else if (enemy.key === "orc") {
+          ctx.fillRect(-r * .76, -r * .52, r * 1.52, r * 1.32);
+          ctx.strokeRect(-r * .76, -r * .52, r * 1.52, r * 1.32);
+          ctx.fillStyle = "#f4efe3";
+          ctx.fillRect(-r * .45, r * .05, r * .18, r * .32);
+          ctx.fillRect(r * .27, r * .05, r * .18, r * .32);
+        } else if (enemy.key === "dragon") {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r * .78, r * .62, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-r * .55, -r * .18);
+          ctx.lineTo(-r * 1.35, -r * .9);
+          ctx.lineTo(-r * 1.05, r * .15);
+          ctx.moveTo(r * .55, -r * .18);
+          ctx.lineTo(r * 1.35, -r * .9);
+          ctx.lineTo(r * 1.05, r * .15);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffd166";
+          ctx.fillRect(r * .48, -r * .16, r * .55, r * .18);
+        } else if (enemy.key === "bat") {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r * .55, r * .45, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.moveTo(-r * .4, 0);
+          ctx.lineTo(-r * 1.35, -r * .62);
+          ctx.lineTo(-r * 1.05, r * .42);
+          ctx.moveTo(r * .4, 0);
+          ctx.lineTo(r * 1.35, -r * .62);
+          ctx.lineTo(r * 1.05, r * .42);
+          ctx.fill();
+          ctx.stroke();
+        } else if (enemy.key === "skeleton") {
+          ctx.fillStyle = enemy.hit > 0 ? "#ffffff" : "#e8e1ca";
+          ctx.fillRect(-r * .48, -r * .75, r * .96, r * .62);
+          ctx.strokeRect(-r * .48, -r * .75, r * .96, r * .62);
+          ctx.fillRect(-r * .32, -r * .08, r * .64, r * .8);
+          ctx.strokeRect(-r * .32, -r * .08, r * .64, r * .8);
+        } else {
+          ctx.fillRect(-r, -r, r * 2, r * 2);
+        }
+        if (enemy.key === "bat") {
+          ctx.fillStyle = "#ffef6e";
+          ctx.fillRect(-r * .36, -r * .12, 3, 3);
+          ctx.fillRect(r * .16, -r * .12, 3, 3);
+        } else if (enemy.key === "skeleton") {
+          ctx.fillStyle = "#101827";
+          ctx.fillRect(-r * .31, -r * .55, 4, 5);
+          ctx.fillRect(r * .12, -r * .55, 4, 5);
+          ctx.fillRect(-r * .12, -r * .25, r * .24, 3);
+        } else {
+          ctx.fillStyle = "#101827";
+          ctx.fillRect(-r * .35, -r * .08, 4, 4);
+          ctx.fillRect(r * .18, -r * .08, 4, 4);
+        }
+      }
+
+      function drawBossShape(enemy, r) {
+        const color = enemy.hit > 0 ? "#ffffff" : enemy.color;
+        ctx.shadowColor = enemy.color;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = "#101827";
+        ctx.lineWidth = 4;
+        if (enemy.key === "ancientDragon") {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r * .9, r * .66, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-r * .55, -r * .2);
+          ctx.lineTo(-r * 1.35, -r * .95);
+          ctx.lineTo(-r * 1.1, r * .3);
+          ctx.moveTo(r * .55, -r * .2);
+          ctx.lineTo(r * 1.35, -r * .95);
+          ctx.lineTo(r * 1.1, r * .3);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#ffd166";
+          ctx.beginPath();
+          ctx.moveTo(r * .7, -r * .15);
+          ctx.lineTo(r * 1.3, 0);
+          ctx.lineTo(r * .7, r * .15);
+          ctx.fill();
+        } else if (enemy.key === "darkLord") {
+          ctx.fillRect(-r * .7, -r * .75, r * 1.4, r * 1.5);
+          ctx.strokeRect(-r * .7, -r * .75, r * 1.4, r * 1.5);
+          ctx.fillStyle = "#21152f";
+          ctx.fillRect(-r * .42, -r * 1.02, r * .84, r * .38);
+          ctx.strokeRect(-r * .42, -r * 1.02, r * .84, r * .38);
+          ctx.fillStyle = "#fff0a8";
+          ctx.beginPath();
+          ctx.moveTo(-r * .45, -r * 1.03);
+          ctx.lineTo(-r * .2, -r * 1.35);
+          ctx.lineTo(0, -r * 1.03);
+          ctx.lineTo(r * .2, -r * 1.35);
+          ctx.lineTo(r * .45, -r * 1.03);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-r * .8, -r * .65, r * 1.6, r * 1.35);
+          ctx.strokeRect(-r * .8, -r * .65, r * 1.6, r * 1.35);
+          ctx.beginPath();
+          ctx.moveTo(-r * .55, -r * .52);
+          ctx.lineTo(-r * 1.12, -r * .92);
+          ctx.lineTo(-r * .62, -r * .2);
+          ctx.moveTo(r * .55, -r * .52);
+          ctx.lineTo(r * 1.12, -r * .92);
+          ctx.lineTo(r * .62, -r * .2);
+          ctx.fill();
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#ffef6e";
+        ctx.fillRect(-r * .34, -r * .18, r * .22, r * .12);
+        ctx.fillRect(r * .12, -r * .18, r * .22, r * .12);
+        ctx.fillStyle = "#101827";
+        ctx.fillRect(-r * .26, -r * .16, r * .08, r * .08);
+        ctx.fillRect(r * .2, -r * .16, r * .08, r * .08);
       }
 
       function drawProjectiles() {
         for (const p of state.projectiles) {
+          if (p.trail && p.trail.length) {
+            for (let i = p.trail.length - 1; i >= 0; i -= 1) {
+              const point = p.trail[i];
+              const a = (1 - i / (p.trail.length + 1)) * .34;
+              const size = Math.max(2, p.r * (1 - i * .13));
+              ctx.fillStyle = hexAlpha(p.color, a);
+              ctx.fillRect(point.x - size / 2, point.y - size / 2, size, size);
+            }
+            ctx.strokeStyle = hexAlpha(p.color, .32);
+            ctx.lineWidth = Math.max(2, p.r * .55);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            for (const point of p.trail) ctx.lineTo(point.x, point.y);
+            ctx.stroke();
+          }
           ctx.fillStyle = p.color;
           ctx.shadowColor = p.color;
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = p.heavy ? 6 : 12;
           ctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+          if (p.heavy) {
+            ctx.strokeStyle = "#3b3028";
+            ctx.lineWidth = 3;
+            ctx.strokeRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+          }
+          if (p.status === "ice") {
+            ctx.fillStyle = "#e8fbff";
+            ctx.fillRect(p.x - 3, p.y - p.r, 6, p.r * 2);
+          }
+          if (p.status === "poison") {
+            ctx.fillStyle = "#9d64ff";
+            ctx.fillRect(p.x - p.r * .45, p.y - p.r * .45, p.r * .9, p.r * .9);
+          }
           ctx.shadowBlur = 0;
         }
       }
@@ -1442,7 +2159,7 @@
           const a = clamp(e.life / e.max, 0, 1);
           if (e.type === "ring") {
             ctx.strokeStyle = hexAlpha(e.color, a);
-            ctx.lineWidth = 5;
+            ctx.lineWidth = e.width || 5;
             ctx.beginPath();
             ctx.arc(e.x, e.y, e.r * (1.1 - a * .25), 0, Math.PI * 2);
             ctx.stroke();
@@ -1457,10 +2174,13 @@
           }
           if (e.type === "burst") {
             ctx.fillStyle = hexAlpha(e.color, a);
-            for (let i = 0; i < 8; i += 1) {
-              const ang = i / 8 * Math.PI * 2;
-              const d = (1 - a) * 32;
-              ctx.fillRect(e.x + Math.cos(ang) * d - 3, e.y + Math.sin(ang) * d - 3, 6, 6);
+            const count = e.count || 8;
+            const size = (e.size || 6) * (.7 + a * .5);
+            const distance = e.distance || 32;
+            for (let i = 0; i < count; i += 1) {
+              const ang = i / count * Math.PI * 2;
+              const d = (1 - a) * distance;
+              ctx.fillRect(e.x + Math.cos(ang) * d - size / 2, e.y + Math.sin(ang) * d - size / 2, size, size);
             }
           }
         }
@@ -1501,8 +2221,87 @@
       }
 
       function drawTitleScene() {
-        ctx.fillStyle = "rgba(5, 10, 18, .34)";
+        const t = last || 0;
+        ctx.fillStyle = "rgba(5, 10, 18, .56)";
         ctx.fillRect(0, 0, W, H);
+
+        ctx.save();
+        ctx.globalAlpha = .72;
+        const enemies = [
+          { key: "slime", x: 72 + Math.sin(t * .55) * 10, y: 220 + Math.cos(t * .45) * 8, r: 14, color: enemyDefs.slime.color, hit: 0 },
+          { key: "bat", x: 360 + Math.sin(t * .75) * 14, y: 255 + Math.cos(t * .65) * 9, r: 11, color: enemyDefs.bat.color, hit: 0 },
+          { key: "goblin", x: 100 + Math.cos(t * .42) * 12, y: 560 + Math.sin(t * .5) * 10, r: 15, color: enemyDefs.goblin.color, hit: 0 },
+          { key: "skeleton", x: 360 + Math.cos(t * .36) * 10, y: 585 + Math.sin(t * .48) * 9, r: 16, color: enemyDefs.skeleton.color, hit: 0 }
+        ];
+        for (const enemy of enemies) {
+          ctx.save();
+          ctx.translate(enemy.x, enemy.y);
+          ctx.fillStyle = "rgba(0,0,0,.22)";
+          ctx.fillRect(-enemy.r, enemy.r, enemy.r * 2, 5);
+          drawEnemyShape(enemy, enemy.r);
+          ctx.restore();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(W / 2, 392);
+        ctx.fillStyle = "rgba(255,209,102,.08)";
+        ctx.beginPath();
+        ctx.arc(0, 0, 78 + Math.sin(t * 1.3) * 4, 0, Math.PI * 2);
+        ctx.fill();
+        drawTitleTrainer(t);
+        const allies = ["fire", "water", "ice"];
+        allies.forEach((type, i) => {
+          const angle = t * .85 + i / allies.length * Math.PI * 2;
+          const x = Math.cos(angle) * 58;
+          const y = Math.sin(angle) * 34;
+          const def = monsterDefs[type];
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.globalAlpha = .92;
+          drawMonsterShape({ type, evolved: i === 2 }, def, i === 2 ? 13 : 11);
+          ctx.restore();
+        });
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = .75;
+        ctx.fillStyle = "#ffd166";
+        for (let i = 0; i < 12; i += 1) {
+          const x = 42 + (i * 37) % 382;
+          const y = 142 + (i * 71) % 530;
+          const pulse = .5 + Math.sin(t * 1.8 + i) * .5;
+          const s = 1.5 + pulse * 2.2;
+          ctx.fillRect(x - s / 2, y - s / 2, s, s);
+        }
+        ctx.restore();
+      }
+
+      function drawTitleTrainer(t) {
+        const bob = Math.sin(t * 4) * 2;
+        ctx.save();
+        ctx.translate(0, bob);
+        ctx.fillStyle = "rgba(0,0,0,.28)";
+        ctx.fillRect(-16, 23, 32, 6);
+        ctx.fillStyle = "#f2c19a";
+        ctx.fillRect(-10, -18, 20, 18);
+        ctx.fillStyle = "#e8475c";
+        ctx.fillRect(-14, -26, 28, 9);
+        ctx.fillRect(-6, -31, 18, 6);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-6, -11, 4, 4);
+        ctx.fillRect(4, -11, 4, 4);
+        ctx.fillStyle = "#162133";
+        ctx.fillRect(-5, -10, 2, 2);
+        ctx.fillRect(5, -10, 2, 2);
+        ctx.fillStyle = "#284fc5";
+        ctx.fillRect(-12, 0, 24, 21);
+        ctx.fillStyle = "#f4f8ff";
+        ctx.fillRect(-4, 0, 8, 19);
+        ctx.fillStyle = "#111827";
+        ctx.fillRect(-12, 20, 9, 9);
+        ctx.fillRect(3, 20, 9, 9);
+        ctx.restore();
       }
 
       function hexAlpha(hex, alpha) {
@@ -1518,6 +2317,7 @@
         el.level.textContent = String(state.level);
         el.coins.textContent = String(save.coins);
         el.hp.textContent = `${Math.max(0, Math.ceil(state.player.hp))}/${state.player.maxHp}`;
+        el.teamSlots.textContent = `Team ${state.monsters.length}/${state.maxSlots}`;
         el.ultimateText.textContent = `${Math.floor(state.ultimate)}%`;
         el.ultimateButton.classList.toggle("ready", state.ultimate >= 100);
         const readyEggs = state.eggs.length;
@@ -1535,6 +2335,7 @@
 
       function renderEggPanel() {
         el.eggList.innerHTML = "";
+        el.eggTeamProgress.textContent = getTeamProgressText();
         if (!state.eggs.length) {
           const row = document.createElement("button");
           row.className = "egg-row";
@@ -1580,6 +2381,12 @@
         return Math.floor(def.base * Math.pow(1.15, level));
       }
 
+      function eggInventoryStatusText() {
+        if (state.hatching) return `Hatching ${state.hatching} Egg...`;
+        if (state.monsters.length >= state.maxSlots) return "Team full: duplicates can evolve, new monsters convert to coins.";
+        return "Tap an egg to hatch it.";
+      }
+
       function openEggs() {
         if (!["playing", "eggs"].includes(state.mode)) return;
         if (state.mode === "eggs") {
@@ -1588,7 +2395,7 @@
           return;
         }
         state.mode = "eggs";
-        el.eggStatus.textContent = state.hatching ? `Hatching ${state.hatching} Egg...` : "Tap an egg to hatch it.";
+        el.eggStatus.textContent = eggInventoryStatusText();
         renderEggPanel();
         el.eggOverlay.classList.add("active");
       }
@@ -1597,7 +2404,11 @@
         if (state.mode !== "playing") return;
         clearDirectionalControl();
         state.mode = "paused";
-        el.pauseStats.textContent = `Time ${formatTime(state.time)} / Level ${state.level} / KOs ${state.kills} / Coins +${state.runCoins}`;
+        el.pauseStats.textContent = `Time ${formatTime(state.time)}
+Level ${state.level}
+KOs ${state.kills}
+Coins +${state.runCoins}
+Team: ${getTeamSummary()}`;
         el.pauseOverlay.classList.add("active");
       }
 
@@ -1664,6 +2475,45 @@
         el.controlHint.classList.remove("active");
       }
 
+      function updateKeyboardMovement(code, pressed) {
+        if (code === "KeyW" || code === "ArrowUp") keyboard.up = pressed;
+        if (code === "KeyA" || code === "ArrowLeft") keyboard.left = pressed;
+        if (code === "KeyS" || code === "ArrowDown") keyboard.down = pressed;
+        if (code === "KeyD" || code === "ArrowRight") keyboard.right = pressed;
+      }
+
+      function clearKeyboardMovement() {
+        keyboard.up = false;
+        keyboard.down = false;
+        keyboard.left = false;
+        keyboard.right = false;
+      }
+
+      function resumeRun() {
+        if (state.mode !== "paused") return;
+        state.mode = "playing";
+        el.pauseOverlay.classList.remove("active");
+      }
+
+      document.addEventListener("keydown", event => {
+        if (blockedDefaultKeys.has(event.code)) event.preventDefault();
+        if (movementKeys.has(event.code)) updateKeyboardMovement(event.code, true);
+        if (event.repeat) return;
+        if (event.code === "Space") castUltimate();
+        if (event.code === "KeyE") openEggs();
+        if (event.code === "Escape") {
+          if (state.mode === "playing") pauseRun();
+          else resumeRun();
+        }
+      });
+
+      document.addEventListener("keyup", event => {
+        if (blockedDefaultKeys.has(event.code)) event.preventDefault();
+        if (movementKeys.has(event.code)) updateKeyboardMovement(event.code, false);
+      });
+
+      window.addEventListener("blur", clearKeyboardMovement);
+
       canvas.addEventListener("pointerdown", event => {
         if (state.mode !== "playing") return;
         const point = getCanvasPoint(event);
@@ -1695,10 +2545,7 @@
         el.eggOverlay.classList.remove("active");
       });
       el.pauseButton.addEventListener("click", pauseRun);
-      el.resumeButton.addEventListener("click", () => {
-        state.mode = "playing";
-        el.pauseOverlay.classList.remove("active");
-      });
+      el.resumeButton.addEventListener("click", resumeRun);
       el.quitButton.addEventListener("click", backToTitle);
       el.restartButton.addEventListener("click", backToTitle);
 
