@@ -1,1 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3sec Games</title>
+<style>
+  * { box-sizing: border-box; }
 
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #101827;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+  }
+
+  .screen {
+    width: 464px;
+    min-height: 825px;
+    padding: 28px 18px 24px;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,0.20), transparent 24%),
+      linear-gradient(180deg, #132038 0%, #182945 54%, #101827 100%);
+  }
+
+  .title {
+    text-align: center;
+    margin: 24px 0 8px;
+    font-size: 40px;
+    letter-spacing: 2px;
+    font-weight: 900;
+    text-shadow: 0 4px 0 rgba(0,0,0,0.32);
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #bed0ef;
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  .games {
+    display: grid;
+    gap: 14px;
+  }
+
+  .card {
+    display: block;
+    text-decoration: none;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.09);
+    padding: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.28);
+  }
+
+  .card:active {
+    transform: scale(0.98);
+    background: rgba(255,255,255,0.16);
+  }
+
+  .gameTitle {
+    font-size: 23px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+
+  .gameDesc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #d4e0f5;
+  }
+
+  .badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.15);
+    color: #ffe58c;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .footer {
+    margin-top: 24px;
+    text-align: center;
+    color: #93a6c9;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<main class="screen">
+  <h1 class="title">3sec Games</h1>
+  <div class="subtitle">Tap a game to play</div>
+
+  <section class="games">
+    <a class="card" href="games/hetzer_road/hetzer_road.html">
+      <div class="gameTitle">HETZER ROAD</div>
+      <div class="gameDesc">Tank road shooting game. Dodge, fire, survive.</div>
+      <span class="badge">NEW</span>
+    </a>
+
+    <a class="card" href="visual_search/index.html">
+      <div class="gameTitle">VISUAL SEARCH</div>
+      <div class="gameDesc">Find the target fast. Short visual puzzle challenge.</div>
+      <span class="badge">PLAY</span>
+    </a>
+  </section>
+
+  <div class="footer">Add more games by copying one card.</div>
+</main>
+</body>
+</html>
