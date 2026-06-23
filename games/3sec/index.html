@@ -52,6 +52,9 @@
 
   .card {
     display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
     text-decoration: none;
     color: #fff;
     border: 1px solid rgba(255,255,255,0.16);
@@ -59,6 +62,9 @@
     padding: 18px 18px;
     background: rgba(255,255,255,0.08);
     box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(255,255,255,0.18);
   }
 
   .card:active {
@@ -69,12 +75,14 @@
     font-size: 24px;
     font-weight: bold;
     margin-bottom: 8px;
+    pointer-events: none;
   }
 
   .desc {
     font-size: 14px;
     line-height: 1.5;
     color: #d4d9e3;
+    pointer-events: none;
   }
 
   .tag {
@@ -85,6 +93,7 @@
     background: rgba(255,255,255,0.14);
     font-size: 12px;
     color: #edf2ff;
+    pointer-events: none;
   }
 
   .footer {
@@ -100,14 +109,22 @@
     <h1>3SEC GAMES</h1>
     <p class="sub">Small browser games collection</p>
 
-    <section class="grid">
-      <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html">
+    <section class="grid" aria-label="Game menu">
+      <a
+        class="card"
+        href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html"
+        onclick="window.location.href='https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html'; return false;"
+      >
         <div class="title">HETZER ROAD</div>
         <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
         <span class="tag">Tank Shooter</span>
       </a>
 
-      <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/">
+      <a
+        class="card"
+        href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/"
+        onclick="window.location.href='https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/'; return false;"
+      >
         <div class="title">VISUAL SEARCH</div>
         <div class="desc">3-second visual search games. Find the target quickly.</div>
         <span class="tag">Visual Search</span>
