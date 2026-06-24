@@ -124,21 +124,31 @@
     explosion: "9.png"
   };
 
+  // 音声ファイルは、このHTMLファイルと同じフォルダに置く想定です。
+  // 例:
+  //   hetzer_road.html
+  //   se_shot.mp3
+  //   se_hit.mp3
+  //   bgm_title.mp3
+  //   bgm_battle.mp3
   const seFiles = {
-    shot: "audio/se/se_shot.mp3",
-    hit: "audio/se/se_hit.mp3",
-    explosion: "audio/se/se_explosion.mp3",
-    damage: "audio/se/se_damage.mp3",
-    select: "audio/se/se_select.mp3",
-    coin: "audio/se/se_coin.mp3",
-    gameover: "audio/se/se_gameover.mp3"
+    shot: "se_shot.mp3",
+    hit: "se_hit.mp3",
+    explosion: "se_explosion.mp3",
+    bigExplosion: "se_big_explosion.mp3",
+    damage: "se_damage.mp3",
+    select: "se_select.mp3",
+    coin: "se_coin.mp3",
+    repair: "se_repair.mp3",
+    powerup: "se_powerup.mp3",
+    gameover: "se_gameover.mp3"
   };
 
   const bgmFiles = {
-    title: "audio/bgm/bgm_title.mp3",
-    battle: "audio/bgm/bgm_battle.mp3",
-    boss: "audio/bgm/bgm_boss.mp3",
-    gameover: "audio/bgm/bgm_gameover.mp3"
+    title: "bgm_title.mp3",
+    battle: "bgm_battle.mp3",
+    boss: "bgm_boss.mp3",
+    gameover: "bgm_gameover.mp3"
   };
 
   const sounds = {};
@@ -160,7 +170,10 @@
     Object.entries(seFiles).forEach(([key, src]) => {
       const audio = new Audio(src);
       audio.preload = "auto";
-      audio.volume = key === "explosion" ? 0.55 : 0.72;
+      if (key === "bigExplosion") audio.volume = 0.68;
+      else if (key === "explosion") audio.volume = 0.55;
+      else if (key === "coin" || key === "repair" || key === "powerup" || key === "select") audio.volume = 0.48;
+      else audio.volume = 0.72;
       sounds[key] = audio;
       lastSoundTime[key] = 0;
     });
@@ -215,7 +228,9 @@
     currentBgm = name;
 
     try {
-      next.play().catch(() => {});
+      next.play().catch(err => {
+        console.warn("BGMを再生できませんでした:", name, err);
+      });
     } catch (_) {}
   }
 
@@ -244,7 +259,9 @@
 
     try {
       audio.currentTime = 0;
-      audio.play().catch(() => {});
+      audio.play().catch(err => {
+        console.warn("SEを再生できませんでした:", name, err);
+      });
     } catch (_) {}
   }
 
@@ -555,7 +572,7 @@
   }
 
   function createExplosion(x, y, size, big = false) {
-    playSE("explosion", big ? 180 : 90);
+    playSE(big ? "bigExplosion" : "explosion", big ? 220 : 90);
 
     explosions.push({
       x,
@@ -673,11 +690,12 @@
     }
 
     if (isTruck) {
-      playSE("coin", 120);
       if (player.hp < player.maxHp) {
+        playSE("repair", 120);
         player.hp = Math.min(player.maxHp, player.hp + 1);
         addFloatingText("REPAIR +1", e.x, e.y + 18, 20);
       } else {
+        playSE("powerup", 120);
         rapidTimer = 8000;
         addFloatingText("RAPID FIRE!", e.x, e.y + 18, 20);
       }
