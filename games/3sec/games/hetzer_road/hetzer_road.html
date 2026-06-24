@@ -161,7 +161,14 @@
     heavy: "6.png",
     gun: "7.png",
     truck: "8.png",
-    explosion: "9.png"
+    explosion: "9.png",
+
+    // 補給車撃破で落ちる支援アイテム
+    repairItem: "11.png",
+    rapidItem: "14.png",
+    powerItem: "15.png",
+    armorItem: "16.png",
+    droneItem: "19.png"
   };
 
   // 音声ファイルは、このHTMLファイルと同じフォルダに置く想定です。
@@ -387,11 +394,15 @@
 
   const MAX_BOMBS = 3;
   const WAVE_INTERVAL = 30;
+  const SUPPLY_DROP_RATE = 1.0; // 1.0 = 100%、0.7 = 70%、0.4 = 40%
+  const POWERUP_DURATION = 15000;
+  const DRONE_DROP_WEIGHT = 0.08; // ドローンだけ少しレア
 
   let player;
   let bullets;
   let enemyBullets;
   let enemies;
+  let supplyItems;
   let explosions;
   let floatingTexts;
   let score;
@@ -403,6 +414,8 @@
   let shakeTimer;
   let shakePower;
   let rapidTimer;
+  let powerShellTimer;
+  let armorTimer;
   let combo;
   let comboTimer;
   let bombs = 0;
@@ -410,6 +423,7 @@
   let waveNumber = 1;
   let nextWaveAt = WAVE_INTERVAL;
   let waveBanner = null;
+  let pickupBanner = null;
 
   function loadImages() {
     const entries = Object.entries(imageFiles);
@@ -459,6 +473,7 @@
     bullets = [];
     enemyBullets = [];
     enemies = [];
+    supplyItems = [];
     explosions = [];
     floatingTexts = [];
     score = 0;
@@ -470,6 +485,8 @@
     shakeTimer = 0;
     shakePower = 0;
     rapidTimer = 0;
+    powerShellTimer = 0;
+    armorTimer = 0;
     combo = 0;
     comboTimer = 0;
     bombs = MAX_BOMBS;
@@ -481,6 +498,7 @@
       life: 1500,
       maxLife: 1500
     };
+    pickupBanner = null;
     updateBombButton();
   }
 
@@ -550,6 +568,15 @@
     };
   }
 
+  function showPickupBanner(text, subText = "", life = 1050) {
+    pickupBanner = {
+      text,
+      subText,
+      life,
+      maxLife: life
+    };
+  }
+
   function closeKillBonus(e) {
     if (!player) return 0;
 
@@ -559,6 +586,94 @@
     if (e.y >= veryCloseLine) return 200;
     if (e.y >= closeLine) return 100;
     return 0;
+  }
+
+  const supplyDropTypes = [
+    { kind: "repair", imgKey: "repairItem", text: "REPAIR", subText: "HP +1", score: 80, weight: 0.27 },
+    { kind: "rapid", imgKey: "rapidItem", text: "RAPID FIRE", subText: "15s", score: 120, weight: 0.23 },
+    { kind: "power", imgKey: "powerItem", text: "POWER SHELL", subText: "15s", score: 120, weight: 0.22 },
+    { kind: "armor", imgKey: "armorItem", text: "ARMOR UP", subText: "15s", score: 120, weight: 0.20 },
+    { kind: "drone", imgKey: "droneItem", text: "DRONE BOMB", subText: "BOMB +1", score: 180, weight: DRONE_DROP_WEIGHT }
+  ];
+
+  function chooseSupplyDrop() {
+    const total = supplyDropTypes.reduce((sum, d) => sum + d.weight, 0);
+    let r = Math.random() * total;
+
+    for (const drop of supplyDropTypes) {
+      r -= drop.weight;
+      if (r <= 0) return drop;
+    }
+
+    return supplyDropTypes[0];
+  }
+
+  function spawnSupplyItem(x, y) {
+    const drop = chooseSupplyDrop();
+    const rare = drop.kind === "drone";
+
+    if (rare) {
+      playSE("powerup", 180);
+      addShake(7, 240);
+      showPickupBanner("RARE DRONE!", "BOMB SUPPORT", 1000);
+      addFloatingText("RARE DRONE!", x, y - 54, 24);
+    }
+
+    supplyItems.push({
+      kind: drop.kind,
+      img: images[drop.imgKey],
+      label: drop.text,
+      subLabel: drop.subText,
+      score: drop.score,
+      rare,
+      x: clamp(x, 48, W - 48),
+      y: clamp(y, 50, H - 180),
+      w: rare ? 70 : 52,
+      h: rare ? 70 : 52,
+      speed: rare ? 1.18 : 1.65,
+      life: rare ? 11000 : 9000,
+      maxLife: rare ? 11000 : 9000,
+      bob: rand(0, Math.PI * 2)
+    });
+  }
+
+  function collectSupplyItem(item) {
+    score += item.score;
+    playSE(item.kind === "repair" ? "repair" : "powerup", 120);
+
+    if (item.kind === "repair") {
+      player.hp = Math.min(player.maxHp, player.hp + 1);
+      showPickupBanner("REPAIR!", "HP +1");
+      addFloatingText("REPAIR +1 ♥", player.x, player.y - 58, 22);
+    } else if (item.kind === "rapid") {
+      rapidTimer = POWERUP_DURATION;
+      showPickupBanner("RAPID FIRE!", "15 SEC");
+      addFloatingText("RAPID FIRE!", player.x, player.y - 58, 22);
+    } else if (item.kind === "power") {
+      powerShellTimer = POWERUP_DURATION;
+      showPickupBanner("POWER SHELL!", "DAMAGE x2");
+      addFloatingText("POWER SHELL!", player.x, player.y - 58, 22);
+    } else if (item.kind === "armor") {
+      armorTimer = POWERUP_DURATION;
+      showPickupBanner("ARMOR UP!", "DAMAGE REDUCE");
+      addFloatingText("ARMOR UP!", player.x, player.y - 58, 22);
+    } else if (item.kind === "drone") {
+      addShake(9, 300);
+      bombFlashTimer = Math.max(bombFlashTimer, 180);
+
+      if (bombs < MAX_BOMBS) {
+        bombs++;
+        updateBombButton();
+        showPickupBanner("DRONE BOMB!", "BOMB +1", 1250);
+        addFloatingText("BOMB +1!", player.x, player.y - 58, 24);
+      } else {
+        score += 300;
+        showPickupBanner("DRONE BONUS!", "+300 SCORE", 1250);
+        addFloatingText("BOMB FULL +300", player.x, player.y - 58, 22);
+      }
+    }
+
+    addFloatingText("SUPPLY +" + item.score, player.x, player.y - 30, 16);
   }
 
   function useBomb() {
@@ -597,6 +712,17 @@
     return rapidTimer > 0 ? 250 : player.baseFireCooldown;
   }
 
+  function currentBulletDamage() {
+    return powerShellTimer > 0 ? 2 : 1;
+  }
+
+  function activePowerTimerMax(name) {
+    if (name === "rapid") return POWERUP_DURATION;
+    if (name === "power") return POWERUP_DURATION;
+    if (name === "armor") return POWERUP_DURATION;
+    return 1;
+  }
+
   function enemyFireScale(now) {
     const s = elapsedSeconds(now);
     if (s < 20) return 0.22;
@@ -617,14 +743,17 @@
     player.fireTimer = 120;
     playSE("shot", 70);
 
+    const powered = powerShellTimer > 0;
+
     bullets.push({
       x: player.x,
       y: player.y - 40,
-      w: rapidTimer > 0 ? 11 : 9,
-      h: rapidTimer > 0 ? 30 : 26,
+      w: powered ? 13 : (rapidTimer > 0 ? 11 : 9),
+      h: powered ? 34 : (rapidTimer > 0 ? 30 : 26),
       speed: rapidTimer > 0 ? 9.8 : 8.5,
-      damage: 1,
-      glow: rapidTimer > 0
+      damage: currentBulletDamage(),
+      glow: rapidTimer > 0 || powered,
+      powered
     });
   }
 
@@ -700,10 +829,13 @@
     const data = enemyData(type);
     const size = data.size;
 
+    const spawnX = rand(size / 2 + 12, W - size / 2 - 12);
+
     enemies.push({
       type,
       img: data.img,
-      x: rand(size / 2 + 12, W - size / 2 - 12),
+      x: spawnX,
+      baseX: spawnX,
       y: -size,
       w: size,
       h: size,
@@ -713,7 +845,8 @@
       score: data.score,
       fireRate: data.fireRate,
       lastEnemyShot: now + rand(300, 1000),
-      hitFlash: 0
+      hitFlash: 0,
+      wobblePhase: rand(0, Math.PI * 2)
     });
   }
 
@@ -734,6 +867,19 @@
 
   function damagePlayer(amount) {
     if (player.invincibleTimer > 0) return;
+
+    if (armorTimer > 0) {
+      amount = Math.max(0, amount - 1);
+      addFloatingText(amount <= 0 ? "ARMOR BLOCK!" : "ARMOR REDUCE!", player.x, player.y - 54, 18);
+    }
+
+    if (amount <= 0) {
+      playSE("select", 180);
+      player.hitTimer = 150;
+      player.invincibleTimer = 360;
+      addShake(3, 120);
+      return;
+    }
 
     player.hp -= amount;
     playSE("damage", 220);
@@ -756,6 +902,10 @@
 
     if (waveBanner && waveBanner.life > 0) {
       waveBanner.life -= dt;
+    }
+
+    if (pickupBanner && pickupBanner.life > 0) {
+      pickupBanner.life -= dt;
     }
 
     const elapsed = elapsedSeconds(now);
@@ -789,6 +939,8 @@
     player.fireTimer = Math.max(0, player.fireTimer - dt);
     player.invincibleTimer = Math.max(0, player.invincibleTimer - dt);
     rapidTimer = Math.max(0, rapidTimer - dt);
+    powerShellTimer = Math.max(0, powerShellTimer - dt);
+    armorTimer = Math.max(0, armorTimer - dt);
     comboTimer = Math.max(0, comboTimer - dt);
     if (comboTimer <= 0) combo = 0;
 
@@ -808,6 +960,11 @@
       e.y += e.speed;
       e.hitFlash = Math.max(0, e.hitFlash - dt);
 
+      if (e.type === "truck") {
+        e.wobblePhase += dt * 0.004;
+        e.x = clamp(e.baseX + Math.sin(e.wobblePhase) * 18, e.w / 2 + 12, W - e.w / 2 - 12);
+      }
+
       if (e.fireRate > 0 && e.y > 10 && e.y < H - 240) {
         if (now - e.lastEnemyShot > enemyShotGap(now) && Math.random() < e.fireRate * dt * enemyFireScale(now)) {
           e.lastEnemyShot = now;
@@ -817,6 +974,14 @@
     }
 
     enemies = enemies.filter(e => e.y - e.h / 2 < H + 80);
+
+    for (const item of supplyItems) {
+      item.y += item.speed;
+      item.life -= dt;
+      item.bob += dt * 0.006;
+      item.x += Math.sin(item.bob) * 0.12;
+    }
+    supplyItems = supplyItems.filter(item => item.life > 0 && item.y - item.h / 2 < H + 40);
 
     for (const ex of explosions) ex.life -= dt;
     explosions = explosions.filter(ex => ex.life > 0);
@@ -860,21 +1025,17 @@
     }
 
     if (isTruck) {
-      addFloatingText("SUPPLY!", e.x, e.y - 34, 22);
       addShake(5, 160);
 
-      if (player.hp < player.maxHp) {
-        playSE("repair", 120);
-        player.hp = Math.min(player.maxHp, player.hp + 1);
-        addFloatingText("REPAIR +1 ♥", e.x, e.y + 18, 22);
+      if (Math.random() < SUPPLY_DROP_RATE) {
+        addFloatingText("SUPPLY DROP!", e.x, e.y - 34, 22);
+        spawnSupplyItem(e.x, e.y + 18);
       } else {
-        playSE("powerup", 120);
-        rapidTimer = 8000;
-        addFloatingText("RAPID FIRE 8s!", e.x, e.y + 18, 22);
+        addFloatingText("SUPPLY!", e.x, e.y - 34, 22);
       }
 
       score += 100;
-      addFloatingText("SUPPLY BONUS +100", e.x, e.y + 44, 16);
+      addFloatingText("SUPPLY BONUS +100", e.x, e.y + 48, 16);
     }
 
     enemies.splice(index, 1);
@@ -916,6 +1077,15 @@
       if (rectsOverlap(hitBox, player)) {
         enemyBullets.splice(i, 1);
         damagePlayer(1);
+      }
+    }
+
+    for (let i = supplyItems.length - 1; i >= 0; i--) {
+      const item = supplyItems[i];
+
+      if (rectsOverlap(item, player)) {
+        supplyItems.splice(i, 1);
+        collectSupplyItem(item);
       }
     }
 
@@ -990,9 +1160,9 @@
         ctx.fillStyle = "rgba(255, 245, 170, 0.22)";
         ctx.fillRect(b.x - b.w, b.y - b.h / 2 - 3, b.w * 2, b.h + 6);
       }
-      ctx.fillStyle = "#f5e6a6";
+      ctx.fillStyle = b.powered ? "#ffef8a" : "#f5e6a6";
       ctx.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h);
-      ctx.fillStyle = "#fff7cf";
+      ctx.fillStyle = b.powered ? "#ffffff" : "#fff7cf";
       ctx.fillRect(b.x - 2, b.y - b.h / 2 - 6, 4, 8);
     }
 
@@ -1006,6 +1176,26 @@
 
   function drawEnemies() {
     for (const e of enemies) {
+      if (e.type === "truck") {
+        const pulse = 1 + Math.sin((performance.now() + e.wobblePhase * 1000) * 0.006) * 0.08;
+
+        ctx.save();
+        ctx.globalAlpha = 0.38;
+        ctx.fillStyle = "#ffe88a";
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.w * 0.58 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.textAlign = "center";
+        ctx.font = "bold 12px Arial";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0,0,0,0.8)";
+        ctx.fillStyle = "#fff4a8";
+        ctx.strokeText("SUPPLY", e.x, e.y - e.h / 2 - 14);
+        ctx.fillText("SUPPLY", e.x, e.y - e.h / 2 - 14);
+        ctx.restore();
+      }
+
       drawImageCentered(e.img, e.x, e.y, e.w, e.h);
 
       if (e.hitFlash > 0) {
@@ -1026,6 +1216,47 @@
         ctx.fillStyle = "#a8e063";
         ctx.fillRect(x, y, bw * (e.hp / e.maxHp), bh);
       }
+    }
+  }
+
+  function drawSupplyItems() {
+    for (const item of supplyItems) {
+      const blink = item.life < 2200 && Math.floor(item.life / 160) % 2 === 0;
+      if (blink) continue;
+
+      const y = item.y + Math.sin(item.bob) * 5;
+      const pulse = 1 + Math.sin(item.bob * 1.7) * (item.rare ? 0.085 : 0.045);
+      const alpha = Math.min(1, item.life / 500);
+
+      ctx.save();
+      ctx.globalAlpha = (item.rare ? 0.48 : 0.32) * alpha;
+      ctx.fillStyle = item.rare ? "#ffe88a" : "#ffffff";
+      ctx.beginPath();
+      ctx.arc(item.x, y, item.w * 0.52 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (item.rare) {
+        ctx.globalAlpha = 0.7 * alpha;
+        ctx.strokeStyle = "#fff4a8";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(item.x, y, item.w * 0.66 * pulse, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      drawImageCentered(item.img, item.x, y, item.w * pulse, item.h * pulse, alpha);
+
+      ctx.save();
+      ctx.globalAlpha = 0.92 * alpha;
+      ctx.textAlign = "center";
+      ctx.font = "bold 11px Arial";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0,0,0,0.78)";
+      ctx.fillStyle = item.rare ? "#fff4a8" : "#ffffff";
+      ctx.strokeText(item.label, item.x, y + item.h * 0.52 + 12);
+      ctx.fillText(item.label, item.x, y + item.h * 0.52 + 12);
+      ctx.restore();
     }
   }
 
@@ -1145,11 +1376,48 @@
     ctx.restore();
   }
 
+
+  function drawPickupBanner() {
+    if (!pickupBanner || pickupBanner.life <= 0) return;
+
+    const t = pickupBanner.life / pickupBanner.maxLife;
+    const pop = 1 + Math.sin((1 - t) * Math.PI) * 0.18;
+    const y = 250 - (1 - t) * 22;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, t * 2.2);
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "rgba(0,0,0,0.42)";
+    ctx.fillRect(42, y - 48, W - 84, pickupBanner.subText ? 86 : 62);
+
+    ctx.font = "bold " + Math.round(34 * pop) + "px Arial";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(0,0,0,0.82)";
+    ctx.fillStyle = "#fff4a8";
+    ctx.strokeText(pickupBanner.text, W / 2, y);
+    ctx.fillText(pickupBanner.text, W / 2, y);
+
+    if (pickupBanner.subText) {
+      ctx.font = "bold 17px Arial";
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(0,0,0,0.78)";
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeText(pickupBanner.subText, W / 2, y + 27);
+      ctx.fillText(pickupBanner.subText, W / 2, y + 27);
+    }
+
+    ctx.restore();
+  }
+
   function drawUI() {
     ctx.save();
 
+    const activePowerCount = (rapidTimer > 0 ? 1 : 0) + (powerShellTimer > 0 ? 1 : 0) + (armorTimer > 0 ? 1 : 0);
+    const uiHeight = activePowerCount > 0 ? 58 + activePowerCount * 20 : 56;
+
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(0, 0, W, rapidTimer > 0 ? 76 : 56);
+    ctx.fillRect(0, 0, W, uiHeight);
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 18px Arial";
@@ -1165,25 +1433,38 @@
     for (let i = 0; i < player.maxHp; i++) hearts += i < player.hp ? "♥ " : "♡ ";
     ctx.fillText("HP: " + hearts, 14, 48);
 
-    if (rapidTimer > 0) {
+    let powerY = 70;
+
+    function drawPowerBar(label, timer, maxTimer) {
+      const sec = Math.ceil(timer / 1000);
+      ctx.textAlign = "left";
       ctx.font = "bold 15px Arial";
-      ctx.fillText("RAPID FIRE", 14, 70);
-      ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.fillRect(116, 60, 130, 9);
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(116, 60, 130 * (rapidTimer / 8000), 9);
+      ctx.fillText(label, 14, powerY);
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.fillRect(126, powerY - 10, 130, 9);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(126, powerY - 10, 130 * (timer / maxTimer), 9);
+      ctx.font = "bold 13px Arial";
+      ctx.textAlign = "right";
+      ctx.fillText(sec + "s", 274, powerY);
+      powerY += 20;
     }
+
+    if (rapidTimer > 0) drawPowerBar("RAPID FIRE", rapidTimer, activePowerTimerMax("rapid"));
+    if (powerShellTimer > 0) drawPowerBar("POWER SHELL", powerShellTimer, activePowerTimerMax("power"));
+    if (armorTimer > 0) drawPowerBar("ARMOR", armorTimer, activePowerTimerMax("armor"));
 
     ctx.textAlign = "right";
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = bombs > 0 ? "#fff4a8" : "rgba(255,255,255,0.55)";
-    ctx.fillText("BOMB x" + bombs, W - 14, rapidTimer > 0 ? 70 : 48);
+    ctx.fillText("BOMB x" + bombs, W - 14, activePowerCount > 0 ? uiHeight - 8 : 48);
 
     if (combo >= 4 && comboTimer > 0) {
       ctx.textAlign = "right";
       ctx.font = "bold 16px Arial";
       ctx.fillStyle = "#fff";
-      ctx.fillText("COMBO x" + combo, W - 14, rapidTimer > 0 ? 92 : 70);
+      ctx.fillText("COMBO x" + combo, W - 14, activePowerCount > 0 ? uiHeight + 16 : 70);
     }
 
     ctx.restore();
@@ -1208,9 +1489,9 @@
     ctx.fillText("WASD / Arrow Keys also work", W / 2, H / 2 + 116);
 
     ctx.font = "15px Arial";
-    ctx.fillText("Truck: Repair or Rapid Fire", W / 2, H / 2 + 150);
-    ctx.fillText("BOMB x3: Clear bullets and damage enemies", W / 2, H / 2 + 174);
-    ctx.fillText("Close Kill gives bonus score", W / 2, H / 2 + 198);
+    ctx.fillText("Truck: Drop support items", W / 2, H / 2 + 150);
+    ctx.fillText("Repair / Rapid / Power / Armor / Rare Drone", W / 2, H / 2 + 174);
+    ctx.fillText("BOMB x3: Clear bullets and damage enemies", W / 2, H / 2 + 198);
 
     ctx.font = "bold 20px Arial";
     ctx.fillText("Tap or Space to Start", W / 2, H / 2 + 226);
@@ -1223,6 +1504,7 @@
     drawBackground();
     drawBullets();
     drawEnemies();
+    drawSupplyItems();
     drawExplosions();
     drawFloatingTexts();
 
@@ -1267,6 +1549,7 @@
     drawBackground();
     drawBullets();
     drawEnemies();
+    drawSupplyItems();
     drawPlayer();
     drawExplosions();
     drawFloatingTexts();
@@ -1276,6 +1559,7 @@
 
     drawBombFlash();
     drawWaveBanner();
+    drawPickupBanner();
     drawUI();
   }
 
