@@ -61,10 +61,40 @@
   .menuButton:active {
     transform: scale(0.96);
   }
+
+  .soundButton {
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 106px;
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    letter-spacing: 0.5px;
+  }
+
+  .soundButton.off {
+    opacity: 0.62;
+  }
+
+  .soundButton:active {
+    transform: scale(0.96);
+  }
 </style>
 </head>
 <body>
 <a class="menuButton" href="../../index.html" aria-label="Back to menu">MENU</a>
+<button id="soundButton" class="soundButton" type="button" aria-label="Sound on off">SOUND ON</button>
 <canvas id="game" width="464" height="825"></canvas>
 
 <script>
@@ -77,6 +107,9 @@
   const ctx = canvas.getContext("2d");
 
   const SAVE_KEY = "hetzer-vertical-shooter-best-v2";
+  const SOUND_KEY = "hetzer-road-sound-enabled-v1";
+  const soundButton = document.getElementById("soundButton");
+  let soundEnabled = localStorage.getItem(SOUND_KEY) !== "0";
 
   const images = {};
   const imageFiles = {
@@ -90,6 +123,166 @@
     truck: "8.png",
     explosion: "9.png"
   };
+
+  const seFiles = {
+    shot: "audio/se/se_shot.mp3",
+    hit: "audio/se/se_hit.mp3",
+    explosion: "audio/se/se_explosion.mp3",
+    damage: "audio/se/se_damage.mp3",
+    select: "audio/se/se_select.mp3",
+    coin: "audio/se/se_coin.mp3",
+    gameover: "audio/se/se_gameover.mp3"
+  };
+
+  const bgmFiles = {
+    title: "audio/bgm/bgm_title.mp3",
+    battle: "audio/bgm/bgm_battle.mp3",
+    boss: "audio/bgm/bgm_boss.mp3",
+    gameover: "audio/bgm/bgm_gameover.mp3"
+  };
+
+  const sounds = {};
+  const bgms = {};
+  const lastSoundTime = {};
+  let currentBgm = null;
+  let audioInitialized = false;
+  let audioUnlocked = false;
+
+  function updateSoundButton() {
+    soundButton.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+    soundButton.classList.toggle("off", !soundEnabled);
+  }
+
+  function initAudio() {
+    if (audioInitialized) return;
+    audioInitialized = true;
+
+    Object.entries(seFiles).forEach(([key, src]) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = key === "explosion" ? 0.55 : 0.72;
+      sounds[key] = audio;
+      lastSoundTime[key] = 0;
+    });
+
+    Object.entries(bgmFiles).forEach(([key, src]) => {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.loop = true;
+      audio.volume = key === "battle" ? 0.36 : 0.30;
+      bgms[key] = audio;
+    });
+  }
+
+  function unlockAudio() {
+    initAudio();
+    if (audioUnlocked) return;
+
+    audioUnlocked = true;
+
+    [...Object.values(sounds), ...Object.values(bgms)].forEach(audio => {
+      audio.load();
+    });
+  }
+
+  function stopBGM(reset = false) {
+    Object.values(bgms).forEach(audio => {
+      try {
+        audio.pause();
+        if (reset) audio.currentTime = 0;
+      } catch (_) {}
+    });
+    currentBgm = null;
+  }
+
+  function playBGM(name) {
+    if (!soundEnabled || !audioUnlocked) return;
+    initAudio();
+
+    const next = bgms[name];
+    if (!next) return;
+    if (currentBgm === name && !next.paused) return;
+
+    Object.entries(bgms).forEach(([key, audio]) => {
+      if (key !== name) {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_) {}
+      }
+    });
+
+    currentBgm = name;
+
+    try {
+      next.play().catch(() => {});
+    } catch (_) {}
+  }
+
+  function refreshBGMForState() {
+    if (!soundEnabled || !audioUnlocked) return;
+
+    if (gameState === "playing") {
+      playBGM("battle");
+    } else if (gameState === "gameover") {
+      playBGM("gameover");
+    } else if (gameState === "title") {
+      playBGM("title");
+    }
+  }
+
+  function playSE(name, minGap = 0) {
+    if (!soundEnabled) return;
+    initAudio();
+
+    const audio = sounds[name];
+    if (!audio) return;
+
+    const now = performance.now();
+    if (minGap > 0 && now - lastSoundTime[name] < minGap) return;
+    lastSoundTime[name] = now;
+
+    try {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch (_) {}
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
+    updateSoundButton();
+
+    if (soundEnabled) {
+      unlockAudio();
+      playSE("select", 120);
+      refreshBGMForState();
+    } else {
+      Object.values(sounds).forEach(audio => {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (_) {}
+      });
+      stopBGM(true);
+    }
+  }
+
+  soundButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSound();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopBGM(false);
+    } else {
+      refreshBGMForState();
+    }
+  });
+
+  updateSoundButton();
 
   let gameState = "loading";
   let bestScore = Number(localStorage.getItem(SAVE_KEY) || 0);
@@ -182,12 +375,17 @@
   }
 
   function startGame() {
+    unlockAudio();
+    playSE("select", 120);
     initGame();
     gameState = "playing";
+    playBGM("battle");
   }
 
   function gameOver() {
     gameState = "gameover";
+    playSE("gameover", 600);
+    playBGM("gameover");
     if (score > bestScore) {
       bestScore = score;
       localStorage.setItem(SAVE_KEY, String(bestScore));
@@ -254,6 +452,7 @@
 
     lastShot = now;
     player.fireTimer = 120;
+    playSE("shot", 70);
 
     bullets.push({
       x: player.x,
@@ -356,6 +555,8 @@
   }
 
   function createExplosion(x, y, size, big = false) {
+    playSE("explosion", big ? 180 : 90);
+
     explosions.push({
       x,
       y,
@@ -372,6 +573,7 @@
     if (player.invincibleTimer > 0) return;
 
     player.hp -= amount;
+    playSE("damage", 220);
     player.hitTimer = 260;
     player.invincibleTimer = 760;
     addShake(7, 220);
@@ -471,6 +673,7 @@
     }
 
     if (isTruck) {
+      playSE("coin", 120);
       if (player.hp < player.maxHp) {
         player.hp = Math.min(player.maxHp, player.hp + 1);
         addFloatingText("REPAIR +1", e.x, e.y + 18, 20);
@@ -496,6 +699,7 @@
           e.hp -= b.damage;
           e.hitFlash = 90;
           bulletUsed = true;
+          playSE("hit", 45);
 
           if (e.hp <= 0) {
             handleEnemyDestroyed(e, j);
@@ -767,6 +971,7 @@
     ctx.font = "15px Arial";
     ctx.fillText("Truck: Repair or Rapid Fire", W / 2, H / 2 + 150);
     ctx.fillText("Heavy Tank: Big Explosion", W / 2, H / 2 + 174);
+    ctx.fillText("SOUND button controls SE + BGM", W / 2, H / 2 + 198);
 
     ctx.font = "bold 20px Arial";
     ctx.fillText("Tap or Space to Start", W / 2, H / 2 + 226);
@@ -880,6 +1085,7 @@
       e.preventDefault();
     }
     if (e.code === "Space") {
+      unlockAudio();
       if (gameState === "title" || gameState === "gameover") startGame();
       e.preventDefault();
     }
@@ -905,6 +1111,7 @@
   });
 
   canvas.addEventListener("pointerdown", (e) => {
+    unlockAudio();
     canvas.setPointerCapture(e.pointerId);
 
     if (gameState === "title" || gameState === "gameover") {
@@ -934,6 +1141,7 @@
     touchActive = false;
   });
 
+  initAudio();
   drawLoading();
   loadImages();
   requestAnimationFrame((now) => {
