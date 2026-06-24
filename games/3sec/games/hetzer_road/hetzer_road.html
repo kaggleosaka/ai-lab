@@ -90,11 +90,44 @@
   .soundButton:active {
     transform: scale(0.96);
   }
+
+  .bombButton {
+    position: fixed;
+    right: 10px;
+    bottom: 18px;
+    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 118px;
+    height: 48px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(160, 32, 16, 0.88);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    border: 2px solid rgba(255, 230, 160, 0.85);
+    box-shadow: 0 5px 16px rgba(0,0,0,0.42);
+    letter-spacing: 0.5px;
+  }
+
+  .bombButton.off {
+    opacity: 0.38;
+    background: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .bombButton:active {
+    transform: scale(0.94);
+  }
+
 </style>
 </head>
 <body>
 <a class="menuButton" href="../../index.html" aria-label="Back to menu">MENU</a>
 <button id="soundButton" class="soundButton" type="button" aria-label="Sound on off">SOUND ON</button>
+<button id="bombButton" class="bombButton off" type="button" aria-label="Use bomb">BOMB x3</button>
 <canvas id="game" width="464" height="825"></canvas>
 
 <script>
@@ -109,7 +142,14 @@
   const SAVE_KEY = "hetzer-vertical-shooter-best-v2";
   const SOUND_KEY = "hetzer-road-sound-enabled-v1";
   const soundButton = document.getElementById("soundButton");
+  const bombButton = document.getElementById("bombButton");
   let soundEnabled = localStorage.getItem(SOUND_KEY) !== "0";
+
+  // スマホ軽量版: BGMは読み込まず、SEだけを鳴らす。
+  // BGM用mp3を同じフォルダに置いていても、この版では使用しません。
+  const MOBILE_LIGHT_AUDIO = true;
+  const DISABLE_BGM = true;
+  const DISABLE_HIT_SE = true;
 
   const images = {};
   const imageFiles = {
@@ -144,6 +184,7 @@
     gameover: "se_gameover.mp3"
   };
 
+  // BGMファイル名は記録として残しますが、スマホ軽量版では読み込みません。
   const bgmFiles = {
     title: "bgm_title.mp3",
     battle: "bgm_battle.mp3",
@@ -159,8 +200,23 @@
   let audioUnlocked = false;
 
   function updateSoundButton() {
-    soundButton.textContent = soundEnabled ? "SOUND ON" : "SOUND OFF";
+    soundButton.textContent = soundEnabled ? "SE ON" : "SE OFF";
     soundButton.classList.toggle("off", !soundEnabled);
+  }
+
+  function updateBombButton() {
+    if (!bombButton) return;
+
+    if (gameState === "playing" && bombs > 0) {
+      bombButton.textContent = "BOMB x" + bombs;
+      bombButton.classList.remove("off");
+    } else if (gameState === "playing") {
+      bombButton.textContent = "BOMB x0";
+      bombButton.classList.add("off");
+    } else {
+      bombButton.textContent = "BOMB x3";
+      bombButton.classList.add("off");
+    }
   }
 
   function initAudio() {
@@ -178,13 +234,15 @@
       lastSoundTime[key] = 0;
     });
 
-    Object.entries(bgmFiles).forEach(([key, src]) => {
-      const audio = new Audio(src);
-      audio.preload = "auto";
-      audio.loop = true;
-      audio.volume = key === "battle" ? 0.36 : 0.30;
-      bgms[key] = audio;
-    });
+    if (!DISABLE_BGM) {
+      Object.entries(bgmFiles).forEach(([key, src]) => {
+        const audio = new Audio(src);
+        audio.preload = "auto";
+        audio.loop = true;
+        audio.volume = key === "battle" ? 0.36 : 0.30;
+        bgms[key] = audio;
+      });
+    }
   }
 
   function unlockAudio() {
@@ -193,7 +251,8 @@
 
     audioUnlocked = true;
 
-    [...Object.values(sounds), ...Object.values(bgms)].forEach(audio => {
+    const audioList = DISABLE_BGM ? Object.values(sounds) : [...Object.values(sounds), ...Object.values(bgms)];
+    audioList.forEach(audio => {
       audio.load();
     });
   }
@@ -209,6 +268,7 @@
   }
 
   function playBGM(name) {
+    if (DISABLE_BGM) return;
     if (!soundEnabled || !audioUnlocked) return;
     initAudio();
 
@@ -235,6 +295,7 @@
   }
 
   function refreshBGMForState() {
+    if (DISABLE_BGM) return;
     if (!soundEnabled || !audioUnlocked) return;
 
     if (gameState === "playing") {
@@ -248,7 +309,12 @@
 
   function playSE(name, minGap = 0) {
     if (!soundEnabled) return;
+    if (DISABLE_HIT_SE && name === "hit") return;
     initAudio();
+
+    if (name === "shot") minGap = Math.max(minGap, 130);
+    if (name === "explosion") minGap = Math.max(minGap, 180);
+    if (name === "bigExplosion") minGap = Math.max(minGap, 320);
 
     const audio = sounds[name];
     if (!audio) return;
@@ -291,6 +357,13 @@
     toggleSound();
   });
 
+  bombButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    unlockAudio();
+    useBomb();
+  });
+
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       stopBGM(false);
@@ -312,6 +385,9 @@
   let touchX = W / 2;
   let touchY = H - 20;
 
+  const MAX_BOMBS = 3;
+  const WAVE_INTERVAL = 30;
+
   let player;
   let bullets;
   let enemyBullets;
@@ -329,6 +405,11 @@
   let rapidTimer;
   let combo;
   let comboTimer;
+  let bombs = 0;
+  let bombFlashTimer = 0;
+  let waveNumber = 1;
+  let nextWaveAt = WAVE_INTERVAL;
+  let waveBanner = null;
 
   function loadImages() {
     const entries = Object.entries(imageFiles);
@@ -340,6 +421,7 @@
         loaded++;
         if (loaded === entries.length) {
           gameState = "title";
+          updateBombButton();
           draw();
         }
       };
@@ -348,6 +430,7 @@
         loaded++;
         if (loaded === entries.length) {
           gameState = "title";
+          updateBombButton();
           draw();
         }
       };
@@ -389,6 +472,16 @@
     rapidTimer = 0;
     combo = 0;
     comboTimer = 0;
+    bombs = MAX_BOMBS;
+    bombFlashTimer = 0;
+    waveNumber = 1;
+    nextWaveAt = WAVE_INTERVAL;
+    waveBanner = {
+      text: "WAVE 1",
+      life: 1500,
+      maxLife: 1500
+    };
+    updateBombButton();
   }
 
   function startGame() {
@@ -396,11 +489,13 @@
     playSE("select", 120);
     initGame();
     gameState = "playing";
+    updateBombButton();
     playBGM("battle");
   }
 
   function gameOver() {
     gameState = "gameover";
+    updateBombButton();
     playSE("gameover", 600);
     playBGM("gameover");
     if (score > bestScore) {
@@ -445,6 +540,57 @@
       maxLife: 760,
       size
     });
+  }
+
+  function showWaveBanner(text, life = 1500) {
+    waveBanner = {
+      text,
+      life,
+      maxLife: life
+    };
+  }
+
+  function closeKillBonus(e) {
+    if (!player) return 0;
+
+    const closeLine = player.y - 170;
+    const veryCloseLine = player.y - 95;
+
+    if (e.y >= veryCloseLine) return 200;
+    if (e.y >= closeLine) return 100;
+    return 0;
+  }
+
+  function useBomb() {
+    if (gameState !== "playing") return;
+    if (bombs <= 0) return;
+
+    bombs--;
+    updateBombButton();
+
+    playSE("bigExplosion", 300);
+    addShake(12, 360);
+    bombFlashTimer = 260;
+    showWaveBanner("BOMB!", 900);
+
+    const cleared = enemyBullets.length;
+    enemyBullets = [];
+
+    if (cleared > 0) {
+      addFloatingText("CLEAR +" + cleared, W / 2, H / 2 + 64, 20);
+      score += cleared * 10;
+    }
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      e.hp -= 2;
+      e.hitFlash = 140;
+      createExplosion(e.x, e.y, e.w * 0.72, e.type === "heavy");
+
+      if (e.hp <= 0) {
+        handleEnemyDestroyed(e, i, true);
+      }
+    }
   }
 
   function currentFireCooldown() {
@@ -606,6 +752,21 @@
     bgScroll += dt * 0.13;
     if (bgScroll > 60) bgScroll -= 60;
 
+    bombFlashTimer = Math.max(0, bombFlashTimer - dt);
+
+    if (waveBanner && waveBanner.life > 0) {
+      waveBanner.life -= dt;
+    }
+
+    const elapsed = elapsedSeconds(now);
+    if (elapsed >= nextWaveAt) {
+      waveNumber++;
+      nextWaveAt += WAVE_INTERVAL;
+      showWaveBanner("WAVE " + waveNumber, 1600);
+      addFloatingText("WAVE " + waveNumber, W / 2, 170, 28);
+      playSE("select", 180);
+    }
+
     if (keys.left) player.x -= player.speed;
     if (keys.right) player.x += player.speed;
     if (keys.up) player.y -= player.speed;
@@ -669,7 +830,7 @@
     checkCollisions();
   }
 
-  function handleEnemyDestroyed(e, index) {
+  function handleEnemyDestroyed(e, index, byBomb = false) {
     const isHeavy = e.type === "heavy";
     const isTruck = e.type === "truck";
 
@@ -680,26 +841,40 @@
     if (combo >= 4) add += 50;
     if (combo >= 8) add += 100;
 
+    const closeBonus = closeKillBonus(e);
+    if (closeBonus > 0 && !byBomb) {
+      add += closeBonus;
+    }
+
     score += add;
 
     createExplosion(e.x, e.y, e.w, isHeavy);
     addFloatingText("+" + add, e.x, e.y - e.h * 0.35, isHeavy ? 24 : 18);
+
+    if (closeBonus > 0 && !byBomb) {
+      addFloatingText(closeBonus >= 200 ? "POINT BLANK!" : "CLOSE BONUS!", e.x, e.y + 10, closeBonus >= 200 ? 22 : 18);
+    }
 
     if (isHeavy) {
       addFloatingText("BIG KILL!", e.x, e.y + 12, 20);
     }
 
     if (isTruck) {
+      addFloatingText("SUPPLY!", e.x, e.y - 34, 22);
+      addShake(5, 160);
+
       if (player.hp < player.maxHp) {
         playSE("repair", 120);
         player.hp = Math.min(player.maxHp, player.hp + 1);
-        addFloatingText("REPAIR +1", e.x, e.y + 18, 20);
+        addFloatingText("REPAIR +1 ♥", e.x, e.y + 18, 22);
       } else {
         playSE("powerup", 120);
         rapidTimer = 8000;
-        addFloatingText("RAPID FIRE!", e.x, e.y + 18, 20);
+        addFloatingText("RAPID FIRE 8s!", e.x, e.y + 18, 22);
       }
-      score += 50;
+
+      score += 100;
+      addFloatingText("SUPPLY BONUS +100", e.x, e.y + 44, 16);
     }
 
     enemies.splice(index, 1);
@@ -929,6 +1104,47 @@
     ctx.restore();
   }
 
+  function drawBombFlash() {
+    if (bombFlashTimer <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.42, bombFlashTimer / 260 * 0.42);
+    ctx.fillStyle = "#fff2b0";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.globalAlpha = Math.min(0.65, bombFlashTimer / 260 * 0.65);
+    ctx.strokeStyle = "#ffdd7a";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.arc(W / 2, H / 2, 250 * (1 - bombFlashTimer / 260) + 40, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawWaveBanner() {
+    if (!waveBanner || waveBanner.life <= 0) return;
+
+    const t = waveBanner.life / waveBanner.maxLife;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, t * 1.8);
+    ctx.textAlign = "center";
+    ctx.font = "bold 42px Arial";
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = "rgba(0,0,0,0.78)";
+    ctx.fillStyle = "#fff4a8";
+    ctx.strokeText(waveBanner.text, W / 2, 132);
+    ctx.fillText(waveBanner.text, W / 2, 132);
+
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#ffffff";
+    if (waveBanner.text.indexOf("WAVE") === 0) {
+      ctx.strokeText("Survive the road!", W / 2, 160);
+      ctx.fillText("Survive the road!", W / 2, 160);
+    }
+    ctx.restore();
+  }
+
   function drawUI() {
     ctx.save();
 
@@ -958,11 +1174,16 @@
       ctx.fillRect(116, 60, 130 * (rapidTimer / 8000), 9);
     }
 
+    ctx.textAlign = "right";
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = bombs > 0 ? "#fff4a8" : "rgba(255,255,255,0.55)";
+    ctx.fillText("BOMB x" + bombs, W - 14, rapidTimer > 0 ? 70 : 48);
+
     if (combo >= 4 && comboTimer > 0) {
       ctx.textAlign = "right";
       ctx.font = "bold 16px Arial";
       ctx.fillStyle = "#fff";
-      ctx.fillText("COMBO x" + combo, W - 14, rapidTimer > 0 ? 70 : 48);
+      ctx.fillText("COMBO x" + combo, W - 14, rapidTimer > 0 ? 92 : 70);
     }
 
     ctx.restore();
@@ -988,8 +1209,8 @@
 
     ctx.font = "15px Arial";
     ctx.fillText("Truck: Repair or Rapid Fire", W / 2, H / 2 + 150);
-    ctx.fillText("Heavy Tank: Big Explosion", W / 2, H / 2 + 174);
-    ctx.fillText("SOUND button controls SE + BGM", W / 2, H / 2 + 198);
+    ctx.fillText("BOMB x3: Clear bullets and damage enemies", W / 2, H / 2 + 174);
+    ctx.fillText("Close Kill gives bonus score", W / 2, H / 2 + 198);
 
     ctx.font = "bold 20px Arial";
     ctx.fillText("Tap or Space to Start", W / 2, H / 2 + 226);
@@ -1053,6 +1274,8 @@
 
     ctx.restore();
 
+    drawBombFlash();
+    drawWaveBanner();
     drawUI();
   }
 
@@ -1105,6 +1328,11 @@
     if (e.code === "Space") {
       unlockAudio();
       if (gameState === "title" || gameState === "gameover") startGame();
+      e.preventDefault();
+    }
+    if (e.key.toLowerCase() === "b") {
+      unlockAudio();
+      useBomb();
       e.preventDefault();
     }
   });
