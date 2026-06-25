@@ -36,9 +36,34 @@
     box-shadow: 0 0 30px rgba(0,0,0,0.65);
     border-radius: 10px;
   }
+
+  .menu-button {
+    position: fixed;
+    top: max(12px, calc(50vh - 412.5px + 12px));
+    left: max(12px, calc(50vw - 232px + 12px));
+    z-index: 10;
+    padding: 9px 13px;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px;
+    background: rgba(0,0,0,0.62);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(255,255,255,0.2);
+  }
+
+  .menu-button:active {
+    transform: scale(0.96);
+    background: rgba(255,255,255,0.22);
+  }
 </style>
 </head>
 <body>
+<button id="menuButton" class="menu-button" type="button" aria-label="Back to menu">MENU</button>
 <div class="wrap">
   <canvas id="game" width="464" height="825"></canvas>
 </div>
@@ -58,6 +83,25 @@
   const ctx = canvas.getContext("2d");
   const W = canvas.width;
   const H = canvas.height;
+
+  const MENU_URL = "https://kaggleosaka.github.io/ai-lab/games/3sec/";
+  const menuButton = document.getElementById("menuButton");
+
+  function goMenu() {
+    window.location.href = MENU_URL;
+  }
+
+  if (menuButton) {
+    menuButton.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    menuButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      goMenu();
+    });
+  }
 
   // スマホでは指が車に重ならないように、車をタッチ位置より少し上に表示する。
   const TOUCH_OFFSET_Y = 118;
@@ -1265,6 +1309,7 @@
   window.addEventListener("keydown", (e) => {
     state.keys[e.code] = true;
     if (e.code === "Space") startOrRetry();
+    if (e.code === "Escape") goMenu();
     if (e.code === "KeyM") {
       audioEnabled = !audioEnabled;
       showMessage(audioEnabled ? "SOUND ON" : "SOUND OFF", 0.8);
