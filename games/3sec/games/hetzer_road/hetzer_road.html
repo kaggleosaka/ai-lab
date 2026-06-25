@@ -93,23 +93,24 @@
 
   .bombButton {
     position: fixed;
-    right: 10px;
-    bottom: 18px;
+    right: 12px;
+    bottom: 20px;
     z-index: 9999;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 118px;
-    height: 48px;
-    padding: 0 14px;
+    min-width: 148px;
+    height: 58px;
+    padding: 0 18px;
     border-radius: 999px;
-    background: rgba(160, 32, 16, 0.88);
+    background: rgba(178, 36, 18, 0.93);
     color: #fff;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 900;
-    border: 2px solid rgba(255, 230, 160, 0.85);
-    box-shadow: 0 5px 16px rgba(0,0,0,0.42);
+    border: 3px solid rgba(255, 230, 160, 0.95);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.48), 0 0 14px rgba(255, 196, 80, 0.34);
     letter-spacing: 0.5px;
+    touch-action: manipulation;
   }
 
   .bombButton.off {
@@ -153,6 +154,7 @@
 
   const images = {};
   const imageFiles = {
+    title: "title.png",
     player: "1.png",
     playerFire: "2.png",
     playerHit: "3.png",
@@ -391,6 +393,8 @@
   let touchActive = false;
   let touchX = W / 2;
   let touchY = H - 20;
+  const activePointers = new Set();
+  let bombGestureLockUntil = 0;
 
   const MAX_BOMBS = 3;
   const WAVE_INTERVAL = 30;
@@ -424,6 +428,29 @@
   let nextWaveAt = WAVE_INTERVAL;
   let waveBanner = null;
   let pickupBanner = null;
+  let lastSupplyAlert = 0;
+
+  const waveNames = [
+    "PATROL",
+    "HEAVY ARMOR",
+    "GUN LINE",
+    "SUPPLY CHANCE",
+    "LAST STAND"
+  ];
+
+  function waveTitle(num) {
+    const name = waveNames[(num - 1) % waveNames.length];
+    return "WAVE " + num + ": " + name;
+  }
+
+  function waveSubTitle(num) {
+    const name = waveNames[(num - 1) % waveNames.length];
+    if (name === "PATROL") return "Break through the road";
+    if (name === "HEAVY ARMOR") return "Heavy tanks ahead";
+    if (name === "GUN LINE") return "Enemy guns active";
+    if (name === "SUPPLY CHANCE") return "Supply trucks incoming";
+    return "Hold the line";
+  }
 
   function loadImages() {
     const entries = Object.entries(imageFiles);
@@ -494,11 +521,13 @@
     waveNumber = 1;
     nextWaveAt = WAVE_INTERVAL;
     waveBanner = {
-      text: "WAVE 1",
+      text: waveTitle(1),
+      subText: waveSubTitle(1),
       life: 1500,
       maxLife: 1500
     };
     pickupBanner = null;
+    lastSupplyAlert = 0;
     updateBombButton();
   }
 
@@ -560,9 +589,10 @@
     });
   }
 
-  function showWaveBanner(text, life = 1500) {
+  function showWaveBanner(text, life = 1500, subText = "") {
     waveBanner = {
       text,
+      subText,
       life,
       maxLife: life
     };
@@ -676,9 +706,21 @@
     addFloatingText("SUPPLY +" + item.score, player.x, player.y - 30, 16);
   }
 
+  function triggerBombByGesture() {
+    const now = performance.now();
+    if (now < bombGestureLockUntil) return;
+    bombGestureLockUntil = now + 650;
+    touchActive = false;
+    useBomb();
+  }
+
   function useBomb() {
     if (gameState !== "playing") return;
-    if (bombs <= 0) return;
+    if (bombs <= 0) {
+      addFloatingText("NO BOMB!", W / 2, H - 120, 22);
+      playSE("select", 180);
+      return;
+    }
 
     bombs--;
     updateBombButton();
@@ -790,6 +832,17 @@
     const s = elapsedSeconds(now);
     const r = Math.random();
 
+    // WAVEごとに少しだけ出現傾向を変える。
+    // これでWAVE表示にゲーム上の意味が出る。
+    if (waveNumber >= 2) {
+      const waveMode = (waveNumber - 1) % waveNames.length;
+      if (waveMode === 1 && r < 0.18) return "heavy";      // HEAVY ARMOR
+      if (waveMode === 2 && r < 0.18) return "gun";        // GUN LINE
+      if (waveMode === 3 && r < 0.24) return "truck";      // SUPPLY CHANCE
+      if (waveMode === 4 && r < 0.10) return "heavy";      // LAST STAND
+      if (waveMode === 4 && r >= 0.10 && r < 0.20) return "gun";
+    }
+
     if (score < 1000 && s < 25) {
       if (r < 0.66) return "light";
       if (r < 0.92) return "medium";
@@ -830,6 +883,12 @@
     const size = data.size;
 
     const spawnX = rand(size / 2 + 12, W - size / 2 - 12);
+
+    if (type === "truck" && now - lastSupplyAlert > 3600) {
+      lastSupplyAlert = now;
+      showPickupBanner("SUPPLY TRUCK!", "SHOOT IT", 900);
+      playSE("select", 180);
+    }
 
     enemies.push({
       type,
@@ -912,8 +971,8 @@
     if (elapsed >= nextWaveAt) {
       waveNumber++;
       nextWaveAt += WAVE_INTERVAL;
-      showWaveBanner("WAVE " + waveNumber, 1600);
-      addFloatingText("WAVE " + waveNumber, W / 2, 170, 28);
+      showWaveBanner(waveTitle(waveNumber), 1700, waveSubTitle(waveNumber));
+      addFloatingText(waveTitle(waveNumber), W / 2, 170, 26);
       playSE("select", 180);
     }
 
@@ -1369,9 +1428,10 @@
 
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = "#ffffff";
-    if (waveBanner.text.indexOf("WAVE") === 0) {
-      ctx.strokeText("Survive the road!", W / 2, 160);
-      ctx.fillText("Survive the road!", W / 2, 160);
+    const subText = waveBanner.subText || (waveBanner.text.indexOf("WAVE") === 0 ? "Survive the road!" : "");
+    if (subText) {
+      ctx.strokeText(subText, W / 2, 160);
+      ctx.fillText(subText, W / 2, 160);
     }
     ctx.restore();
   }
@@ -1471,33 +1531,108 @@
   }
 
   function drawTitle() {
-    drawBackground();
+    const titleImg = images.title;
 
-    ctx.fillStyle = "rgba(0,0,0,0.62)";
-    ctx.fillRect(0, 0, W, H);
+    if (titleImg && titleImg.complete && titleImg.naturalWidth !== 0) {
+      const scale = Math.max(W / titleImg.naturalWidth, H / titleImg.naturalHeight);
+      const dw = titleImg.naturalWidth * scale;
+      const dh = titleImg.naturalHeight * scale;
+      const dx = (W - dw) / 2;
+      const dy = (H - dh) / 2;
+      ctx.drawImage(titleImg, dx, dy, dw, dh);
+    } else {
+      drawBackground();
+    }
 
-    drawImageCentered(images.player, W / 2, H / 2 - 120, 96, 96);
+    // タイトル文字を読みやすくするための上下グラデーション
+    const topGrad = ctx.createLinearGradient(0, 0, 0, 260);
+    topGrad.addColorStop(0, "rgba(0,0,0,0.56)");
+    topGrad.addColorStop(0.55, "rgba(0,0,0,0.32)");
+    topGrad.addColorStop(1, "rgba(0,0,0,0.00)");
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(0, 0, W, 270);
+
+    const midGrad = ctx.createLinearGradient(0, 210, 0, 510);
+    midGrad.addColorStop(0, "rgba(0,0,0,0.00)");
+    midGrad.addColorStop(0.35, "rgba(0,0,0,0.28)");
+    midGrad.addColorStop(0.70, "rgba(0,0,0,0.18)");
+    midGrad.addColorStop(1, "rgba(0,0,0,0.00)");
+    ctx.fillStyle = midGrad;
+    ctx.fillRect(0, 210, W, 300);
+
+    const bottomGrad = ctx.createLinearGradient(0, H - 190, 0, H);
+    bottomGrad.addColorStop(0, "rgba(0,0,0,0.00)");
+    bottomGrad.addColorStop(1, "rgba(0,0,0,0.48)");
+    ctx.fillStyle = bottomGrad;
+    ctx.fillRect(0, H - 190, W, 190);
+
+    // タイトルプレート
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.30)";
+    ctx.strokeStyle = "rgba(255,244,168,0.46)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(34, 174, W - 68, 152, 18);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = "#fff4a8";
+    ctx.textAlign = "center";
+    ctx.font = "bold 50px Arial";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(0,0,0,0.86)";
+    ctx.strokeText("HETZER", W / 2, 230);
+    ctx.fillText("HETZER", W / 2, 230);
+    ctx.strokeText("ROAD", W / 2, 285);
+    ctx.fillText("ROAD", W / 2, 285);
 
     ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.font = "bold 40px Arial";
-    ctx.fillText("HETZER", W / 2, H / 2 - 12);
-    ctx.fillText("ROAD", W / 2, H / 2 + 34);
+    ctx.font = "bold 17px Arial";
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(0,0,0,0.72)";
+    ctx.strokeText("BREAK THROUGH THE ARMORED ROAD", W / 2, 336);
+    ctx.fillText("BREAK THROUGH THE ARMORED ROAD", W / 2, 336);
 
-    ctx.font = "18px Arial";
-    ctx.fillText("Drag below the tank to Move", W / 2, H / 2 + 88);
-    ctx.fillText("WASD / Arrow Keys also work", W / 2, H / 2 + 116);
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.44)";
+    ctx.beginPath();
+    ctx.roundRect(44, 548, W - 88, 134, 16);
+    ctx.fill();
+    ctx.restore();
 
-    ctx.font = "15px Arial";
-    ctx.fillText("Truck: Drop support items", W / 2, H / 2 + 150);
-    ctx.fillText("Repair / Rapid / Power / Armor / Rare Drone", W / 2, H / 2 + 174);
-    ctx.fillText("BOMB x3: Clear bullets and damage enemies", W / 2, H / 2 + 198);
+    ctx.font = "bold 15px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.strokeText("Drag to move / Auto fire", W / 2, 584);
+    ctx.fillText("Drag to move / Auto fire", W / 2, 584);
+    ctx.strokeText("BOMB: button / two-finger tap / B or X", W / 2, 610);
+    ctx.fillText("BOMB: button / two-finger tap / B or X", W / 2, 610);
+    ctx.strokeText("Supply trucks drop support items", W / 2, 636);
+    ctx.fillText("Supply trucks drop support items", W / 2, 636);
 
-    ctx.font = "bold 20px Arial";
-    ctx.fillText("Tap or Space to Start", W / 2, H / 2 + 226);
+    ctx.font = "bold 25px Arial";
+    ctx.fillStyle = "#fff4a8";
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "rgba(0,0,0,0.84)";
+    ctx.strokeText("TAP TO START", W / 2, 712);
+    ctx.fillText("TAP TO START", W / 2, 712);
 
-    ctx.font = "16px Arial";
-    ctx.fillText("BEST: " + bestScore, W / 2, H / 2 + 264);
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.strokeText("BEST: " + bestScore, W / 2, 744);
+    ctx.fillText("BEST: " + bestScore, W / 2, 744);
+  }
+
+  function scoreRank(value) {
+    if (value >= 10000) return "LEGEND";
+    if (value >= 6000) return "HETZER ACE";
+    if (value >= 3000) return "ROAD FIGHTER";
+    if (value >= 1000) return "TANK HUNTER";
+    return "ROOKIE";
   }
 
   function drawGameOver() {
@@ -1520,8 +1655,13 @@
     ctx.fillText("SCORE: " + score, W / 2, H / 2);
     ctx.fillText("BEST: " + bestScore, W / 2, H / 2 + 36);
 
+    ctx.font = "bold 22px Arial";
+    ctx.fillStyle = "#fff4a8";
+    ctx.fillText("RANK: " + scoreRank(score), W / 2, H / 2 + 76);
+
     ctx.font = "bold 20px Arial";
-    ctx.fillText("Tap or Space to Restart", W / 2, H / 2 + 105);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("Tap or Space to Restart", W / 2, H / 2 + 128);
   }
 
   function drawLoading() {
@@ -1614,7 +1754,7 @@
       if (gameState === "title" || gameState === "gameover") startGame();
       e.preventDefault();
     }
-    if (e.key.toLowerCase() === "b") {
+    if (e.key.toLowerCase() === "b" || e.key.toLowerCase() === "x") {
       unlockAudio();
       useBomb();
       e.preventDefault();
@@ -1643,9 +1783,15 @@
   canvas.addEventListener("pointerdown", (e) => {
     unlockAudio();
     canvas.setPointerCapture(e.pointerId);
+    activePointers.add(e.pointerId);
 
     if (gameState === "title" || gameState === "gameover") {
       startGame();
+      return;
+    }
+
+    if (gameState === "playing" && activePointers.size >= 2) {
+      triggerBombByGesture();
       return;
     }
 
@@ -1656,18 +1802,21 @@
 
   canvas.addEventListener("pointermove", (e) => {
     if (!touchActive) return;
+    if (activePointers.size >= 2) return;
     touchX = pointerToCanvasX(e);
     touchY = pointerToCanvasY(e);
   });
 
   canvas.addEventListener("pointerup", (e) => {
-    touchActive = false;
+    activePointers.delete(e.pointerId);
+    touchActive = activePointers.size > 0 && gameState === "playing";
     try {
       canvas.releasePointerCapture(e.pointerId);
     } catch (_) {}
   });
 
-  canvas.addEventListener("pointercancel", () => {
+  canvas.addEventListener("pointercancel", (e) => {
+    activePointers.delete(e.pointerId);
     touchActive = false;
   });
 
