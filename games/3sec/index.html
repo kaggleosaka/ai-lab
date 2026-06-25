@@ -39,10 +39,18 @@
   }
 
   .sub {
-    margin: 0 0 28px;
+    margin: 0 0 22px;
     text-align: center;
     color: #bfc7d5;
     font-size: 15px;
+  }
+
+  .crumb {
+    min-height: 22px;
+    margin: 0 0 12px;
+    color: #9ca7b8;
+    font-size: 13px;
+    text-align: center;
   }
 
   .grid {
@@ -50,7 +58,7 @@
     gap: 14px;
   }
 
-  .card {
+  .card, .backBtn {
     display: block;
     width: 100%;
     box-sizing: border-box;
@@ -67,8 +75,20 @@
     -webkit-tap-highlight-color: rgba(255,255,255,0.18);
   }
 
-  .card:active {
+  .card:active, .backBtn:active {
     transform: scale(0.985);
+  }
+
+  .card.primary {
+    background:
+      linear-gradient(135deg, rgba(255,215,86,0.20), rgba(255,255,255,0.08));
+    border-color: rgba(255,215,86,0.35);
+  }
+
+  .card.search {
+    background:
+      linear-gradient(135deg, rgba(90,180,255,0.18), rgba(255,255,255,0.08));
+    border-color: rgba(90,180,255,0.34);
   }
 
   .title {
@@ -96,11 +116,31 @@
     pointer-events: none;
   }
 
+  .panelTitle {
+    margin: 8px 0 14px;
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .backBtn {
+    margin-top: 16px;
+    padding: 13px 16px;
+    text-align: center;
+    font-size: 15px;
+    background: rgba(255,255,255,0.05);
+  }
+
   .footer {
     margin-top: 30px;
     text-align: center;
     color: #7f8794;
     font-size: 12px;
+  }
+
+  .hidden {
+    display: none;
   }
 </style>
 </head>
@@ -108,30 +148,79 @@
   <main class="wrap">
     <h1>3SEC GAMES</h1>
     <p class="sub">Small browser games collection</p>
+    <div class="crumb" id="crumb">Select a category</div>
 
-    <section class="grid" aria-label="Game menu">
-      <a
-        class="card"
-        href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html"
-        onclick="window.location.href='https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html'; return false;"
-      >
-        <div class="title">HETZER ROAD</div>
-        <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
-        <span class="tag">Tank Shooter</span>
-      </a>
+    <section id="homeMenu" class="grid" aria-label="Category menu">
+      <button class="card primary" type="button" onclick="showPanel('casual')">
+        <div class="title">CASUAL GAME</div>
+        <div class="desc">Action games made for quick mobile play.</div>
+        <span class="tag">Hetzer Road / GoGo Race</span>
+      </button>
 
-      <a
-        class="card"
-        href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/"
-        onclick="window.location.href='https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/'; return false;"
-      >
+      <button class="card search" type="button" onclick="showPanel('visual')">
         <div class="title">VISUAL SEARCH</div>
         <div class="desc">3-second visual search games. Find the target quickly.</div>
         <span class="tag">Visual Search</span>
-      </a>
+      </button>
+    </section>
+
+    <section id="casualPanel" class="hidden" aria-label="Casual game menu">
+      <div class="panelTitle">CASUAL GAME</div>
+      <div class="grid">
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html"
+        >
+          <div class="title">HETZER ROAD</div>
+          <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
+          <span class="tag">Tank Shooter</span>
+        </a>
+
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/gogo_race/gogo_race.html"
+        >
+          <div class="title">GoGo Race</div>
+          <div class="desc">Retro gadget racing. Dodge rivals, chase star lines, and survive night curves.</div>
+          <span class="tag">Gadget Racing</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
+    <section id="visualPanel" class="hidden" aria-label="Visual search menu">
+      <div class="panelTitle">VISUAL SEARCH</div>
+      <div class="grid">
+        <a
+          class="card search"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/"
+        >
+          <div class="title">VISUAL SEARCH</div>
+          <div class="desc">3-second visual search games. Find the target quickly.</div>
+          <span class="tag">Visual Search</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
     </section>
 
     <div class="footer">kaggleosaka / ai-lab / games / 3sec</div>
   </main>
+
+<script>
+function showPanel(name) {
+  const home = document.getElementById("homeMenu");
+  const casual = document.getElementById("casualPanel");
+  const visual = document.getElementById("visualPanel");
+  const crumb = document.getElementById("crumb");
+
+  home.classList.toggle("hidden", name !== "home");
+  casual.classList.toggle("hidden", name !== "casual");
+  visual.classList.toggle("hidden", name !== "visual");
+
+  if (name === "casual") crumb.textContent = "Category / Casual Game";
+  else if (name === "visual") crumb.textContent = "Category / Visual Search";
+  else crumb.textContent = "Select a category";
+}
+</script>
 </body>
 </html>
