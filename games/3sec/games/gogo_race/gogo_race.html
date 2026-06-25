@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GoGo Race</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #111827;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    touch-action: none;
+    user-select: none;
+  }
+  .wrap {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle at 50% 15%, rgba(255,255,255,0.12), transparent 28%),
+      linear-gradient(180deg, #1c2b44, #0c1018);
+  }
+  canvas {
+    width: min(100vw, calc(100vh * 464 / 825));
+    height: min(100vh, calc(100vw * 825 / 464));
+    max-width: 464px;
+    max-height: 825px;
+    background: #222;
+    image-rendering: pixelated;
+    box-shadow: 0 0 30px rgba(0,0,0,0.65);
+    border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="game" width="464" height="825"></canvas>
+</div>
+
+<audio id="se_select" src="audio/se/se_select.mp3" preload="auto"></audio>
+<audio id="se_coin" src="audio/se/se_coin.mp3" preload="auto"></audio>
+<audio id="se_hit" src="audio/se/se_hit.mp3" preload="auto"></audio>
+<audio id="se_damage" src="audio/se/se_damage.mp3" preload="auto"></audio>
+<audio id="se_powerup" src="audio/se/se_powerup.mp3" preload="auto"></audio>
+<audio id="se_gameover" src="audio/se/se_gameover.mp3" preload="auto"></audio>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  // スマホでは指が車に重ならないように、車をタッチ位置より少し上に表示する。
+  const TOUCH_OFFSET_Y = 118;
+  const PLAYER_MIN_Y = H - 270;
+  const PLAYER_MAX_Y = H - 130;
+
+  const HI_KEY = "gogo-race-hi";
+  const OLD_HI_KEY = "gogo-gadget-racer-hi";
+  const lanes = [88, 176, 264, 352];
+
+  const images = {};
+  const imageFiles = [1,2,3,4,5,6,7,8,9,21,22,23,24,25,26,27,28,29];
+  let loadedCount = 0;
+
+  imageFiles.forEach(n => {
+    const img = new Image();
+    img.onload = () => loadedCount++;
+    img.onerror = () => loadedCount++;
+    img.src = `${n}.png`;
+    images[n] = img;
+  });
+
+  const se = {
+    select: document.getElementById("se_select"),
+    coin: document.getElementById("se_coin"),
+    hit: document.getElementById("se_hit"),
+    damage: document.getElementById("se_damage"),
+    powerup: document.getElementById("se_powerup"),
+    gameover: document.getElementById("se_gameover")
+  };
+
+  let audioEnabled = true;
+  function playSe(name) {
+    if (!audioEnabled) return;
+    const a = se[name];
+    if (!a) return;
+    try {
+      a.currentTime = 0;
+      a.volume = 0.75;
+      a.play().catch(() => {});
+    } catch (e) {}
+  }
+
+  const state = {
+    mode: "title",
+    score: 0,
+    hi: Number(localStorage.getItem(HI_KEY) || localStorage.getItem(OLD_HI_KEY) || 0),
+    time: 0,
+    roadY: 0,
+    roadCurve: 0,
+    targetCurve: 0,
+    curveTimer: 0,
+    curveName: "STRAIGHT",
+    phaseIndex: 0,
+    last: performance.now(),
+    spawnTimer: 0,
+    itemTimer: 5,
+    starTimer: 3.2,
+    bossTimer: 48,
+    messageTimer: 0,
+    message: "",
+    shake: 0,
+    combo: 0,
+    comboTimer: 0,
+    starChain: 0,
+    starLineSeq: 0,
+    edgeWarnCooldown: 0,
+    keys: {},
+    muted: false
+  };
+
+  const player = {
+    x: W / 2,
+    y: H - 130,
+    w: 76,
+    h: 102,
+    hp: 3,
+    inv: 0,
+    shieldHits: 0,
+    gadget: "NORMAL",
+    gadgetTimer: 0,
+    slipTimer: 0,
+    slipVx: 0,
+    targetX: W / 2,
+    targetY: H - 130,
+    dragging: false,
+    drawId: 1,
+    offRoadTimer: 0,
+    offRoadSide: ""
+  };
+
+  let objects = [];
+  let particles = [];
+  let starLines = {};
+
+  const rivalTypes = [
+    { id: 8,  name: "BLACK RIVAL",   score: 100, dmg: 1, speed: 1.00, move: "straight", size: 0.92, start: 0 },
+    { id: 21, name: "YELLOW RIVAL",  score: 150, dmg: 1, speed: 1.14, move: "straight", size: 0.92, start: 18 },
+    { id: 22, name: "VILLAIN CAR",   score: 180, dmg: 1, speed: 1.00, move: "chase",    size: 0.95, start: 24 },
+    { id: 23, name: "RED SPEEDER",   score: 220, dmg: 1, speed: 1.35, move: "zigzag",   size: 0.86, start: 28 },
+    { id: 24, name: "ARMORED TRUCK", score: 320, dmg: 2, speed: 0.78, move: "straight", size: 1.18, start: 38 },
+    { id: 25, name: "BLOCKER",       score: 260, dmg: 1, speed: 1.05, move: "block",    size: 0.96, start: 45 },
+    { id: 26, name: "DRILL CAR",     score: 330, dmg: 2, speed: 1.18, move: "straight", size: 0.98, start: 42 },
+    { id: 27, name: "OIL TRUCK",     score: 300, dmg: 1, speed: 0.95, move: "oil",      size: 1.02, start: 50 },
+    { id: 28, name: "SAW RIVAL",     score: 420, dmg: 2, speed: 1.08, move: "zigzag",   size: 1.05, start: 60 }
+  ];
+
+  function resetGame() {
+    state.mode = "play";
+    state.score = 0;
+    state.time = 0;
+    state.spawnTimer = 0.5;
+    state.itemTimer = 4;
+    state.starTimer = 2.2;
+    state.roadCurve = 0;
+    state.targetCurve = 0;
+    state.curveTimer = 2.5;
+    state.curveName = "STRAIGHT";
+    state.phaseIndex = 0;
+    state.bossTimer = 65;
+    state.messageTimer = 1.8;
+    state.message = "WARM UP!";
+    state.shake = 0;
+    state.combo = 0;
+    state.comboTimer = 0;
+    state.starChain = 0;
+    state.starLineSeq = 0;
+    state.edgeWarnCooldown = 0;
+    objects = [];
+    particles = [];
+    starLines = {};
+    player.x = W / 2;
+    player.targetX = W / 2;
+    player.y = H - 130;
+    player.targetY = player.y;
+    player.hp = 3;
+    player.inv = 1.2;
+    player.shieldHits = 0;
+    player.gadget = "NORMAL";
+    player.gadgetTimer = 0;
+    player.slipTimer = 0;
+    player.slipVx = 0;
+    player.drawId = 1;
+    player.offRoadTimer = 0;
+    player.offRoadSide = "";
+    playSe("select");
+  }
+
+  function gameOver() {
+    state.mode = "gameover";
+    if (Math.floor(state.score) > state.hi) {
+      state.hi = Math.floor(state.score);
+      localStorage.setItem(HI_KEY, String(state.hi));
+    }
+    playSe("gameover");
+  }
+
+  function showMessage(text, sec = 1.2) {
+    state.message = text;
+    state.messageTimer = sec;
+  }
+
+  function randLane() {
+    return lanes[Math.floor(Math.random() * lanes.length)];
+  }
+
+  // 20秒ごとのフェーズ制:
+  // 0-20 WARM UP / 20-40 CURVE ROAD / 40-60 JUNGLE RUN /
+  // 60-80 NIGHT ZONE / 80-100 DANGER NIGHT / 100-120 BOSS ROAD / 120+ MAX SPEED
+  const PHASES = [
+    { name: "WARM UP",      start: 0 },
+    { name: "CURVE ROAD",   start: 20 },
+    { name: "JUNGLE RUN",   start: 40 },
+    { name: "NIGHT ZONE",   start: 60 },
+    { name: "DANGER NIGHT", start: 80 },
+    { name: "BOSS ROAD",    start: 100 },
+    { name: "MAX SPEED",    start: 120 }
+  ];
+
+  function phaseIndex() {
+    return Math.min(PHASES.length - 1, Math.floor(state.time / 20));
+  }
+
+  function phaseName() {
+    return PHASES[phaseIndex()].name;
+  }
+
+  function phaseDifficulty() {
+    return phaseIndex() / (PHASES.length - 1);
+  }
+
+  function difficulty() {
+    return Math.max(0, Math.min(1, state.time / 120));
+  }
+
+  function updatePhase() {
+    const p = phaseIndex();
+    if (p !== state.phaseIndex) {
+      state.phaseIndex = p;
+      showMessage(phaseName() + "!", 1.35);
+      state.shake = Math.max(state.shake, p >= 3 ? 8 : 4);
+    }
+  }
+
+  function nightAmount() {
+    if (state.time < 60) return 0;
+
+    // NIGHT ZONE以降はライト外を暗くする。
+    // ただしライト内の視認性を優先するため、黒幕は少し抑える。
+    if (state.time < 80) return 0.74 + (state.time - 60) / 20 * 0.08;
+    if (state.time < 100) return 0.82 + (state.time - 80) / 20 * 0.05;
+    return Math.min(0.92, 0.87 + (state.time - 100) / 80 * 0.05);
+  }
+
+  function roadPower() {
+    // 20秒ごとに曲がりを強くする。夜以降は視界も狭くなるので少しだけ抑える。
+    const p = phaseIndex();
+    return 88 + p * 13 + Math.min(24, state.time * 0.12);
+  }
+
+  function objectSpeedBase() {
+    // フェーズが進むほど速くなる。MAX SPEEDでも理不尽すぎない上限にする。
+    const p = phaseIndex();
+    return 3.25 + p * 0.14 + state.time * 0.026;
+  }
+
+  function roadOffsetAt(y) {
+    const t = Math.max(0, Math.min(1, y / H));
+    return state.roadCurve * Math.pow(1 - t, 1.75) * roadPower();
+  }
+
+  function objectDrawX(o) {
+    return o.x + roadOffsetAt(o.y);
+  }
+
+  function updateRoadCurve(dt) {
+    state.curveTimer -= dt;
+    if (state.curveTimer <= 0) {
+      const d = difficulty();
+      let choices;
+
+      const p = phaseIndex();
+      if (p === 0) {
+        choices = [0, 0, 0, 0, -1, 1];             // WARM UP: ほぼ直線
+      } else if (p === 1) {
+        choices = [0, 0, -1, 1, -1, 1];            // CURVE ROAD: カーブ開始
+      } else if (p === 2) {
+        choices = [0, -1, 1, -1, 1, 0, -1, 1];     // JUNGLE RUN
+      } else {
+        choices = [-1, 1, 0, -1, 1, -1, 1, 0];     // NIGHT以降: カーブ多め
+      }
+
+      const next = choices[Math.floor(Math.random() * choices.length)];
+      state.targetCurve = next;
+      state.curveTimer = Math.max(2.65, 5.7 - d * 2.15) + Math.random() * Math.max(1.3, 2.8 - d * 1.2);
+
+      if (next < 0) {
+        state.curveName = "LEFT CURVE";
+        showMessage("LEFT CURVE!", 0.9);
+      } else if (next > 0) {
+        state.curveName = "RIGHT CURVE";
+        showMessage("RIGHT CURVE!", 0.9);
+      } else {
+        state.curveName = "STRAIGHT";
+      }
+    }
+
+    // カーブへの入り方は少しなめらかにして、急に道路が折れないようにする。
+    state.roadCurve += (state.targetCurve - state.roadCurve) * Math.min(1, dt * (1.10 + phaseDifficulty() * 0.95));
+  }
+
+  function addObject(o) {
+    objects.push(o);
+  }
+
+  function spawnObstacle() {
+    const r = Math.random();
+    const d = difficulty();
+    const speedBase = objectSpeedBase() + 0.18;
+    const x = randLane();
+
+    // フェーズごとに障害物の性格を変える。
+    // 40秒以降は木が増えてCUTTERが活きる。80秒以降はオイルも少し怖くなる。
+    const p = phaseIndex();
+    const treeRate = p < 2 ? 0.38 : 0.48 + Math.min(0.08, p * 0.012);
+    const oilRate = p < 1 ? 0.07 : p < 4 ? 0.14 : 0.20;
+
+    if (r < treeRate) {
+      addObject({ kind: "obstacle", id: 5, name: "TREE", x, y: -90, w: 76, h: 86, speed: speedBase, dmg: 1, score: 35, passed: false });
+    } else if (r < treeRate + oilRate) {
+      addObject({ kind: "oil", id: 6, name: "OIL", x, y: -80, w: 90, h: 52, speed: speedBase * 0.94, dmg: 0, score: 0, passed: false });
+    } else {
+      addObject({ kind: "obstacle", id: 7, name: "BARRIER", x, y: -80, w: 96, h: 58, speed: speedBase * 0.90, dmg: 1, score: 45, passed: false });
+    }
+  }
+
+  function spawnRival() {
+    const available = rivalTypes.filter(t => state.time >= t.start);
+    const t = available[Math.floor(Math.random() * available.length)] || rivalTypes[0];
+    const speedBase = objectSpeedBase() * t.speed;
+    const size = 86 * t.size;
+    addObject({
+      kind: "rival",
+      id: t.id,
+      name: t.name,
+      x: randLane(),
+      y: -110,
+      w: size,
+      h: size * 1.25,
+      speed: speedBase,
+      dmg: t.dmg,
+      score: t.score,
+      move: t.move,
+      t: Math.random() * 10,
+      passed: false,
+      oilDrop: 0
+    });
+  }
+
+  function spawnBoss() {
+    addObject({
+      kind: "boss",
+      id: 29,
+      name: "BOSS RIVAL",
+      x: W / 2,
+      y: -150,
+      w: 130,
+      h: 160,
+      speed: 2.35 + state.time * 0.014,
+      dmg: 2,
+      score: 1000,
+      move: "boss",
+      t: 0,
+      passed: false
+    });
+    showMessage("BOSS RIVAL!", 1.5);
+  }
+
+  function spawnItem() {
+    const r = Math.random();
+    const id = r < 0.34 ? 3 : r < 0.67 ? 4 : 9;
+    const name = id === 3 ? "SHIELD" : id === 4 ? "CUTTER" : "TURBO";
+    addObject({ kind: "item", id, name, x: randLane(), y: -80, w: 66, h: 66, speed: 3.05 + state.time * 0.016, passed: false });
+  }
+
+  function spawnStarLine() {
+    const p = phaseIndex();
+    const total = 5 + Math.min(2, Math.floor(state.time / 45));
+    const lineId = ++state.starLineSeq;
+    const speed = 3.15 + state.time * 0.017;
+    const baseLaneIndex = Math.floor(Math.random() * lanes.length);
+    const pattern = Math.random();
+
+    starLines[lineId] = { total, got: 0, missed: false };
+
+    for (let i = 0; i < total; i++) {
+      let laneIndex = baseLaneIndex;
+
+      // まっすぐ列だけでなく、ときどき隣レーンへ流れる星列にする。
+      // 判定は高いしきい値から先に見る。先に pattern > 0.62 を見ると、
+      // pattern > 0.82 のジグザグ列が実行されないため。
+      if (pattern > 0.82) {
+        laneIndex = Math.max(0, Math.min(lanes.length - 1, baseLaneIndex + (i % 2 === 0 ? 0 : (baseLaneIndex < 2 ? 1 : -1))));
+      } else if (pattern > 0.62) {
+        const dir = baseLaneIndex < 2 ? 1 : -1;
+        laneIndex = Math.max(0, Math.min(lanes.length - 1, baseLaneIndex + (i >= Math.ceil(total / 2) ? dir : 0)));
+      }
+
+      addObject({
+        kind: "star",
+        name: "GOGO STAR",
+        x: lanes[laneIndex],
+        y: -95 - i * 54,
+        w: 34,
+        h: 34,
+        speed,
+        score: 65 + p * 8,
+        lineId,
+        total,
+        passed: false,
+        t: i * 0.25
+      });
+    }
+  }
+
+  function activateGadget(name) {
+    player.gadget = name;
+    if (name === "SHIELD") {
+      player.gadgetTimer = 8;
+      player.shieldHits = 1;
+      player.drawId = 3;
+    } else if (name === "CUTTER") {
+      player.gadgetTimer = 7;
+      player.drawId = 4;
+    } else if (name === "TURBO") {
+      player.gadgetTimer = 5;
+      player.drawId = 2;
+    }
+    showMessage(name + "!", 1.0);
+    playSe("powerup");
+  }
+
+  function rectsOverlap(a, b, scaleA = 0.54, scaleB = 0.60) {
+    const aw = a.w * scaleA;
+    const ah = a.h * scaleA;
+    const bw = b.w * scaleB;
+    const bh = b.h * scaleB;
+    const ax = a.kind ? objectDrawX(a) : a.x;
+    const bx = b.kind ? objectDrawX(b) : b.x;
+    return Math.abs(ax - bx) < (aw + bw) / 2 && Math.abs(a.y - b.y) < (ah + bh) / 2;
+  }
+
+  function damagePlayer(amount, label) {
+    if (player.inv > 0) return;
+
+    if (player.shieldHits > 0) {
+      player.shieldHits--;
+      player.inv = 0.8;
+      state.shake = 10;
+      showMessage("SHIELD BLOCK!", 0.9);
+      playSe("hit");
+      if (player.shieldHits <= 0 && player.gadget === "SHIELD") {
+        player.gadget = "NORMAL";
+        player.gadgetTimer = 0;
+        player.drawId = 1;
+      }
+      return;
+    }
+
+    player.hp -= amount;
+    player.inv = 1.1;
+    state.combo = 0;
+    state.comboTimer = 0;
+    resetStarChain();
+    state.shake = amount >= 2 ? 16 : 10;
+    showMessage(label || "CRASH!", 0.8);
+    playSe(amount >= 2 ? "damage" : "hit");
+
+    if (player.hp <= 0) gameOver();
+  }
+
+  function addScore(base, label) {
+    state.combo++;
+    state.comboTimer = 2.2;
+    let mult = 1;
+    if (state.combo >= 5) mult = 2.0;
+    else if (state.combo >= 3) mult = 1.5;
+    else if (state.combo >= 2) mult = 1.2;
+    if (player.gadget === "TURBO") mult *= 1.5;
+    const add = Math.floor(base * mult);
+    state.score += add;
+    showMessage(`${label} +${add}`, 0.9);
+    playSe("coin");
+  }
+
+  function resetStarChain() {
+    state.starChain = 0;
+  }
+
+  function collectStar(o) {
+    const line = starLines[o.lineId];
+    if (!line || line.missed) return;
+
+    line.got++;
+    const chainMult = 1 + Math.min(3, state.starChain) * 0.35;
+    const turboMult = player.gadget === "TURBO" ? 1.35 : 1;
+    const add = Math.floor(o.score * chainMult * turboMult);
+    state.score += add;
+
+    if (line.got >= line.total) {
+      state.starChain++;
+      const bonus = Math.floor((420 + phaseIndex() * 60) * (1 + Math.min(4, state.starChain - 1) * 0.45));
+      state.score += bonus;
+      state.combo++;
+      state.comboTimer = 2.4;
+      showMessage(`STAR LINE x${Math.max(1, state.starChain)} +${bonus}`, 1.05);
+      playSe("powerup");
+    } else if (line.got === 1 || line.got === Math.ceil(line.total / 2)) {
+      showMessage(`STAR +${add}`, 0.45);
+      playSe("coin");
+    } else {
+      playSe("coin");
+    }
+  }
+
+  function missStarLine(lineId) {
+    const line = starLines[lineId];
+    if (!line || line.missed || line.got >= line.total) return;
+    line.missed = true;
+    resetStarChain();
+  }
+
+  function updatePlayer(dt) {
+    if (player.inv > 0) player.inv -= dt;
+    if (state.edgeWarnCooldown > 0) state.edgeWarnCooldown -= dt;
+
+    if (player.gadgetTimer > 0) {
+      player.gadgetTimer -= dt;
+      if (player.gadgetTimer <= 0) {
+        player.gadget = "NORMAL";
+        player.drawId = 1;
+        player.shieldHits = 0;
+      }
+    }
+    if (player.slipTimer > 0) {
+      player.slipTimer -= dt;
+      player.slipVx *= 0.94;
+      player.x += player.slipVx;
+      if (player.slipTimer <= 0) player.slipVx = 0;
+    }
+
+    // 路肩に出ている間はハンドルが重くなり、速度感も落ちる。
+    const roadCenter = roadCenterAt(player.y);
+    const roadWidth = roadWidthAt(player.y);
+    const safeLeft = roadCenter - roadWidth / 2 + 28;
+    const safeRight = roadCenter + roadWidth / 2 - 28;
+    const wasOffRoad = player.x < safeLeft || player.x > safeRight;
+    const roadGrip = wasOffRoad ? 0.52 : 1;
+
+    let input = 0;
+    if (state.keys.ArrowLeft || state.keys.KeyA) input -= 1;
+    if (state.keys.ArrowRight || state.keys.KeyD) input += 1;
+
+    const speed = (player.gadget === "TURBO" ? 395 : 330) * roadGrip;
+    if (input !== 0) {
+      const slipMul = player.slipTimer > 0 ? 0.55 : 1;
+      player.x += input * speed * slipMul * dt;
+      player.targetX = player.x;
+    }
+
+    if (player.dragging) {
+      const follow = player.slipTimer > 0 ? 0.06 : wasOffRoad ? 0.12 : 0.22;
+      player.x += (player.targetX - player.x) * follow;
+      player.y += (player.targetY - player.y) * Math.min(0.18, follow);
+    } else {
+      // 指を離したら、従来の下寄りポジションへゆっくり戻す。
+      player.targetY = H - 130;
+      player.y += (player.targetY - player.y) * 0.045;
+    }
+
+    // 昔のアーケード風: カーブ中は外側へ少し流される
+    player.x -= state.roadCurve * (18 + phaseIndex() * 5.5) * dt;
+
+    player.x = Math.max(44, Math.min(W - 44, player.x));
+
+    // 路肩ペナルティ: はみ出し中はコンボ切れ・少し引き戻し・長時間でダメージ。
+    const centerNow = roadCenterAt(player.y);
+    const widthNow = roadWidthAt(player.y);
+    const leftNow = centerNow - widthNow / 2 + 28;
+    const rightNow = centerNow + widthNow / 2 - 28;
+    const offLeft = player.x < leftNow;
+    const offRight = player.x > rightNow;
+
+    if (offLeft || offRight) {
+      player.offRoadSide = offLeft ? "LEFT" : "RIGHT";
+      player.offRoadTimer += dt;
+      state.combo = 0;
+      state.comboTimer = 0;
+      resetStarChain();
+      state.shake = Math.max(state.shake, 2.0 + Math.min(6, player.offRoadTimer * 4));
+
+      // 道路側へじわっと戻す。即死ではなく「まずい、戻らないと」という感触にする。
+      const limit = offLeft ? leftNow : rightNow;
+      player.x += (limit - player.x) * Math.min(1, dt * 1.75);
+      player.targetX = player.x;
+
+      if (state.edgeWarnCooldown <= 0) {
+        showMessage("ROAD EDGE!", 0.55);
+        state.edgeWarnCooldown = 0.75;
+      }
+
+      if (player.offRoadTimer > 1.15 && player.inv <= 0) {
+        player.offRoadTimer = 0;
+        damagePlayer(1, "ROAD DAMAGE!");
+      }
+    } else {
+      player.offRoadTimer = Math.max(0, player.offRoadTimer - dt * 2.2);
+      if (player.offRoadTimer <= 0) player.offRoadSide = "";
+    }
+  }
+
+  function updateObjects(dt) {
+    state.spawnTimer -= dt;
+    const d = difficulty();
+    const p = phaseIndex();
+    const intervalByPhase = [1.34, 1.12, 0.98, 0.86, 0.76, 0.68, 0.60];
+    const interval = Math.max(0.56, intervalByPhase[p] - Math.min(0.12, d * 0.10));
+    if (state.spawnTimer <= 0) {
+      // 20秒ごとに少しずつ難しくする。JUNGLE以降は障害物が増える。
+      const rivalRateByPhase = [0.74, 0.68, 0.58, 0.56, 0.52, 0.50, 0.48];
+      const rivalRate = rivalRateByPhase[p];
+      if (Math.random() < rivalRate) spawnRival(); else spawnObstacle();
+      state.spawnTimer = interval;
+    }
+
+    state.itemTimer -= dt;
+    if (state.itemTimer <= 0) {
+      spawnItem();
+      // フェーズが進むほどアイテム間隔は少し長くする。取りに行く判断を作る。
+      const itemBaseByPhase = [5.0, 5.4, 5.9, 6.3, 6.8, 7.2, 7.5];
+      state.itemTimer = itemBaseByPhase[phaseIndex()] + Math.random() * 2.4;
+    }
+
+    state.starTimer -= dt;
+    if (state.starTimer <= 0) {
+      spawnStarLine();
+      // 星列はスコアの主役。少し短めの間隔で出し、取りに行く判断を作る。
+      const starBaseByPhase = [3.2, 3.5, 3.8, 4.0, 4.3, 4.5, 4.7];
+      state.starTimer = starBaseByPhase[phaseIndex()] + Math.random() * 1.6;
+    }
+
+    state.bossTimer -= dt;
+    if (state.time >= 100 && state.bossTimer <= 0) {
+      spawnBoss();
+      state.bossTimer = Math.max(24, 42 - state.time * 0.06);
+    }
+
+    for (const o of objects) {
+      o.t += dt;
+      if (o.move === "zigzag") o.x += Math.sin(o.t * 4.2) * 92 * dt;
+      if (o.move === "chase") o.x += Math.sign(player.x - o.x) * 58 * dt;
+      if (o.move === "block") o.x += Math.sin(o.t * 2.5) * 115 * dt;
+      if (o.move === "boss") o.x = W / 2 + Math.sin(o.t * 1.5) * 105;
+      o.x = Math.max(42, Math.min(W - 42, o.x));
+      o.y += o.speed * 60 * dt;
+
+      if (o.move === "oil") {
+        o.oilDrop -= dt;
+        if (o.oilDrop <= 0 && o.y > 30 && o.y < H - 180) {
+          addObject({ kind: "oil", id: 6, name: "OIL", x: o.x, y: o.y - 20, w: 82, h: 48, speed: o.speed * 0.95, dmg: 0, score: 0, passed: false, t: 0 });
+          o.oilDrop = phaseIndex() >= 4 ? 0.95 : 1.2;
+        }
+      }
+
+      if (!o.passed && o.kind !== "item" && o.kind !== "star" && o.y > player.y + player.h * 0.45) {
+        o.passed = true;
+        if (o.kind === "rival") addScore(o.score, "OVERTAKE");
+        if (o.kind === "boss") addScore(o.score, "BOSS OVERTAKEN");
+      }
+
+      if (o.kind === "star" && !o.passed && o.y > player.y + player.h * 0.55) {
+        o.passed = true;
+        missStarLine(o.lineId);
+      }
+
+      if (rectsOverlap(player, o, 0.54, o.kind === "oil" ? 0.62 : o.kind === "star" ? 0.78 : 0.58)) {
+        if (o.kind === "star") {
+          collectStar(o);
+          o.dead = true;
+        } else if (o.kind === "item") {
+          activateGadget(o.name === "TURBO" ? "TURBO" : o.name);
+          o.dead = true;
+        } else if (o.kind === "oil") {
+          if (player.slipTimer <= 0) {
+            player.slipTimer = 2.0;
+            player.slipVx = (Math.random() < 0.5 ? -1 : 1) * 6.2;
+            state.combo = 0;
+            resetStarChain();
+            showMessage("SLIP!", 0.8);
+            playSe("hit");
+          }
+          o.dead = true;
+        } else if (player.gadget === "CUTTER" && o.kind === "obstacle") {
+          o.dead = true;
+          burst(objectDrawX(o), o.y, 10);
+          addScore(o.score + 50, "CUT THROUGH");
+        } else {
+          damagePlayer(o.dmg || 1, o.name || "CRASH!");
+          if (o.kind !== "boss") o.dead = true;
+        }
+      }
+    }
+
+    objects = objects.filter(o => !o.dead && o.y < H + 180);
+  }
+
+  function burst(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      particles.push({ x, y, vx: (Math.random() - 0.5) * 220, vy: (Math.random() - 0.5) * 220, life: 0.45 + Math.random() * 0.25 });
+    }
+  }
+
+  function updateParticles(dt) {
+    for (const p of particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+    }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  function updatePlay(dt) {
+    state.time += dt;
+    state.roadY = (state.roadY + (265 + phaseIndex() * 22 + state.time * 1.8) * dt) % 92;
+    updatePhase();
+    updateRoadCurve(dt);
+    const runMult = player.gadget === "TURBO" ? 2 : 1;
+    state.score += 5 * runMult * dt;
+    if (state.messageTimer > 0) state.messageTimer -= dt;
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - 45 * dt);
+    if (state.comboTimer > 0) {
+      state.comboTimer -= dt;
+      if (state.comboTimer <= 0) state.combo = 0;
+    }
+    updatePlayer(dt);
+    updateObjects(dt);
+    updateParticles(dt);
+  }
+
+  function roadCenterAt(y) {
+    const t = Math.max(0, Math.min(1, y / H));
+    return W / 2 + state.roadCurve * Math.pow(1 - t, 1.75) * roadPower();
+  }
+
+  function roadWidthAt(y) {
+    const t = Math.max(0, Math.min(1, y / H));
+    return 245 + t * 92;
+  }
+
+  function drawRoadLine(offsetX, color, width, dashed = false) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    if (dashed) {
+      ctx.setLineDash([32, 34]);
+      ctx.lineDashOffset = -state.roadY;
+    }
+    ctx.beginPath();
+    for (let y = -50; y <= H + 50; y += 18) {
+      const rw = roadWidthAt(y);
+      const x = roadCenterAt(y) + offsetX * rw;
+      if (y === -50) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawRoad() {
+    // ジャングル背景
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#1d7a41");
+    bg.addColorStop(1, "#0f4f2b");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // カーブ道路本体: 横スライスで昔のアーケード風に描く
+    for (let y = 0; y < H; y += 6) {
+      const center = roadCenterAt(y);
+      const width = roadWidthAt(y);
+      const left = center - width / 2;
+      const right = center + width / 2;
+
+      ctx.fillStyle = y % 24 < 12 ? "#535b62" : "#4a5258";
+      ctx.fillRect(left, y, width, 7);
+
+      ctx.fillStyle = "#d9c27a";
+      ctx.fillRect(left - 13, y, 13, 7);
+      ctx.fillRect(right, y, 13, 7);
+
+      ctx.fillStyle = "rgba(255,255,255,0.78)";
+      ctx.fillRect(left + 2, y, 4, 7);
+      ctx.fillRect(right - 6, y, 4, 7);
+    }
+
+    // 車線ラインも道路のカーブに追従
+    drawRoadLine(-0.25, "rgba(255,255,255,0.18)", 2, false);
+    drawRoadLine(0.25, "rgba(255,255,255,0.18)", 2, false);
+    drawRoadLine(0, "rgba(255,235,120,0.92)", 8, true);
+
+    // カーブ方向の小さな案内表示
+    if (state.mode === "play" && Math.abs(state.roadCurve) > 0.25) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "900 15px sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      roundRect(W / 2 - 70, 106, 140, 28, 10, true, false);
+      ctx.fillStyle = "#fff7a8";
+      ctx.fillText(state.roadCurve < 0 ? "LEFT CURVE" : "RIGHT CURVE", W / 2, 126);
+      ctx.restore();
+    }
+  }
+
+  function drawImageOrFallback(id, x, y, w, h, label) {
+    const img = images[id];
+    if (img && img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, x - w / 2, y - h / 2, w, h);
+      return;
+    }
+    ctx.save();
+    ctx.fillStyle = id >= 21 ? "#7c3aed" : id === 5 ? "#8b7355" : id === 6 ? "#111" : id === 7 ? "#f97316" : id === 9 ? "#ef4444" : "#f8fafc";
+    ctx.strokeStyle = "#111827";
+    ctx.lineWidth = 3;
+    roundRect(x - w/2, y - h/2, w, h, 12, true, true);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(label || id, x, y + 4);
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function drawStarShape(x, y, r) {
+    const pulse = 1 + Math.sin(performance.now() / 120 + y * 0.04) * 0.10;
+    const rr = r * pulse;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-Math.PI / 2);
+
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = "#fff7a8";
+    ctx.beginPath();
+    ctx.arc(0, 0, rr * 1.75, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#ffe45c";
+    ctx.strokeStyle = "#7c4a03";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = i * Math.PI / 5;
+      const rad = i % 2 === 0 ? rr : rr * 0.45;
+      const sx = Math.cos(a) * rad;
+      const sy = Math.sin(a) * rad;
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawObjects() {
+    for (const o of objects) {
+      if (o.kind === "star") {
+        drawStarShape(objectDrawX(o), o.y, 15);
+        continue;
+      }
+
+      if (o.kind === "item") {
+        ctx.save();
+        ctx.globalAlpha = 0.25 + Math.sin(performance.now() / 130) * 0.08;
+        ctx.fillStyle = "#fff7a8";
+        ctx.beginPath();
+        ctx.arc(objectDrawX(o), o.y, o.w * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      drawImageOrFallback(o.id, objectDrawX(o), o.y, o.w, o.h, o.name);
+    }
+  }
+
+  function drawPlayer() {
+    const blink = player.inv > 0 && Math.floor(performance.now() / 80) % 2 === 0;
+    if (blink) ctx.globalAlpha = 0.45;
+    const id = player.drawId;
+    drawImageOrFallback(id, player.x, player.y, player.w, player.h, "YOU");
+    ctx.globalAlpha = 1;
+
+    if (player.gadget === "SHIELD" && player.shieldHits > 0) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(125, 211, 252, 0.9)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 62 + Math.sin(performance.now() / 110) * 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawNightOverlay() {
+    const amount = nightAmount();
+    if (amount <= 0) return;
+
+    // 重要:
+    // destination-out をメインcanvasで直接使うと、黒幕だけでなく
+    // 道路・敵・アイテムの絵そのものまで削ってしまう。
+    // そのため、夜の黒幕は一度オフスクリーンcanvasに作り、
+    // ライト穴を開けてからメインcanvasへ重ねる。
+    const mask = document.createElement("canvas");
+    mask.width = W;
+    mask.height = H;
+    const m = mask.getContext("2d");
+
+    const lightLen = player.gadget === "TURBO" ? 450 : 390;
+    const lightW = player.gadget === "TURBO" ? 230 : 195;
+    const wobble = player.slipTimer > 0 ? Math.sin(performance.now() / 55) * 14 : 0;
+    const px = player.x + wobble;
+    const py = player.y - 20;
+
+    // ライト外はしっかり暗くする。ただし黒幕だけを重ねる。
+    m.fillStyle = `rgba(0, 4, 10, ${Math.min(0.88, amount + 0.10)})`;
+    m.fillRect(0, 0, W, H);
+
+    // 黒幕にライト穴を開ける。
+    m.globalCompositeOperation = "destination-out";
+
+    // 前方を太く長く抜く。細い三角形だけだとレーン上の敵が読みにくい。
+    const beam = m.createRadialGradient(
+      px, py - lightLen * 0.52, 8,
+      px, py - lightLen * 0.52, lightLen * 0.82
+    );
+    beam.addColorStop(0, "rgba(255,255,255,1.00)");
+    beam.addColorStop(0.50, "rgba(255,255,255,1.00)");
+    beam.addColorStop(0.72, "rgba(255,255,255,0.78)");
+    beam.addColorStop(0.92, "rgba(255,255,255,0.25)");
+    beam.addColorStop(1, "rgba(255,255,255,0)");
+
+    m.fillStyle = beam;
+    m.beginPath();
+    m.moveTo(px - 38, py - 28);
+    m.lineTo(px - lightW, py - lightLen);
+    m.quadraticCurveTo(px, py - lightLen - 70, px + lightW, py - lightLen);
+    m.lineTo(px + 38, py - 28);
+    m.closePath();
+    m.fill();
+
+    // 実際にプレイヤーが見たい中央レーンを、もう一段階くっきり抜く。
+    const clearZone = m.createRadialGradient(
+      px, py - 230, 20,
+      px, py - 230, 260
+    );
+    clearZone.addColorStop(0, "rgba(255,255,255,0.95)");
+    clearZone.addColorStop(0.45, "rgba(255,255,255,0.72)");
+    clearZone.addColorStop(1, "rgba(255,255,255,0)");
+    m.fillStyle = clearZone;
+    m.beginPath();
+    m.ellipse(px, py - 230, 135, 250, 0, 0, Math.PI * 2);
+    m.fill();
+
+    // 自車まわりも抜く。ここは指操作時にも車を見失わないため。
+    const near = m.createRadialGradient(player.x, player.y, 10, player.x, player.y, 110);
+    near.addColorStop(0, "rgba(255,255,255,1.00)");
+    near.addColorStop(0.68, "rgba(255,255,255,0.80)");
+    near.addColorStop(1, "rgba(255,255,255,0)");
+    m.fillStyle = near;
+    m.beginPath();
+    m.arc(player.x, player.y, 110, 0, Math.PI * 2);
+    m.fill();
+
+    m.globalCompositeOperation = "source-over";
+
+    // 作った黒幕だけをメインcanvasへ重ねる。
+    ctx.drawImage(mask, 0, 0);
+
+    // ライトの色は雰囲気程度。濃くすると敵とアイテムが読みにくくなる。
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = "#fff4b8";
+    ctx.beginPath();
+    ctx.moveTo(px - 22, py - 34);
+    ctx.lineTo(px - lightW * 0.74, py - lightLen * 0.92);
+    ctx.quadraticCurveTo(px, py - lightLen - 26, px + lightW * 0.74, py - lightLen * 0.92);
+    ctx.lineTo(px + 22, py - 34);
+    ctx.closePath();
+    ctx.fill();
+
+    // アイテムは夜でも拾う判断ができるよう、ライト内で少しだけ発光させる。
+    for (const o of objects) {
+      if (o.kind !== "item") continue;
+      const ox = objectDrawX(o);
+      const inFront = o.y < player.y + 20 && o.y > player.y - lightLen - 70;
+      const nearCenter = Math.abs(ox - px) < lightW * 0.95;
+      if (inFront && nearCenter) {
+        ctx.globalAlpha = 0.22;
+        ctx.fillStyle = "#fff7a8";
+        ctx.beginPath();
+        ctx.arc(ox, o.y, o.w * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (player.gadget === "SHIELD" && player.shieldHits > 0) {
+      ctx.globalAlpha = 0.24;
+      ctx.strokeStyle = "#7dd3fc";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 76, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    ctx.save();
+    ctx.fillStyle = "#ffd166";
+    for (const p of particles) {
+      ctx.globalAlpha = Math.max(0, p.life * 2);
+      ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHud() {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    roundRect(10, 10, W - 20, 70, 12, true, false);
+    ctx.fillStyle = "white";
+    ctx.textAlign = "left";
+    ctx.font = "bold 17px sans-serif";
+    ctx.fillText(`SCORE ${Math.floor(state.score)}`, 24, 36);
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillText(`HI ${state.hi}`, 24, 62);
+    ctx.textAlign = "right";
+    ctx.fillText(`TIME ${Math.floor(state.time)}`, W - 24, 36);
+    ctx.fillText(`HP ${"❤".repeat(Math.max(0, player.hp))}`, W - 24, 62);
+
+    ctx.textAlign = "center";
+    ctx.font = "bold 13px sans-serif";
+    const gText = player.gadget === "NORMAL" ? "GADGET READY" : `${player.gadget} ${Math.ceil(player.gadgetTimer)}s`;
+    ctx.fillStyle = player.gadget === "NORMAL" ? "rgba(255,255,255,0.85)" : "#fff59d";
+    ctx.fillText(gText, W/2, 96);
+
+    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    ctx.font = "bold 12px sans-serif";
+    const levelText = `${phaseName()}  ${Math.floor(state.time % 20)}/20`;
+    ctx.fillText(levelText, W/2, 116);
+
+    if (state.starChain > 0) {
+      ctx.fillStyle = "#ffe45c";
+      ctx.font = "900 14px sans-serif";
+      ctx.fillText(`STAR LINE x${state.starChain}`, W / 2, 136);
+    }
+
+    if (player.offRoadTimer > 0) {
+      ctx.fillStyle = "#ffb4a2";
+      ctx.font = "900 14px sans-serif";
+      ctx.fillText(`ROAD EDGE ${player.offRoadSide}`, W / 2, 136);
+    }
+
+    if (state.combo > 1) {
+      ctx.fillStyle = "#ffec99";
+      ctx.font = "bold 19px sans-serif";
+      ctx.fillText(`COMBO x${state.combo}`, W / 2, state.starChain > 0 || player.offRoadTimer > 0 ? 158 : 140);
+    }
+
+    if (player.dragging) {
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.font = "bold 12px sans-serif";
+      ctx.fillText("CAR STAYS ABOVE YOUR FINGER", W / 2, H - 22);
+    }
+
+    if (state.messageTimer > 0) {
+      ctx.globalAlpha = Math.min(1, state.messageTimer * 2);
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      roundRect(52, 154, W - 104, 52, 12, true, false);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillText(state.message, W / 2, 188);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  function drawTitle() {
+    drawRoad();
+    drawImageOrFallback(1, W/2 - 72, H - 205, 92, 122, "YOU");
+    drawImageOrFallback(29, W/2 + 76, 150, 122, 148, "BOSS");
+
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.48)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 54px sans-serif";
+    ctx.fillText("GoGo", W/2, 260);
+    ctx.font = "900 48px sans-serif";
+    ctx.fillText("Race", W/2, 318);
+
+    ctx.fillStyle = "#ffdd55";
+    ctx.font = "bold 19px sans-serif";
+    ctx.fillText("COLLECT GOGO STARS", W/2, 382);
+    ctx.fillText("OVERTAKE RIVALS. KEEP THE LINE.", W/2, 412);
+
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    roundRect(W/2 - 120, 482, 240, 58, 16, true, false);
+    ctx.fillStyle = "#111827";
+    ctx.font = "900 24px sans-serif";
+    ctx.fillText("START", W/2, 520);
+
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px sans-serif";
+    ctx.fillText("DRAG BELOW THE CAR", W/2, 610);
+    ctx.fillText("STAR LINE COMBO FOR BIG SCORE", W/2, 636);
+    ctx.fillText("GADGETS + NIGHT DRIVE", W/2, 662);
+    ctx.fillText("M KEY: SOUND ON/OFF", W/2, 702);
+    ctx.restore();
+  }
+
+  function drawGameOver() {
+    drawRoad();
+    drawObjects();
+    drawPlayer();
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.62)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#fff";
+    ctx.font = "900 38px sans-serif";
+    ctx.fillText("GAME OVER", W/2, 260);
+    ctx.font = "bold 24px sans-serif";
+    ctx.fillText(`SCORE ${Math.floor(state.score)}`, W/2, 330);
+    ctx.fillText(`HI-SCORE ${state.hi}`, W/2, 370);
+    ctx.fillStyle = "#ffdd55";
+    ctx.font = "bold 18px sans-serif";
+    ctx.fillText("TAP TO RETRY", W/2, 470);
+    ctx.restore();
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (state.shake > 0) {
+      ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+    }
+    if (state.mode === "title") {
+      drawTitle();
+    } else if (state.mode === "play") {
+      drawRoad();
+      drawObjects();
+      drawParticles();
+      drawPlayer();
+      drawNightOverlay();
+      drawHud();
+    } else if (state.mode === "gameover") {
+      drawGameOver();
+    }
+    ctx.restore();
+  }
+
+  function loop(now) {
+    const dt = Math.min(0.033, (now - state.last) / 1000 || 0.016);
+    state.last = now;
+    if (state.mode === "play") updatePlay(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function setTouchTarget(p) {
+    player.targetX = p.x;
+
+    // 指の真下ではなく、少し上を車の中心にする。
+    // 上に行きすぎると難易度が変わりすぎるので、下側の範囲に制限する。
+    player.targetY = Math.max(PLAYER_MIN_Y, Math.min(PLAYER_MAX_Y, p.y - TOUCH_OFFSET_Y));
+  }
+
+  function pointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * W / rect.width,
+      y: (clientY - rect.top) * H / rect.height
+    };
+  }
+
+  function startOrRetry() {
+    if (state.mode !== "play") resetGame();
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    const p = pointerPos(e);
+    if (state.mode !== "play") {
+      startOrRetry();
+      return;
+    }
+    player.dragging = true;
+    setTouchTarget(p);
+  });
+
+  canvas.addEventListener("pointermove", (e) => {
+    e.preventDefault();
+    if (!player.dragging || state.mode !== "play") return;
+    const p = pointerPos(e);
+    setTouchTarget(p);
+  });
+
+  canvas.addEventListener("pointerup", () => player.dragging = false);
+  canvas.addEventListener("pointercancel", () => player.dragging = false);
+
+  window.addEventListener("keydown", (e) => {
+    state.keys[e.code] = true;
+    if (e.code === "Space") startOrRetry();
+    if (e.code === "KeyM") {
+      audioEnabled = !audioEnabled;
+      showMessage(audioEnabled ? "SOUND ON" : "SOUND OFF", 0.8);
+    }
+  });
+  window.addEventListener("keyup", (e) => state.keys[e.code] = false);
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
