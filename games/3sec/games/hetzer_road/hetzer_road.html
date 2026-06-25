@@ -182,6 +182,8 @@
 
     // 補給車撃破で落ちる支援アイテム
     repairItem: "11.png",
+    twinItem: "12.png",
+    optionItem: "13.png",
     rapidItem: "14.png",
     powerItem: "15.png",
     armorItem: "16.png",
@@ -435,6 +437,9 @@
   let rapidTimer;
   let powerShellTimer;
   let armorTimer;
+  let twinTimer;
+  let optionTimer;
+  let lastOptionShot;
   let combo;
   let comboTimer;
   let bombs = 0;
@@ -529,6 +534,9 @@
     rapidTimer = 0;
     powerShellTimer = 0;
     armorTimer = 0;
+    twinTimer = 0;
+    optionTimer = 0;
+    lastOptionShot = 0;
     combo = 0;
     comboTimer = 0;
     bombs = MAX_BOMBS;
@@ -634,10 +642,12 @@
   }
 
   const supplyDropTypes = [
-    { kind: "repair", imgKey: "repairItem", text: "REPAIR", subText: "HP +1", score: 80, weight: 0.27 },
-    { kind: "rapid", imgKey: "rapidItem", text: "RAPID FIRE", subText: "15s", score: 120, weight: 0.23 },
-    { kind: "power", imgKey: "powerItem", text: "POWER SHELL", subText: "15s", score: 120, weight: 0.22 },
-    { kind: "armor", imgKey: "armorItem", text: "ARMOR UP", subText: "15s", score: 120, weight: 0.20 },
+    { kind: "repair", imgKey: "repairItem", text: "REPAIR", subText: "HP +1", score: 80, weight: 0.24 },
+    { kind: "twin", imgKey: "twinItem", text: "TWIN SHOT", subText: "15s", score: 130, weight: 0.18 },
+    { kind: "option", imgKey: "optionItem", text: "OPTION DRONE", subText: "15s", score: 150, weight: 0.14 },
+    { kind: "rapid", imgKey: "rapidItem", text: "RAPID FIRE", subText: "15s", score: 120, weight: 0.20 },
+    { kind: "power", imgKey: "powerItem", text: "POWER SHELL", subText: "15s", score: 120, weight: 0.18 },
+    { kind: "armor", imgKey: "armorItem", text: "ARMOR UP", subText: "15s", score: 120, weight: 0.14 },
     { kind: "drone", imgKey: "droneItem", text: "DRONE BOMB", subText: "BOMB +1", score: 180, weight: DRONE_DROP_WEIGHT }
   ];
 
@@ -690,6 +700,15 @@
       player.hp = Math.min(player.maxHp, player.hp + 1);
       showPickupBanner("REPAIR!", "HP +1");
       addFloatingText("REPAIR +1 ♥", player.x, player.y - 58, 22);
+    } else if (item.kind === "twin") {
+      twinTimer = POWERUP_DURATION;
+      showPickupBanner("TWIN SHOT!", "DOUBLE FIRE 15 SEC");
+      addFloatingText("TWIN SHOT!", player.x, player.y - 58, 22);
+    } else if (item.kind === "option") {
+      optionTimer = POWERUP_DURATION;
+      lastOptionShot = 0;
+      showPickupBanner("OPTION DRONE!", "FOLLOW FIRE 15 SEC");
+      addFloatingText("OPTION DRONE!", player.x, player.y - 58, 22);
     } else if (item.kind === "rapid") {
       rapidTimer = POWERUP_DURATION;
       showPickupBanner("RAPID FIRE!", "15 SEC");
@@ -777,6 +796,8 @@
     if (name === "rapid") return POWERUP_DURATION;
     if (name === "power") return POWERUP_DURATION;
     if (name === "armor") return POWERUP_DURATION;
+    if (name === "twin") return POWERUP_DURATION;
+    if (name === "option") return POWERUP_DURATION;
     return 1;
   }
 
@@ -793,6 +814,19 @@
     return Math.max(850, 1450 - s * 8);
   }
 
+  function addPlayerBullet(x, y, powered = false, small = false) {
+    bullets.push({
+      x,
+      y,
+      w: small ? 7 : (powered ? 13 : (rapidTimer > 0 ? 11 : 9)),
+      h: small ? 22 : (powered ? 34 : (rapidTimer > 0 ? 30 : 26)),
+      speed: small ? 8.2 : (rapidTimer > 0 ? 9.8 : 8.5),
+      damage: small ? 1 : currentBulletDamage(),
+      glow: rapidTimer > 0 || powered || small,
+      powered
+    });
+  }
+
   function shootPlayerBullet(now) {
     if (now - lastShot < currentFireCooldown()) return;
 
@@ -802,16 +836,30 @@
 
     const powered = powerShellTimer > 0;
 
-    bullets.push({
-      x: player.x,
-      y: player.y - 40,
-      w: powered ? 13 : (rapidTimer > 0 ? 11 : 9),
-      h: powered ? 34 : (rapidTimer > 0 ? 30 : 26),
-      speed: rapidTimer > 0 ? 9.8 : 8.5,
-      damage: currentBulletDamage(),
-      glow: rapidTimer > 0 || powered,
-      powered
-    });
+    if (twinTimer > 0) {
+      addPlayerBullet(player.x - 16, player.y - 40, powered);
+      addPlayerBullet(player.x + 16, player.y - 40, powered);
+    } else {
+      addPlayerBullet(player.x, player.y - 40, powered);
+    }
+  }
+
+  function optionDronePosition() {
+    const t = performance.now() * 0.004;
+    return {
+      x: clamp(player.x - 42, 34, W - 34),
+      y: clamp(player.y + 42 + Math.sin(t) * 5, PLAYER_MIN_Y + 30, PLAYER_MAX_Y + 20)
+    };
+  }
+
+  function shootOptionDrone(now) {
+    if (optionTimer <= 0) return;
+    const gap = rapidTimer > 0 ? 360 : 520;
+    if (now - lastOptionShot < gap) return;
+
+    lastOptionShot = now;
+    const pos = optionDronePosition();
+    addPlayerBullet(pos.x, pos.y - 34, false, true);
   }
 
   function shootEnemyBullet(enemy, now) {
@@ -1015,6 +1063,8 @@
     rapidTimer = Math.max(0, rapidTimer - dt);
     powerShellTimer = Math.max(0, powerShellTimer - dt);
     armorTimer = Math.max(0, armorTimer - dt);
+    twinTimer = Math.max(0, twinTimer - dt);
+    optionTimer = Math.max(0, optionTimer - dt);
     comboTimer = Math.max(0, comboTimer - dt);
     if (comboTimer <= 0) combo = 0;
 
@@ -1022,6 +1072,7 @@
     if (shakeTimer <= 0) shakePower = 0;
 
     shootPlayerBullet(now);
+    shootOptionDrone(now);
     spawnEnemy(now);
 
     for (const b of bullets) b.y -= b.speed;
@@ -1349,6 +1400,25 @@
     drawImageCentered(img, player.x, player.y, player.w, player.h, alpha);
   }
 
+  function drawOptionDrone() {
+    if (!player || optionTimer <= 0) return;
+
+    const pos = optionDronePosition();
+    const blink = optionTimer < 2200 && Math.floor(optionTimer / 160) % 2 === 0;
+    if (blink) return;
+
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, optionTimer / 500);
+    ctx.fillStyle = "rgba(255,244,168,0.24)";
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 13.pngを追従支援機として使用。画像がない場合は灰色プレースホルダーになります。
+    drawImageCentered(images.optionItem, pos.x, pos.y, 42, 42, Math.min(1, optionTimer / 500));
+  }
+
   function drawExplosions() {
     for (const ex of explosions) {
       const t = ex.life / ex.maxLife;
@@ -1488,7 +1558,7 @@
   function drawUI() {
     ctx.save();
 
-    const activePowerCount = (rapidTimer > 0 ? 1 : 0) + (powerShellTimer > 0 ? 1 : 0) + (armorTimer > 0 ? 1 : 0);
+    const activePowerCount = (rapidTimer > 0 ? 1 : 0) + (powerShellTimer > 0 ? 1 : 0) + (armorTimer > 0 ? 1 : 0) + (twinTimer > 0 ? 1 : 0) + (optionTimer > 0 ? 1 : 0);
     const uiHeight = activePowerCount > 0 ? 58 + activePowerCount * 20 : 56;
 
     ctx.fillStyle = "rgba(0,0,0,0.45)";
@@ -1527,6 +1597,8 @@
     }
 
     if (rapidTimer > 0) drawPowerBar("RAPID FIRE", rapidTimer, activePowerTimerMax("rapid"));
+    if (twinTimer > 0) drawPowerBar("TWIN SHOT", twinTimer, activePowerTimerMax("twin"));
+    if (optionTimer > 0) drawPowerBar("OPTION", optionTimer, activePowerTimerMax("option"));
     if (powerShellTimer > 0) drawPowerBar("POWER SHELL", powerShellTimer, activePowerTimerMax("power"));
     if (armorTimer > 0) drawPowerBar("ARMOR", armorTimer, activePowerTimerMax("armor"));
 
@@ -1624,8 +1696,8 @@
     ctx.fillText("Drag to move / Auto fire", W / 2, 584);
     ctx.strokeText("BOMB: button / two-finger tap / B or X", W / 2, 610);
     ctx.fillText("BOMB: button / two-finger tap / B or X", W / 2, 610);
-    ctx.strokeText("Supply trucks drop support items", W / 2, 636);
-    ctx.fillText("Supply trucks drop support items", W / 2, 636);
+    ctx.strokeText("Supply trucks drop Twin Shot and Option Drone", W / 2, 636);
+    ctx.fillText("Supply trucks drop Twin Shot and Option Drone", W / 2, 636);
 
     ctx.font = "bold 25px Arial";
     ctx.fillStyle = "#fff4a8";
@@ -1705,6 +1777,7 @@
     drawBullets();
     drawEnemies();
     drawSupplyItems();
+    drawOptionDrone();
     drawPlayer();
     drawExplosions();
     drawFloatingTexts();
