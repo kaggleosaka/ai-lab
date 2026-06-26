@@ -116,6 +116,34 @@
     pointer-events: none;
   }
 
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .playBtn {
+    display: inline-block;
+    text-decoration: none;
+    color: #111318;
+    background: #ffd756;
+    border-radius: 999px;
+    padding: 9px 13px;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid rgba(255,255,255,0.26);
+  }
+
+  .playBtn.sub {
+    color: #edf2ff;
+    background: rgba(255,255,255,0.10);
+  }
+
+  .playBtn:active {
+    transform: scale(0.97);
+  }
+
   .panelTitle {
     margin: 8px 0 14px;
     font-size: 22px;
@@ -167,14 +195,15 @@
     <section id="casualPanel" class="hidden" aria-label="Casual game menu">
       <div class="panelTitle">CASUAL GAME</div>
       <div class="grid">
-        <a
-          class="card"
-          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html"
-        >
+        <div class="card">
           <div class="title">HETZER ROAD</div>
           <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
           <span class="tag">Tank Shooter</span>
-        </a>
+          <div class="actions">
+            <a class="playBtn" href="https://3secgames.itch.io/hetzer-road">Play on itch.io</a>
+            <a class="playBtn sub" href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html">GitHub version</a>
+          </div>
+        </div>
 
         <a
           class="card"
