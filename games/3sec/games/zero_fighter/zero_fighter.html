@@ -110,6 +110,7 @@
   // HETZER ROAD と同じ方式：2本指が同時に乗ったらBOMB。
   // スマホ実機では「連続ダブルタップ」より、この pointerId 管理のほうが確実。
   const activePointers = new Set();
+  let primaryTouchPointerId = null;
   let bombGestureLockUntil = 0;
   let lastTapTime = 0;
   let lastTapX = 0;
@@ -382,6 +383,8 @@
     const now = performance.now();
     if (now < bombGestureLockUntil) return;
     bombGestureLockUntil = now + 650;
+    // HETZER ROAD と同じく、2本指BOMB時はいったん移動入力を切る。
+    // これで「2本目の指の位置へ機体が飛ぶ」現象を防ぐ。
     pointerActive = false;
     lastTapTime = 0;
     useBomb();
@@ -424,7 +427,11 @@
     const p = canvasPoint(e);
 
     try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
-    if (e.pointerType === "touch") activePointers.add(e.pointerId);
+
+    if (e.pointerType === "touch") {
+      activePointers.add(e.pointerId);
+      if (primaryTouchPointerId === null) primaryTouchPointerId = e.pointerId;
+    }
 
     if (gameState !== STATE.PLAY) {
       startFromPoint(p.x, p.y);
@@ -432,11 +439,16 @@
     }
 
     // HETZER ROAD方式：2本指が同時に画面に乗った瞬間に全体BOMB。
-    // ドラッグ移動中でも2本目を置けば発動するので、スマホ実機で安定する。
+    // 重要：2本目の pointerdown では pointerX/Y を更新しない。
+    // これで「新しく置いた指の場所へ機体が動く」現象を防ぐ。
     if (e.pointerType === "touch" && activePointers.size >= 2) {
       triggerBombByGesture();
       return;
     }
+
+    // タッチ移動は最初に置いた指だけを採用する。
+    // 2本目以降はBOMB専用で、移動操作には使わない。
+    if (e.pointerType === "touch" && e.pointerId !== primaryTouchPointerId) return;
 
     pointerActive = true;
     isTouchMode = e.pointerType === "touch";
@@ -481,7 +493,13 @@
   canvas.addEventListener("pointermove", e => {
     if (e.pointerType === "touch") e.preventDefault();
     if (gameState !== STATE.PLAY || !pointerActive) return;
+
+    // 2本指中はBOMBジェスチャー扱い。移動座標は更新しない。
     if (e.pointerType === "touch" && activePointers.size >= 2) return;
+
+    // タッチ移動は最初の指だけ。2本目の指では機体を動かさない。
+    if (e.pointerType === "touch" && e.pointerId !== primaryTouchPointerId) return;
+
     const p = canvasPoint(e);
     isTouchMode = e.pointerType === "touch";
     pointerX = p.x;
@@ -491,15 +509,25 @@
     if (e.pointerType === "touch") {
       e.preventDefault();
       activePointers.delete(e.pointerId);
+      if (e.pointerId === primaryTouchPointerId) {
+        primaryTouchPointerId = activePointers.size > 0 ? [...activePointers][0] : null;
+        // 残った2本目の指の座標は信用しない。次の pointerdown/move まで移動停止。
+        pointerActive = false;
+      } else {
+        pointerActive = activePointers.size > 0 && primaryTouchPointerId !== null && gameState === STATE.PLAY;
+      }
+    } else {
+      pointerActive = false;
     }
-    pointerActive = activePointers.size > 0 && gameState === STATE.PLAY;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
   });
   canvas.addEventListener("pointercancel", e => {
     if (e.pointerType === "touch") {
       e.preventDefault();
       activePointers.delete(e.pointerId);
+      if (e.pointerId === primaryTouchPointerId) primaryTouchPointerId = null;
     }
+    if (activePointers.size === 0) primaryTouchPointerId = null;
     pointerActive = false;
     try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
   });
