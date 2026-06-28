@@ -54,12 +54,32 @@
     touch-action: manipulation;
   }
   #bombBtn { right: 14px; }
-  .hudButton:active { transform: scale(0.96); background: rgba(25, 80, 110, 0.9); }
+  #menuBtn {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 78px;
+    height: 34px;
+    border: 1px solid rgba(110, 240, 255, 0.65);
+    border-radius: 999px;
+    background: rgba(5, 20, 36, 0.72);
+    color: #fff;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+    text-shadow: 0 0 8px #00eaff;
+    box-shadow: inset 0 0 8px rgba(0, 238, 255, 0.16), 0 0 9px rgba(0, 238, 255, 0.18);
+    user-select: none;
+    touch-action: manipulation;
+    z-index: 5;
+  }
+  .hudButton:active, #menuBtn:active { transform: scale(0.96); background: rgba(25, 80, 110, 0.9); }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game" width="464" height="825"></canvas>
+  <button id="menuBtn" type="button">MENU</button>
   <button id="bombBtn" class="hudButton">BOMB</button>
 </div>
 
@@ -84,6 +104,7 @@
   const H = canvas.height;
 
   const bombBtn = document.getElementById("bombBtn");
+  const menuBtn = document.getElementById("menuBtn");
 
   const TOUCH_OFFSET_Y = 82; // 指かぶり対策。スマホではタッチ位置より上に自機を置く。
   const PLAYER_SIZE = 58;
@@ -360,7 +381,7 @@
   }
 
   function isControlTarget(target) {
-    return target === bombBtn;
+    return target === bombBtn || target === menuBtn;
   }
 
   canvas.addEventListener("pointerdown", e => {
@@ -384,6 +405,12 @@
   canvas.addEventListener("pointerup", () => { pointerActive = false; });
   canvas.addEventListener("pointercancel", () => { pointerActive = false; });
 
+  const MENU_URL = "https://kaggleosaka.github.io/ai-lab/games/3sec/";
+  menuBtn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.location.href = MENU_URL;
+  });
   bombBtn.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); useBomb(); });
 
   document.addEventListener("keydown", e => {
@@ -894,7 +921,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.65)";
     ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText("Drag to move / Auto fire / Bomb button", W / 2, 768);
+    ctx.fillText("Drag to move / Auto fire / Bomb / Menu", W / 2, 768);
     ctx.restore();
   }
 
