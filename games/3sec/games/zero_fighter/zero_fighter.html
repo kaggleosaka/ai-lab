@@ -35,25 +35,6 @@
     image-rendering: pixelated;
     touch-action: none;
   }
-  .hudButton {
-    position: absolute;
-    bottom: 14px;
-    width: 112px;
-    height: 58px;
-    border: 2px solid rgba(110, 240, 255, 0.75);
-    border-radius: 18px;
-    background: rgba(5, 20, 36, 0.78);
-    color: #fff;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    font-size: 15px;
-    text-shadow: 0 0 8px #00eaff;
-    box-shadow: inset 0 0 12px rgba(0, 238, 255, 0.2), 0 0 12px rgba(0, 238, 255, 0.22);
-    display: none;
-    user-select: none;
-    touch-action: manipulation;
-  }
-  #bombBtn { right: 14px; }
   #menuBtn {
     position: absolute;
     top: 10px;
@@ -73,14 +54,13 @@
     touch-action: manipulation;
     z-index: 5;
   }
-  .hudButton:active, #menuBtn:active { transform: scale(0.96); background: rgba(25, 80, 110, 0.9); }
+  #menuBtn:active { transform: scale(0.96); background: rgba(25, 80, 110, 0.9); }
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game" width="464" height="825"></canvas>
   <button id="menuBtn" type="button">MENU</button>
-  <button id="bombBtn" class="hudButton">BOMB</button>
 </div>
 
 <audio id="se_shot" src="audio/se/se_shot.mp3" preload="auto"></audio>
@@ -103,7 +83,6 @@
   const W = canvas.width;
   const H = canvas.height;
 
-  const bombBtn = document.getElementById("bombBtn");
   const menuBtn = document.getElementById("menuBtn");
 
   const TOUCH_OFFSET_Y = 82; // 指かぶり対策。スマホではタッチ位置より上に自機を置く。
@@ -126,6 +105,9 @@
   let pointerX = W / 2;
   let pointerY = H - 120;
   let isTouchMode = false;
+  let lastTapTime = 0;
+  let lastTapX = 0;
+  let lastTapY = 0;
   let audioEnabled = true;
   let screenShake = 0;
   let message = null;
@@ -282,11 +264,11 @@
     gameOverReason = "";
     showMessage(`${def.name}`, def.desc, 1.6);
     gameState = STATE.PLAY;
-    showButtons(true);
+    showButtons(false);
   }
 
   function showButtons(show) {
-    bombBtn.style.display = show ? "block" : "none";
+    // BOMBは画面ボタンなし。スマホはダブルタップ、PCはB/Xキーで発動。
   }
 
   function showMessage(title, sub = "", time = 1.3) {
@@ -380,16 +362,28 @@
     };
   }
 
-  function isControlTarget(target) {
-    return target === bombBtn || target === menuBtn;
-  }
-
   canvas.addEventListener("pointerdown", e => {
     const p = canvasPoint(e);
     if (gameState !== STATE.PLAY) {
       startFromPoint(p.x, p.y);
       return;
     }
+
+    // スマホ操作：ボタンを増やさず、ダブルタップで全体BOMBを発動する。
+    // 1回タップ/ドラッグは通常移動、短時間・近距離の2回目だけBOMB扱い。
+    if (e.pointerType === "touch") {
+      const now = performance.now();
+      const tapDist = Math.hypot(p.x - lastTapX, p.y - lastTapY);
+      if (now - lastTapTime < 320 && tapDist < 48) {
+        useBomb();
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+        lastTapX = p.x;
+        lastTapY = p.y;
+      }
+    }
+
     pointerActive = true;
     isTouchMode = e.pointerType === "touch";
     pointerX = p.x;
@@ -411,8 +405,6 @@
     e.stopPropagation();
     window.location.href = MENU_URL;
   });
-  bombBtn.addEventListener("pointerdown", e => { e.preventDefault(); e.stopPropagation(); useBomb(); });
-
   document.addEventListener("keydown", e => {
     keys[e.key.toLowerCase()] = true;
     if (e.key === "Enter") {
@@ -731,7 +723,7 @@
 
   function resetPowerupsOnDamage() {
     // 被弾したら、取得済みの強化アイテム状態をすべて失う。
-    // BOMB所持数とHPは別管理なのでここでは消さない。
+    // BOMBは全体攻撃の所持数、REPAIRは取得時回復なので、強化リセット対象ではない。
     player.rapidLv = 0;
     player.doubleLv = 0;
     player.supportLv = 0;
@@ -764,7 +756,7 @@
     if (fromBomb) chance *= 0.8;
     if (Math.random() > chance) return;
     const table = [
-      ["RAPID", 20], ["DOUBLE", 18], ["SUPPORT", 14], ["GRENADE", 18], ["BOMB", 12], ["REPAIR", 18]
+      ["RAPID", 22], ["DOUBLE", 20], ["SUPPORT", 16], ["GRENADE", 18], ["BOMB", 10], ["REPAIR", 14]
     ];
     let total = table.reduce((s, x) => s + x[1], 0);
     let r = Math.random() * total;
@@ -804,8 +796,8 @@
       showMessage("GRENADE SHOT", "15 sec", 1.0);
       playSe("powerup", 0.55);
     } else if (t === "BOMB") {
-      player.bombs++;
-      showMessage("BOMB +1", `${player.bombs}`, 1.0);
+      player.bombs = Math.min(3, player.bombs + 1);
+      showMessage("BOMB STOCK", `${player.bombs}/3`, 1.0);
       playSe("coin", 0.45);
     } else if (t === "REPAIR") {
       player.hp = Math.min(player.maxHp, player.hp + 1);
@@ -921,7 +913,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.65)";
     ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText("Drag to move / Auto fire / Bomb / Menu", W / 2, 768);
+    ctx.fillText("Drag to move / Auto fire / Double tap Bomb / Menu", W / 2, 768);
     ctx.restore();
   }
 
