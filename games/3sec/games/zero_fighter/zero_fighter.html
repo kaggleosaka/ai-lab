@@ -17,6 +17,7 @@
     place-items: center;
     overflow: hidden;
     touch-action: none;
+    overscroll-behavior: none;
   }
   #wrap {
     position: relative;
@@ -106,10 +107,18 @@
   let pointerX = W / 2;
   let pointerY = H - 120;
   let isTouchMode = false;
+  // HETZER ROAD と同じ方式：2本指が同時に乗ったらBOMB。
+  // スマホ実機では「連続ダブルタップ」より、この pointerId 管理のほうが確実。
+  const activePointers = new Set();
+  let bombGestureLockUntil = 0;
   let lastTapTime = 0;
   let lastTapX = 0;
   let lastTapY = 0;
   let lastBombInputAt = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  let touchMoved = false;
   let audioEnabled = true;
   let screenShake = 0;
   let message = null;
@@ -368,25 +377,36 @@
   }
 
 
+  function triggerBombByGesture() {
+    if (gameState !== STATE.PLAY || !player) return;
+    const now = performance.now();
+    if (now < bombGestureLockUntil) return;
+    bombGestureLockUntil = now + 650;
+    pointerActive = false;
+    lastTapTime = 0;
+    useBomb();
+  }
+
   function registerBombDoubleTap(e, p) {
     // スマホ用：画面全体のダブルタップで全体BOMB。
-    // 以前は「短時間＋近距離」条件があり、ドラッグ移動中や大型機で不発になりやすかった。
-    // ここでは移動操作を邪魔しないよう、時間条件を中心に判定する。
+    // pointerdown だけだとスマホ実機でドラッグ処理に吸われることがあるため、
+    // 実際の判定は touchend で確定させる。
     if (gameState !== STATE.PLAY || !player) return false;
 
     const now = performance.now();
 
-    // PointerEvent と TouchEvent が両方来る端末で二重判定しないためのガード。
-    if (now - lastBombInputAt < 80) return false;
-    lastBombInputAt = now;
+    // TouchEvent と PointerEvent が近いタイミングで両方来た場合の二重発動防止。
+    // BOMB発動後だけ止めるため、通常タップの記録は阻害しない。
+    if (now - lastBombInputAt < 180) return false;
 
     const elapsedTap = now - lastTapTime;
     const tapDist = Math.hypot(p.x - lastTapX, p.y - lastTapY);
 
-    // 360ms以内ならBOMB。距離制限はかなり緩くして、指ドラッグ中でも発動しやすくする。
-    if (elapsedTap > 0 && elapsedTap < 360 && tapDist < 220) {
+    // 実機優先：400ms以内、距離は広め。少し指がずれてもBOMBにする。
+    if (elapsedTap > 0 && elapsedTap < 400 && tapDist < 260) {
       if (e && typeof e.preventDefault === "function") e.preventDefault();
       useBomb();
+      lastBombInputAt = now;
       lastTapTime = 0;
       lastTapX = 0;
       lastTapY = 0;
@@ -400,15 +420,22 @@
   }
 
   canvas.addEventListener("pointerdown", e => {
+    if (e.pointerType === "touch") e.preventDefault();
     const p = canvasPoint(e);
+
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    if (e.pointerType === "touch") activePointers.add(e.pointerId);
+
     if (gameState !== STATE.PLAY) {
       startFromPoint(p.x, p.y);
       return;
     }
 
-    // スマホ操作：ボタンを増やさず、画面ダブルタップで全体BOMBを発動する。
-    if (e.pointerType === "touch") {
-      registerBombDoubleTap(e, p);
+    // HETZER ROAD方式：2本指が同時に画面に乗った瞬間に全体BOMB。
+    // ドラッグ移動中でも2本目を置けば発動するので、スマホ実機で安定する。
+    if (e.pointerType === "touch" && activePointers.size >= 2) {
+      triggerBombByGesture();
+      return;
     }
 
     pointerActive = true;
@@ -416,23 +443,66 @@
     pointerX = p.x;
     pointerY = p.y;
   });
-  // 古いスマホブラウザ向けの保険。PointerEventが無い環境でもダブルタップBOMBを拾う。
+
   canvas.addEventListener("touchstart", e => {
-    if (window.PointerEvent) return;
     if (gameState !== STATE.PLAY || !e.touches || e.touches.length !== 1) return;
     const p = canvasPoint(e);
-    registerBombDoubleTap(e, p);
+    touchStartX = p.x;
+    touchStartY = p.y;
+    touchStartTime = performance.now();
+    touchMoved = false;
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", e => {
+    if (gameState !== STATE.PLAY || !e.touches || e.touches.length !== 1) return;
+    const p = canvasPoint(e);
+    if (Math.hypot(p.x - touchStartX, p.y - touchStartY) > 90) touchMoved = true;
+  }, { passive: false });
+
+  canvas.addEventListener("touchend", e => {
+    if (gameState !== STATE.PLAY || !e.changedTouches || e.changedTouches.length < 1) return;
+
+    const t = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    const p = {
+      x: (t.clientX - rect.left) * W / rect.width,
+      y: (t.clientY - rect.top) * H / rect.height
+    };
+
+    const tapDuration = performance.now() - touchStartTime;
+
+    // 長押しや大きなドラッグ終了はタップとして扱わない。
+    // ただし少しのブレは許容して、スマホ実機で確実に発動させる。
+    if (tapDuration < 280 && !touchMoved) {
+      registerBombDoubleTap(e, p);
+    }
   }, { passive: false });
 
   canvas.addEventListener("pointermove", e => {
+    if (e.pointerType === "touch") e.preventDefault();
     if (gameState !== STATE.PLAY || !pointerActive) return;
+    if (e.pointerType === "touch" && activePointers.size >= 2) return;
     const p = canvasPoint(e);
     isTouchMode = e.pointerType === "touch";
     pointerX = p.x;
     pointerY = p.y;
   });
-  canvas.addEventListener("pointerup", () => { pointerActive = false; });
-  canvas.addEventListener("pointercancel", () => { pointerActive = false; });
+  canvas.addEventListener("pointerup", e => {
+    if (e.pointerType === "touch") {
+      e.preventDefault();
+      activePointers.delete(e.pointerId);
+    }
+    pointerActive = activePointers.size > 0 && gameState === STATE.PLAY;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
+  canvas.addEventListener("pointercancel", e => {
+    if (e.pointerType === "touch") {
+      e.preventDefault();
+      activePointers.delete(e.pointerId);
+    }
+    pointerActive = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  });
 
   const MENU_URL = "https://kaggleosaka.github.io/ai-lab/games/3sec/";
   menuBtn.addEventListener("pointerdown", e => {
@@ -953,7 +1023,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.65)";
     ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText("Drag to move / Auto fire / Double tap Bomb / Menu", W / 2, 768);
+    ctx.fillText("Drag to move / Auto fire / 2-finger Bomb / Menu", W / 2, 768);
     ctx.restore();
   }
 
