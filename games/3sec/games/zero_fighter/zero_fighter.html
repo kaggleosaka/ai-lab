@@ -7,7 +7,7 @@
 <style>
   :root { --w: 464px; --h: 825px; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
+  html, body {
     margin: 0;
     min-height: 100vh;
     background: #050713;
@@ -25,6 +25,7 @@
     aspect-ratio: 464 / 825;
     background: #071020;
     overflow: hidden;
+    touch-action: none;
     border: 1px solid rgba(60, 220, 255, 0.35);
     box-shadow: 0 0 24px rgba(0, 220, 255, 0.18);
   }
@@ -108,6 +109,7 @@
   let lastTapTime = 0;
   let lastTapX = 0;
   let lastTapY = 0;
+  let lastBombInputAt = 0;
   let audioEnabled = true;
   let screenShake = 0;
   let message = null;
@@ -262,6 +264,9 @@
     enemyTimer = 0.7;
     screenShake = 0;
     gameOverReason = "";
+    lastTapTime = 0;
+    lastTapX = 0;
+    lastTapY = 0;
     showMessage(`${def.name}`, def.desc, 1.6);
     gameState = STATE.PLAY;
     showButtons(false);
@@ -362,6 +367,38 @@
     };
   }
 
+
+  function registerBombDoubleTap(e, p) {
+    // スマホ用：画面全体のダブルタップで全体BOMB。
+    // 以前は「短時間＋近距離」条件があり、ドラッグ移動中や大型機で不発になりやすかった。
+    // ここでは移動操作を邪魔しないよう、時間条件を中心に判定する。
+    if (gameState !== STATE.PLAY || !player) return false;
+
+    const now = performance.now();
+
+    // PointerEvent と TouchEvent が両方来る端末で二重判定しないためのガード。
+    if (now - lastBombInputAt < 80) return false;
+    lastBombInputAt = now;
+
+    const elapsedTap = now - lastTapTime;
+    const tapDist = Math.hypot(p.x - lastTapX, p.y - lastTapY);
+
+    // 360ms以内ならBOMB。距離制限はかなり緩くして、指ドラッグ中でも発動しやすくする。
+    if (elapsedTap > 0 && elapsedTap < 360 && tapDist < 220) {
+      if (e && typeof e.preventDefault === "function") e.preventDefault();
+      useBomb();
+      lastTapTime = 0;
+      lastTapX = 0;
+      lastTapY = 0;
+      return true;
+    }
+
+    lastTapTime = now;
+    lastTapX = p.x;
+    lastTapY = p.y;
+    return false;
+  }
+
   canvas.addEventListener("pointerdown", e => {
     const p = canvasPoint(e);
     if (gameState !== STATE.PLAY) {
@@ -369,19 +406,9 @@
       return;
     }
 
-    // スマホ操作：ボタンを増やさず、ダブルタップで全体BOMBを発動する。
-    // 1回タップ/ドラッグは通常移動、短時間・近距離の2回目だけBOMB扱い。
+    // スマホ操作：ボタンを増やさず、画面ダブルタップで全体BOMBを発動する。
     if (e.pointerType === "touch") {
-      const now = performance.now();
-      const tapDist = Math.hypot(p.x - lastTapX, p.y - lastTapY);
-      if (now - lastTapTime < 320 && tapDist < 48) {
-        useBomb();
-        lastTapTime = 0;
-      } else {
-        lastTapTime = now;
-        lastTapX = p.x;
-        lastTapY = p.y;
-      }
+      registerBombDoubleTap(e, p);
     }
 
     pointerActive = true;
@@ -389,6 +416,14 @@
     pointerX = p.x;
     pointerY = p.y;
   });
+  // 古いスマホブラウザ向けの保険。PointerEventが無い環境でもダブルタップBOMBを拾う。
+  canvas.addEventListener("touchstart", e => {
+    if (window.PointerEvent) return;
+    if (gameState !== STATE.PLAY || !e.touches || e.touches.length !== 1) return;
+    const p = canvasPoint(e);
+    registerBombDoubleTap(e, p);
+  }, { passive: false });
+
   canvas.addEventListener("pointermove", e => {
     if (gameState !== STATE.PLAY || !pointerActive) return;
     const p = canvasPoint(e);
@@ -526,10 +561,15 @@
     }
 
     if (def.name === "ZERO") {
-      const spread = double >= 1 ? 13 : 9;
-      addShot(player.x - spread, player.y - 36, 0, -def.bulletSpeed);
-      addShot(player.x + spread, player.y - 36, 0, -def.bulletSpeed);
-      if (double >= 2) addShot(player.x, player.y - 43, 0, -def.bulletSpeed * 1.05, baseDmg * 1.1);
+      // ZEROは軽快な標準機。初期状態は単発、DOUBLE取得で2連装、Lv2で中央追加の3WAYにする。
+      if (double <= 0) {
+        addShot(player.x, player.y - 39, 0, -def.bulletSpeed, baseDmg * 1.08);
+      } else {
+        const spread = 13;
+        addShot(player.x - spread, player.y - 36, 0, -def.bulletSpeed);
+        addShot(player.x + spread, player.y - 36, 0, -def.bulletSpeed);
+        if (double >= 2) addShot(player.x, player.y - 43, 0, -def.bulletSpeed * 1.05, baseDmg * 1.1);
+      }
     } else if (def.name === "SHIDEN KAI") {
       addShot(player.x, player.y - 38, 0, -def.bulletSpeed, baseDmg * 1.25, { r: 7 });
       if (double >= 1) {
