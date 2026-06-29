@@ -770,13 +770,28 @@
         return '3秒マスター！';
       }
 
-      function goMenu() {
-        window.location.href = 'https://kaggleosaka.github.io/ai-lab/games/3sec/';
+      const MENU_URL = 'https://kaggleosaka.github.io/ai-lab/games/3sec/index.html';
+      let menuLock = false;
+
+      function goMenu(event) {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        if (menuLock) return;
+        menuLock = true;
+
+        // スマホで click が遅延・吸収される場合にも確実にメニューへ戻す。
+        window.location.assign(MENU_URL);
       }
 
       function bindButtons() {
         [els.startBtn, els.startBtn2, els.retryBtn].forEach(btn => btn.addEventListener('click', startGame));
-        [els.menuBtn, els.menuBtn2, els.menuBtn3].forEach(btn => btn.addEventListener('click', goMenu));
+        [els.menuBtn, els.menuBtn2, els.menuBtn3].forEach(btn => {
+          btn.addEventListener('click', goMenu);
+          btn.addEventListener('touchend', goMenu, { passive: false });
+          btn.addEventListener('pointerup', goMenu);
+        });
       }
 
       function initIdleGrid() {
