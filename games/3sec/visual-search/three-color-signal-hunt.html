@@ -21,9 +21,21 @@
       box-sizing: border-box;
     }
 
+    html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
     body {
       margin: 0;
-      min-height: 100vh;
+      width: 100%;
+      height: 100dvh;
+      min-height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: manipulation;
       font-family: Arial, Helvetica, sans-serif;
       color: var(--ink);
       background:
@@ -42,10 +54,12 @@
 
     .game-shell {
       width: min(1120px, 100%);
-      min-height: calc(100vh - 16px);
+      height: calc(100dvh - 16px);
+      min-height: 0;
       display: grid;
-      grid-template-rows: auto auto 1fr auto;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
       gap: 10px;
+      overflow: hidden;
     }
 
     .top-bar {
@@ -190,6 +204,8 @@
       position: relative;
       display: grid;
       place-items: center;
+      min-height: 0;
+      overflow: hidden;
     }
 
     .fireworks-layer {
@@ -424,19 +440,34 @@
       }
     }
 
-    @media (max-width: 820px) {
+    @supports not (height: 100dvh) {
       body {
-        align-items: flex-start;
+        height: 100vh;
+        min-height: 100vh;
       }
 
       .game-shell {
-        min-height: auto;
+        height: calc(100vh - 16px);
+      }
+    }
+
+    @media (max-width: 820px) {
+      body {
+        align-items: flex-start;
+        padding: 6px 8px;
+      }
+
+      .game-shell {
+        height: calc(100dvh - 12px);
+        gap: 7px;
       }
 
       .menu-link {
-        min-width: 88px;
-        height: 38px;
-        font-size: 13px;
+        top: 8px;
+        right: 8px;
+        min-width: 82px;
+        height: 34px;
+        font-size: 12px;
       }
 
       .top-bar,
@@ -447,33 +478,171 @@
       }
 
       .top-bar {
-        padding-top: 52px;
+        padding-top: 42px;
         padding-right: 0;
+        gap: 7px;
       }
 
-      .target-label {
-        text-align: center;
+      .title-block h1 {
+        font-size: 20px;
+        line-height: 1.1;
+      }
+
+      .title-block p {
+        font-size: 12px;
+        line-height: 1.25;
+        margin-top: 2px;
       }
 
       .stats {
         grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+
+      .stat {
+        padding: 5px 6px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+        margin-top: 2px;
+      }
+
+      .target-area {
+        gap: 6px;
+        padding: 7px;
+      }
+
+      .target-label {
+        text-align: center;
+        gap: 1px;
+      }
+
+      .target-label strong {
+        font-size: 11px;
+      }
+
+      .target-label span {
+        font-size: 11px;
+      }
+
+      .target-area .signal {
+        width: 48px;
+        min-height: 82px;
+        gap: 4px;
+        padding: 6px;
+        margin: 0 auto;
+      }
+
+      .target-area .light {
+        width: 24px;
+        border-width: 2px;
       }
 
       .grid {
-        gap: 10px;
+        width: min(100%, calc(100dvh - 300px));
+        gap: 6px;
       }
 
-      .cell {
-        min-height: 112px;
+      .cell,
+      .grid[data-size="5"] .cell,
+      .grid[data-size="6"] .cell {
+        min-height: 0;
+        aspect-ratio: 1 / 1;
+        padding: 2px;
       }
 
-      .signal {
-        width: 48px;
-        min-height: 112px;
+      .signal,
+      .grid[data-size="5"] .signal {
+        width: 34px;
+        min-height: 70px;
+        gap: 3px;
+        padding: 5px 4px;
+        border-radius: 16px;
       }
 
-      .light {
+      .light,
+      .grid[data-size="5"] .light {
+        width: 19px;
+        border-width: 2px;
+      }
+
+      .grid[data-size="6"] {
+        gap: 4px;
+      }
+
+      .grid[data-size="6"] .signal {
+        width: 27px;
+        min-height: 50px;
+        gap: 2px;
+        padding: 3px;
+        border-radius: 14px;
+      }
+
+      .grid[data-size="6"] .light {
+        width: 14px;
+        border-width: 2px;
+      }
+
+      .footer {
+        gap: 5px;
+        font-size: 11px;
+      }
+
+      .footer button {
+        padding: 6px 10px;
+      }
+
+      .modal {
+        padding: 20px;
+      }
+
+      .modal h2 {
+        font-size: 26px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .grid {
+        width: min(100%, calc(100dvh - 315px));
+      }
+
+      .signal,
+      .grid[data-size="5"] .signal {
         width: 30px;
+        min-height: 62px;
+      }
+
+      .light,
+      .grid[data-size="5"] .light {
+        width: 17px;
+      }
+
+      .grid[data-size="6"] .signal {
+        width: 24px;
+        min-height: 45px;
+      }
+
+      .grid[data-size="6"] .light {
+        width: 12px;
+      }
+    }
+
+    @media (max-height: 740px) {
+      .title-block p {
+        display: none;
+      }
+
+      .target-label span {
+        display: none;
+      }
+
+      .grid {
+        width: min(100%, calc(100dvh - 245px));
       }
     }
   </style>
