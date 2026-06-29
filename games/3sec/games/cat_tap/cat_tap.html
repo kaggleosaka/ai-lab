@@ -350,33 +350,6 @@
       box-shadow: 0 2px 0 rgba(80,50,40,0.4);
     }
 
-
-    .menuButton {
-      position: fixed;
-      left: 10px;
-      top: 10px;
-      z-index: 9999;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 72px;
-      height: 36px;
-      padding: 0 12px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.65);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 800;
-      text-decoration: none;
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-      letter-spacing: 0.5px;
-    }
-
-    .menuButton:active {
-      transform: scale(0.96);
-    }
-
     .overlay {
       position: absolute;
       inset: 0;
@@ -471,7 +444,6 @@
   </style>
 </head>
 <body>
-  <a class="menuButton" href="../../index.html" aria-label="Back to menu">MENU</a>
   <main id="game" aria-label="CAT TAP game">
     <section class="top">
       <div class="title-row">
@@ -500,6 +472,7 @@
       <div id="combo"></div>
       <div class="btn-row">
         <button class="btn" id="startBtn" type="button">START</button>
+        <button class="btn secondary" id="menuBtn" type="button">MENU</button>
       </div>
     </section>
 
@@ -513,6 +486,7 @@
       </div>
       <div class="btn-row">
         <button class="btn" id="startBtn2" type="button">START</button>
+        <button class="btn secondary" id="menuBtn2" type="button">MENU</button>
       </div>
     </section>
 
@@ -527,6 +501,7 @@
       </div>
       <div class="btn-row">
         <button class="btn" id="retryBtn" type="button">もう一度</button>
+        <button class="btn secondary" id="menuBtn3" type="button">MENU</button>
       </div>
     </section>
   </main>
@@ -568,7 +543,10 @@
         rankMessage: document.getElementById('rankMessage'),
         startBtn: document.getElementById('startBtn'),
         startBtn2: document.getElementById('startBtn2'),
-        retryBtn: document.getElementById('retryBtn')
+        retryBtn: document.getElementById('retryBtn'),
+        menuBtn: document.getElementById('menuBtn'),
+        menuBtn2: document.getElementById('menuBtn2'),
+        menuBtn3: document.getElementById('menuBtn3')
       };
 
       const state = {
@@ -792,8 +770,13 @@
         return '3秒マスター！';
       }
 
+      function goMenu() {
+        window.location.href = 'https://kaggleosaka.github.io/ai-lab/games/3sec/';
+      }
+
       function bindButtons() {
         [els.startBtn, els.startBtn2, els.retryBtn].forEach(btn => btn.addEventListener('click', startGame));
+        [els.menuBtn, els.menuBtn2, els.menuBtn3].forEach(btn => btn.addEventListener('click', goMenu));
       }
 
       function initIdleGrid() {
