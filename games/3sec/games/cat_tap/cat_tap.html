@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CAT TAP</title>
+  <style>
+    :root {
+      --w: 464px;
+      --h: 825px;
+      --bg1: #fff4df;
+      --bg2: #ffdfe8;
+      --brown: #6d4b35;
+      --dark: #3a2a22;
+      --cream: #fff9ee;
+      --pink: #ff7da8;
+      --yellow: #ffd15c;
+      --green: #68c79a;
+      --blue: #78b7ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #fffaf0 0%, #ffe0ea 45%, #d9f0ff 100%);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--dark);
+      overflow: hidden;
+    }
+
+    #game {
+      position: relative;
+      width: min(100vw, var(--w));
+      height: min(100vh, var(--h));
+      aspect-ratio: 464 / 825;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 16% 10%, rgba(255,255,255,0.9) 0 9%, transparent 10%),
+        radial-gradient(circle at 86% 16%, rgba(255,255,255,0.7) 0 7%, transparent 8%),
+        linear-gradient(180deg, var(--bg1), var(--bg2) 58%, #dff7ef 100%);
+      border-radius: 26px;
+      box-shadow: 0 20px 50px rgba(87, 56, 45, 0.25);
+    }
+
+    .top {
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 132px;
+      padding: 18px 18px 0;
+      z-index: 5;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 38px;
+      line-height: 0.94;
+      font-weight: 950;
+      letter-spacing: 1px;
+      color: #5b3728;
+      text-shadow: 0 4px 0 rgba(255, 255, 255, 0.78);
+    }
+
+    .sub {
+      font-size: 13px;
+      font-weight: 800;
+      color: #91604a;
+      margin-top: 5px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      min-width: 164px;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.78);
+      border: 3px solid rgba(109, 75, 53, 0.12);
+      border-radius: 16px;
+      padding: 6px 8px;
+      text-align: center;
+      box-shadow: 0 4px 0 rgba(109, 75, 53, 0.08);
+    }
+
+    .stat .label {
+      display: block;
+      font-size: 10px;
+      font-weight: 900;
+      color: #9b6b55;
+    }
+
+    .stat .value {
+      display: block;
+      font-size: 21px;
+      line-height: 1.05;
+      font-weight: 950;
+      color: #4c3025;
+    }
+
+    .best {
+      position: absolute;
+      top: 95px;
+      right: 18px;
+      padding: 4px 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.65);
+      font-size: 12px;
+      font-weight: 900;
+      color: #7b5542;
+    }
+
+    .prompt-box {
+      position: absolute;
+      top: 132px;
+      left: 18px;
+      right: 18px;
+      height: 78px;
+      background: rgba(255, 255, 255, 0.88);
+      border: 4px solid #fff;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 0 rgba(109, 75, 53, 0.09);
+      z-index: 4;
+    }
+
+    #prompt {
+      font-size: 21px;
+      font-weight: 950;
+      text-align: center;
+      color: #5b3728;
+      padding: 0 8px;
+    }
+
+    .question-timer {
+      position: relative;
+      width: 84%;
+      height: 8px;
+      background: rgba(109,75,53,0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    #qbar {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 100%;
+      background: linear-gradient(90deg, #6fcf97, #ffd15c, #ff7da8);
+      border-radius: 999px;
+      transform-origin: left center;
+    }
+
+    #grid {
+      position: absolute;
+      top: 224px;
+      left: 20px;
+      right: 20px;
+      height: 454px;
+      display: grid;
+      gap: 12px;
+      z-index: 3;
+    }
+
+    #grid.choice-2 {
+      grid-template-columns: repeat(2, 150px);
+      grid-template-rows: 170px;
+      justify-content: center;
+      align-content: center;
+      gap: 18px;
+    }
+
+    #grid.choice-4 {
+      grid-template-columns: repeat(2, 150px);
+      grid-template-rows: repeat(2, 150px);
+      justify-content: center;
+      align-content: center;
+      gap: 16px;
+    }
+
+    #grid.choice-9 {
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .cell {
+      position: relative;
+      border: none;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.74), rgba(255,255,255,0.37));
+      box-shadow: inset 0 -8px 0 rgba(109, 75, 53, 0.08), 0 6px 0 rgba(109, 75, 53, 0.11);
+      overflow: hidden;
+      cursor: pointer;
+      padding: 0;
+      touch-action: manipulation;
+    }
+
+    .cell::before {
+      content: "";
+      position: absolute;
+      left: 14%;
+      right: 14%;
+      bottom: 10px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(93, 61, 45, 0.14);
+      filter: blur(1px);
+    }
+
+    .cat-img {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      width: 92%;
+      height: 92%;
+      object-fit: contain;
+      transform: translateX(-50%);
+      transition: transform 120ms ease;
+      pointer-events: none;
+    }
+
+    .cell:active .cat-img {
+      transform: translateX(-50%) scale(0.94);
+    }
+
+    .fallback-cat {
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      font-size: 72px;
+      pointer-events: none;
+    }
+
+    .cat-label {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 6px;
+      padding: 2px 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.74);
+      color: #81573f;
+      font-size: 10px;
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+
+    .bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 132px;
+      padding: 10px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      z-index: 5;
+    }
+
+    #combo {
+      min-height: 26px;
+      font-size: 22px;
+      font-weight: 950;
+      color: #e05e89;
+      text-shadow: 0 3px 0 #fff;
+      transition: transform 120ms ease;
+    }
+
+    #message {
+      position: absolute;
+      top: 360px;
+      left: 50%;
+      min-width: 150px;
+      padding: 12px 18px;
+      transform: translate(-50%, -50%) scale(0.8);
+      opacity: 0;
+      pointer-events: none;
+      text-align: center;
+      color: #fff;
+      font-size: 34px;
+      font-weight: 1000;
+      border-radius: 999px;
+      background: rgba(255, 125, 168, 0.94);
+      box-shadow: 0 8px 0 rgba(109, 75, 53, 0.18);
+      z-index: 8;
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    #message.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .btn {
+      appearance: none;
+      border: none;
+      border-radius: 18px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 950;
+      color: #fff;
+      background: linear-gradient(180deg, #ff9abc, #ff6f9e);
+      box-shadow: 0 6px 0 #d7507c;
+      cursor: pointer;
+      min-width: 132px;
+      touch-action: manipulation;
+    }
+
+    .btn.secondary {
+      background: linear-gradient(180deg, #95c9ff, #5fa8f5);
+      box-shadow: 0 6px 0 #3f84c7;
+    }
+
+    .btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 rgba(80,50,40,0.4);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      background: rgba(255, 247, 233, 0.94);
+      backdrop-filter: blur(2px);
+      text-align: center;
+      z-index: 20;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .big-title {
+      font-size: 52px;
+      line-height: 0.95;
+      font-weight: 1000;
+      color: #5b3728;
+      letter-spacing: 2px;
+      text-shadow: 0 5px 0 #fff;
+      margin-bottom: 6px;
+    }
+
+    .jp-title {
+      font-size: 21px;
+      font-weight: 950;
+      color: #e05e89;
+      margin-bottom: 20px;
+    }
+
+    .howto {
+      background: #fff;
+      border-radius: 24px;
+      padding: 18px;
+      margin: 8px 0 22px;
+      color: #6d4b35;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.55;
+      box-shadow: 0 7px 0 rgba(109, 75, 53, 0.1);
+    }
+
+    .result-title {
+      font-size: 42px;
+      font-weight: 1000;
+      color: #5b3728;
+      margin-bottom: 8px;
+    }
+
+    .result-card {
+      width: 100%;
+      max-width: 340px;
+      background: #fff;
+      border-radius: 24px;
+      padding: 18px 20px;
+      box-shadow: 0 7px 0 rgba(109, 75, 53, 0.1);
+      margin-bottom: 18px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 2px dashed rgba(109,75,53,0.12);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+    }
+
+    #rankMessage {
+      margin-top: 10px;
+      color: #e05e89;
+      font-size: 18px;
+      font-weight: 950;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-height: 825px) {
+      #game { border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main id="game" aria-label="CAT TAP game">
+    <section class="top">
+      <div class="title-row">
+        <div>
+          <div class="logo">CAT<br>TAP</div>
+          <div class="sub">ちがうねこをタップ！</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span class="label">TIME</span><span class="value" id="time">30</span></div>
+          <div class="stat"><span class="label">SCORE</span><span class="value" id="score">0</span></div>
+        </div>
+      </div>
+      <div class="best" id="best">BEST 0</div>
+    </section>
+
+    <section class="prompt-box">
+      <div id="prompt">STARTを押してね！</div>
+      <div class="question-timer"><div id="qbar"></div></div>
+    </section>
+
+    <section id="grid" aria-label="cat grid"></section>
+
+    <div id="message">OK!</div>
+
+    <section class="bottom">
+      <div id="combo"></div>
+      <div class="btn-row">
+        <button class="btn" id="startBtn" type="button">START</button>
+        <button class="btn secondary" id="menuBtn" type="button">MENU</button>
+      </div>
+    </section>
+
+    <section class="overlay" id="startScreen">
+      <div class="big-title">CAT TAP</div>
+      <div class="jp-title">ちがうねこをタップ！</div>
+      <div class="howto">
+        お題のねこをタップ！<br>
+        最初は2択、次は4択、最後は9択！<br>
+        30秒で何匹見つけられる？
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="startBtn2" type="button">START</button>
+        <button class="btn secondary" id="menuBtn2" type="button">MENU</button>
+      </div>
+    </section>
+
+    <section class="overlay hidden" id="resultScreen">
+      <div class="result-title">RESULT</div>
+      <div class="result-card">
+        <div class="result-row"><span>SCORE</span><span id="resultScore">0</span></div>
+        <div class="result-row"><span>見つけたねこ</span><span id="resultFound">0匹</span></div>
+        <div class="result-row"><span>最高コンボ</span><span id="resultCombo">0</span></div>
+        <div class="result-row"><span>BEST</span><span id="resultBest">0</span></div>
+        <div id="rankMessage">ねこ好き！</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="retryBtn" type="button">もう一度</button>
+        <button class="btn secondary" id="menuBtn3" type="button">MENU</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const GAME_TIME = 30;
+      const BASE_QUESTION_TIME = 4.0;
+      const TICK_MS = 1000 / 30;
+
+      const cats = [
+        { file: '1.png', label: 'ふつうのねこ', prompt: 'お題：ふつうのねこ', target: true },
+        { file: '2.png', label: '青い首輪のねこ', prompt: 'お題：青い首輪', target: true },
+        { file: '3.png', label: '赤いリボンのねこ', prompt: 'お題：赤いリボン', target: true },
+        { file: '4.png', label: 'ウインクねこ', prompt: 'お題：ウインク', target: true },
+        { file: '5.png', label: '魚を持ったねこ', prompt: 'お題：魚を持ったねこ', target: true },
+        { file: '6.png', label: 'しましましっぽのねこ', prompt: 'お題：しましましっぽ', target: true },
+        { file: '7.png', label: 'ほっぺが赤いねこ', prompt: 'お題：赤いほっぺ', target: true },
+        { file: '8.png', label: '片方が白い耳のねこ', prompt: 'お題：片方が白い耳', target: true },
+        { file: '9.png', label: '鈴つき首輪のねこ', prompt: 'お題：鈴つき首輪', target: true }
+      ];
+      const els = {
+        time: document.getElementById('time'),
+        score: document.getElementById('score'),
+        best: document.getElementById('best'),
+        prompt: document.getElementById('prompt'),
+        qbar: document.getElementById('qbar'),
+        grid: document.getElementById('grid'),
+        combo: document.getElementById('combo'),
+        message: document.getElementById('message'),
+        startScreen: document.getElementById('startScreen'),
+        resultScreen: document.getElementById('resultScreen'),
+        resultScore: document.getElementById('resultScore'),
+        resultFound: document.getElementById('resultFound'),
+        resultCombo: document.getElementById('resultCombo'),
+        resultBest: document.getElementById('resultBest'),
+        rankMessage: document.getElementById('rankMessage'),
+        startBtn: document.getElementById('startBtn'),
+        startBtn2: document.getElementById('startBtn2'),
+        retryBtn: document.getElementById('retryBtn'),
+        menuBtn: document.getElementById('menuBtn'),
+        menuBtn2: document.getElementById('menuBtn2'),
+        menuBtn3: document.getElementById('menuBtn3')
+      };
+
+      const state = {
+        mode: 'start',
+        score: 0,
+        found: 0,
+        combo: 0,
+        maxCombo: 0,
+        remaining: GAME_TIME,
+        questionRemaining: BASE_QUESTION_TIME,
+        questionLimit: BASE_QUESTION_TIME,
+        currentTargetIndex: null,
+        currentChoiceCount: 2,
+        cellCats: [],
+        locked: false,
+        timerId: null,
+        images: new Map(),
+        best: Number(localStorage.getItem('catTapBest') || 0)
+      };
+
+      function preloadImages() {
+        cats.forEach((cat, index) => {
+          const img = new Image();
+          img.src = cat.file;
+          img.alt = cat.label;
+          img.onload = () => state.images.set(index, img);
+          img.onerror = () => state.images.set(index, null);
+        });
+      }
+
+      function shuffle(array) {
+        const a = array.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      function randomFrom(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      }
+
+      function updateHud() {
+        els.time.textContent = Math.max(0, Math.ceil(state.remaining));
+        els.score.textContent = state.score;
+        els.best.textContent = 'BEST ' + state.best;
+        if (state.combo >= 2) {
+          const suffix = state.combo >= 10 ? ' すごい！' : '!';
+          els.combo.textContent = state.combo + ' COMBO' + suffix;
+          els.combo.style.transform = 'scale(' + Math.min(1.35, 1 + state.combo * 0.025) + ')';
+        } else {
+          els.combo.textContent = '';
+          els.combo.style.transform = 'scale(1)';
+        }
+        const ratio = Math.max(0, Math.min(1, state.questionRemaining / state.questionLimit));
+        els.qbar.style.transform = 'scaleX(' + ratio + ')';
+      }
+
+      function getChoiceCount() {
+        if (state.found >= 13) return 9;
+        if (state.found >= 6) return 4;
+        return 2;
+      }
+
+      function getQuestionLimit(choiceCount) {
+        if (choiceCount >= 9) return 3.0;
+        if (choiceCount >= 4) return 3.5;
+        return 4.0;
+      }
+
+      function buildGrid() {
+        els.grid.innerHTML = '';
+        els.grid.className = 'choice-' + state.currentChoiceCount;
+        state.cellCats.forEach((catIndex, cellIndex) => {
+          const cat = cats[catIndex];
+          const button = document.createElement('button');
+          button.className = 'cell';
+          button.type = 'button';
+          button.setAttribute('aria-label', cat.label);
+          button.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            handleTap(cellIndex);
+          });
+
+          const img = document.createElement('img');
+          img.className = 'cat-img';
+          img.src = cat.file;
+          img.alt = '';
+          img.draggable = false;
+          img.onerror = () => {
+            img.remove();
+            if (!button.querySelector('.fallback-cat')) {
+              const fallback = document.createElement('div');
+              fallback.className = 'fallback-cat';
+              fallback.textContent = '🐱';
+              button.appendChild(fallback);
+            }
+          };
+          button.appendChild(img);
+
+          const label = document.createElement('div');
+          label.className = 'cat-label';
+          label.textContent = cat.label;
+          button.appendChild(label);
+
+          els.grid.appendChild(button);
+        });
+      }
+
+      function nextQuestion() {
+        if (state.mode !== 'playing') return;
+        state.locked = false;
+        const targetPool = cats.map((_, i) => i).filter(i => cats[i].target !== false);
+        state.currentTargetIndex = randomFrom(targetPool);
+        state.currentChoiceCount = getChoiceCount();
+        els.prompt.textContent = cats[state.currentTargetIndex].prompt;
+        state.questionLimit = getQuestionLimit(state.currentChoiceCount);
+        state.questionRemaining = state.questionLimit;
+
+        const distractors = shuffle(cats.map((_, i) => i).filter(i => i !== state.currentTargetIndex));
+        state.cellCats = shuffle([state.currentTargetIndex, ...distractors.slice(0, state.currentChoiceCount - 1)]);
+        buildGrid();
+        updateHud();
+      }
+
+      function showMessage(text, kind) {
+        els.message.textContent = text;
+        els.message.style.background = kind === 'ok'
+          ? 'rgba(104, 199, 154, 0.96)'
+          : kind === 'time'
+            ? 'rgba(120, 183, 255, 0.96)'
+            : 'rgba(255, 125, 168, 0.96)';
+        els.message.classList.add('show');
+        window.setTimeout(() => els.message.classList.remove('show'), 300);
+      }
+
+      function handleTap(cellIndex) {
+        if (state.mode !== 'playing' || state.locked) return;
+        const tappedCatIndex = state.cellCats[cellIndex];
+        if (tappedCatIndex === state.currentTargetIndex) {
+          state.locked = true;
+          state.combo += 1;
+          state.maxCombo = Math.max(state.maxCombo, state.combo);
+          const gain = 100 + (state.combo >= 2 ? state.combo * 10 : 0);
+          state.score += gain;
+          state.found += 1;
+          showMessage('にゃ！', 'ok');
+          updateHud();
+          window.setTimeout(nextQuestion, 260);
+        } else {
+          state.locked = true;
+          state.combo = 0;
+          state.score = Math.max(0, state.score - 50);
+          showMessage('MISS!', 'miss');
+          updateHud();
+          window.setTimeout(nextQuestion, 420);
+        }
+      }
+
+      function startGame() {
+        state.mode = 'playing';
+        state.score = 0;
+        state.found = 0;
+        state.combo = 0;
+        state.maxCombo = 0;
+        state.remaining = GAME_TIME;
+        state.locked = false;
+        els.startScreen.classList.add('hidden');
+        els.resultScreen.classList.add('hidden');
+        els.startBtn.textContent = 'RESTART';
+        clearInterval(state.timerId);
+        nextQuestion();
+        state.timerId = setInterval(tick, TICK_MS);
+        updateHud();
+      }
+
+      function tick() {
+        if (state.mode !== 'playing') return;
+        const dt = TICK_MS / 1000;
+        state.remaining -= dt;
+        state.questionRemaining -= dt;
+        if (state.remaining <= 0) {
+          finishGame();
+          return;
+        }
+        if (state.questionRemaining <= 0 && !state.locked) {
+          state.locked = true;
+          state.combo = 0;
+          showMessage('TIME!', 'time');
+          updateHud();
+          window.setTimeout(nextQuestion, 360);
+          return;
+        }
+        updateHud();
+      }
+
+      function finishGame() {
+        clearInterval(state.timerId);
+        state.timerId = null;
+        state.mode = 'result';
+        state.remaining = 0;
+        state.questionRemaining = 0;
+        updateHud();
+        if (state.score > state.best) {
+          state.best = state.score;
+          localStorage.setItem('catTapBest', String(state.best));
+        }
+        els.resultScore.textContent = state.score;
+        els.resultFound.textContent = state.found + '匹';
+        els.resultCombo.textContent = state.maxCombo;
+        els.resultBest.textContent = state.best;
+        els.rankMessage.textContent = getRankMessage(state.found);
+        els.resultScreen.classList.remove('hidden');
+      }
+
+      function getRankMessage(found) {
+        if (found <= 5) return 'ゆっくり派のねこ好き！';
+        if (found <= 12) return 'なかなかすごい！';
+        if (found <= 20) return 'ねこ探し名人！';
+        return '3秒マスター！';
+      }
+
+      function goMenu() {
+        window.location.href = 'index.html';
+      }
+
+      function bindButtons() {
+        [els.startBtn, els.startBtn2, els.retryBtn].forEach(btn => btn.addEventListener('click', startGame));
+        [els.menuBtn, els.menuBtn2, els.menuBtn3].forEach(btn => btn.addEventListener('click', goMenu));
+      }
+
+      function initIdleGrid() {
+        state.currentChoiceCount = 2;
+        state.cellCats = shuffle(cats.map((_, i) => i)).slice(0, 2);
+        buildGrid();
+        updateHud();
+      }
+
+      preloadImages();
+      bindButtons();
+      initIdleGrid();
+    })();
+  </script>
+</body>
+</html>
