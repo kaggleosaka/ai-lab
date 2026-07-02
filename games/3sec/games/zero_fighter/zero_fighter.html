@@ -138,6 +138,13 @@
     images[i] = img;
   }
 
+  const bossImages = [];
+  for (let i = 1; i <= 9; i++) {
+    const img = new Image();
+    img.src = `boss${i}.png`;
+    bossImages[i] = img;
+  }
+
   const se = {
     shot: document.getElementById("se_shot"),
     hit: document.getElementById("se_hit"),
@@ -220,7 +227,27 @@
     }
   ];
 
+
+  const bossDefs = [
+    { id: 1, name: "ACE FIGHTER", img: 1, appearTime: 30, hp: 55, size: 96, r: 42, score: 3000, pattern: "ace", reward: 1 },
+    { id: 2, name: "HEAVY BOMBER", img: 2, appearTime: 60, hp: 90, size: 132, r: 58, score: 6000, pattern: "bomber", reward: 1 },
+    { id: 3, name: "GUNSHIP", img: 3, appearTime: 90, hp: 115, size: 138, r: 62, score: 8500, pattern: "gunship", reward: 2 },
+    { id: 4, name: "FAST ACE", img: 4, appearTime: 120, hp: 100, size: 106, r: 44, score: 10000, pattern: "fast", reward: 1 },
+    { id: 5, name: "FORTRESS AIRSHIP", img: 5, appearTime: 150, hp: 160, size: 150, r: 68, score: 14000, pattern: "fortress", reward: 2 },
+    { id: 6, name: "CARRIER", img: 6, appearTime: 180, hp: 180, size: 158, r: 72, score: 17000, pattern: "carrier", reward: 2 },
+    { id: 7, name: "STEALTH", img: 7, appearTime: 210, hp: 145, size: 132, r: 58, score: 19000, pattern: "stealth", reward: 2 },
+    { id: 8, name: "UFO", img: 8, appearTime: 240, hp: 190, size: 150, r: 70, score: 24000, pattern: "ufo", reward: 3 },
+    { id: 9, name: "FINAL FORTRESS", img: 9, appearTime: 300, hp: 280, size: 170, r: 78, score: 50000, pattern: "final", reward: 3 }
+  ];
+
   let player = null;
+  let boss = null;
+  let bossWarning = null;
+  let bossDefeatedCount = 0;
+  let bossSpawnedFlags = {};
+  // ボスを倒した直後に、経過時間で次のボスが即出現しないようにする。
+  // 例: boss1撃破が60秒を過ぎていた場合でも、boss2は少し間を空けて出す。
+  let nextBossAllowedTime = 30;
   let bullets = [];
   let enemyBullets = [];
   let enemies = [];
@@ -268,6 +295,11 @@
     items = [];
     explosions = [];
     particles = [];
+    boss = null;
+    bossWarning = null;
+    bossDefeatedCount = 0;
+    bossSpawnedFlags = {};
+    nextBossAllowedTime = 30;
     score = 0;
     elapsed = 0;
     fireCooldown = 0;
@@ -558,6 +590,19 @@
     playSe("bigExplosion", 0.75);
     showMessage("BOMB", "SCREEN CLEAR", 1.0);
 
+    if (boss) {
+      boss.hp -= 18;
+      makeExplosion(boss.x, boss.y, 1.2);
+      for (let i = 0; i < 4; i++) {
+        makeExplosion(
+          boss.x + (Math.random() - 0.5) * boss.size,
+          boss.y + (Math.random() - 0.5) * boss.size,
+          0.65 + Math.random() * 0.45
+        );
+      }
+      if (boss.hp <= 0) destroyBoss();
+    }
+
     for (const e of enemies) {
       e.hp -= 8;
       makeExplosion(e.x, e.y, 1.0);
@@ -580,6 +625,10 @@
       message.time -= dt;
       if (message.time <= 0) message = null;
     }
+    if (bossWarning) {
+      bossWarning.time -= dt;
+      if (bossWarning.time <= 0) bossWarning = null;
+    }
     screenShake = Math.max(0, screenShake - dt * 38);
     updateStars(dt);
     updateParticles(dt);
@@ -590,6 +639,8 @@
     elapsed += dt;
     updatePlayer(dt);
     updateFiring(dt);
+    checkBossSpawn();
+    updateBoss(dt);
     updateEnemies(dt);
     updateBullets(dt);
     updateItems(dt);
@@ -717,11 +768,239 @@
     return arr;
   }
 
+
+  function checkBossSpawn() {
+    if (boss || gameState !== STATE.PLAY) return;
+
+    // ボス撃破直後の連続出現を防ぐ。
+    // 経過時間が次ボスの appearTime を超えていても、最低12秒の通常戦を挟む。
+    if (elapsed < nextBossAllowedTime) return;
+
+    for (const def of bossDefs) {
+      if (elapsed >= def.appearTime && !bossSpawnedFlags[def.id]) {
+        bossSpawnedFlags[def.id] = true;
+        spawnBoss(def);
+        break;
+      }
+    }
+  }
+
+  function spawnBoss(def) {
+    boss = {
+      id: def.id,
+      name: def.name,
+      img: def.img,
+      pattern: def.pattern,
+      x: W / 2,
+      y: -100,
+      targetY: def.id === 9 ? 128 : 118,
+      vx: def.pattern === "fast" ? 120 : 80,
+      hp: def.hp,
+      maxHp: def.hp,
+      size: def.size,
+      r: def.r,
+      score: def.score,
+      reward: def.reward,
+      t: 0,
+      fire: 1.2,
+      phase: 1,
+      alpha: 1
+    };
+    bossWarning = { time: 1.4, max: 1.4, name: def.name };
+    enemyBullets = [];
+    screenShake = 12;
+    showMessage("WARNING!!", def.name, 1.4);
+    playSe("bigExplosion", 0.45);
+  }
+
+  function updateBoss(dt) {
+    if (!boss) return;
+    boss.t += dt;
+
+    if (boss.y < boss.targetY) {
+      boss.y += 82 * dt;
+      return;
+    }
+
+    const hpRate = boss.hp / boss.maxHp;
+    boss.phase = hpRate > 0.66 ? 1 : hpRate > 0.33 ? 2 : 3;
+
+    if (boss.pattern === "fast") {
+      boss.x += Math.sin(boss.t * 4.2) * 170 * dt;
+    } else if (boss.pattern === "stealth") {
+      boss.x += Math.sin(boss.t * 2.3) * 95 * dt;
+      boss.alpha = clamp(0.62 + Math.sin(boss.t * 5.0) * 0.25, 0.38, 0.95);
+    } else if (boss.pattern === "ufo") {
+      boss.x += Math.sin(boss.t * 1.8) * 105 * dt;
+      boss.y = boss.targetY + Math.sin(boss.t * 1.4) * 10;
+    } else {
+      boss.x += boss.vx * dt;
+      if (boss.x < 82 || boss.x > W - 82) boss.vx *= -1;
+    }
+
+    boss.x = clamp(boss.x, 68, W - 68);
+    boss.fire -= dt;
+    if (boss.fire <= 0) {
+      fireBoss();
+      boss.fire = bossFireInterval();
+    }
+  }
+
+  function bossFireInterval() {
+    if (!boss) return 1.0;
+    let base = 1.12;
+    if (boss.pattern === "fast") base = 0.88;
+    if (boss.pattern === "gunship") base = 0.78;
+    if (boss.pattern === "ufo") base = 0.92;
+    if (boss.pattern === "final") base = 0.68;
+    if (boss.phase === 2) base *= 0.82;
+    if (boss.phase === 3) base *= 0.68;
+    return base;
+  }
+
+  function addEnemyBullet(x, y, vx, vy, r = 5, life = 5) {
+    enemyBullets.push({ x, y, vx, vy, r, life });
+  }
+
+  function bossAimedShot(speed = 175, ox = 0, oy = 30) {
+    if (!player || !boss) return;
+    const sx = boss.x + ox;
+    const sy = boss.y + oy;
+    const dx = player.x - sx;
+    const dy = player.y - sy;
+    const len = Math.hypot(dx, dy) || 1;
+    addEnemyBullet(sx, sy, dx / len * speed, dy / len * speed, 6, 5);
+  }
+
+  function bossSpreadShot(speed = 165, count = 3, spread = 0.28) {
+    if (!player || !boss) return;
+    const baseAngle = Math.atan2(player.y - boss.y, player.x - boss.x);
+    const mid = (count - 1) / 2;
+    for (let i = 0; i < count; i++) {
+      const a = baseAngle + (i - mid) * spread;
+      addEnemyBullet(boss.x, boss.y + 34, Math.cos(a) * speed, Math.sin(a) * speed, 5, 5);
+    }
+  }
+
+  function bossCircleShot(count = 10, speed = 130) {
+    if (!boss) return;
+    for (let i = 0; i < count; i++) {
+      const a = Math.PI * 2 * i / count + boss.t * 0.25;
+      addEnemyBullet(boss.x, boss.y, Math.cos(a) * speed, Math.sin(a) * speed, 5, 5);
+    }
+  }
+
+  function fireBoss() {
+    if (!boss) return;
+
+    if (boss.pattern === "ace") {
+      bossAimedShot(180);
+      if (boss.phase >= 2) bossSpreadShot(155, 3, 0.24);
+    } else if (boss.pattern === "bomber") {
+      bossSpreadShot(150, boss.phase >= 3 ? 5 : 3, 0.24);
+    } else if (boss.pattern === "gunship") {
+      bossSpreadShot(155, boss.phase >= 2 ? 5 : 3, 0.22);
+      addEnemyBullet(boss.x - 48, boss.y + 30, -42, 170, 5, 5);
+      addEnemyBullet(boss.x + 48, boss.y + 30, 42, 170, 5, 5);
+    } else if (boss.pattern === "fast") {
+      bossAimedShot(230);
+      if (boss.phase >= 2) bossSpreadShot(190, 3, 0.25);
+    } else if (boss.pattern === "fortress") {
+      bossSpreadShot(145, boss.phase >= 3 ? 5 : 3, 0.23);
+      if (boss.phase >= 2) spawnBossMinion();
+    } else if (boss.pattern === "carrier") {
+      bossAimedShot(160, -38, 28);
+      bossAimedShot(160, 38, 28);
+      if (boss.phase >= 2) spawnBossMinion();
+    } else if (boss.pattern === "stealth") {
+      bossAimedShot(210);
+      if (boss.phase >= 3) bossSpreadShot(180, 5, 0.22);
+    } else if (boss.pattern === "ufo") {
+      bossCircleShot(boss.phase === 1 ? 8 : boss.phase === 2 ? 12 : 16, 125);
+    } else if (boss.pattern === "final") {
+      bossSpreadShot(170, boss.phase >= 2 ? 5 : 3, 0.22);
+      if (boss.phase >= 2) bossCircleShot(12, 130);
+      if (boss.phase >= 3) spawnBossMinion();
+    }
+
+    playSe("shot", 0.16);
+  }
+
+  function spawnBossMinion() {
+    if (!boss || enemies.length > 8) return;
+    const x = boss.x + (Math.random() < 0.5 ? -55 : 55);
+    enemies.push({
+      type: "small",
+      img: 6,
+      x: clamp(x, 35, W - 35),
+      y: boss.y + 48,
+      vx: (Math.random() - 0.5) * 55,
+      vy: 120,
+      hp: 2.5,
+      maxHp: 2.5,
+      r: 24,
+      size: 52,
+      score: 100,
+      t: 0,
+      fire: 1.5
+    });
+  }
+
+  function destroyBoss() {
+    if (!boss) return;
+    const deadBoss = boss;
+
+    score += deadBoss.score;
+    bossDefeatedCount++;
+    boss = null;
+
+    // 次のボスが即座に出ないように、通常戦の時間を少し作る。
+    // ただし本来の出現時刻より早くは出さない。
+    const nextDef = bossDefs.find(d => d.id === deadBoss.id + 1);
+    nextBossAllowedTime = nextDef ? Math.max(nextDef.appearTime, elapsed + 12) : Infinity;
+
+    showMessage(deadBoss.id === 9 ? "MISSION COMPLETE" : "BOSS DESTROYED", deadBoss.id === 9 ? "FINAL BOSS DOWN" : `+${deadBoss.score}`, deadBoss.id === 9 ? 2.2 : 1.4);
+    playSe("bigExplosion", 0.8);
+    screenShake = deadBoss.id === 9 ? 28 : 22;
+
+    for (let i = 0; i < 6; i++) {
+      const ex = {
+        x: deadBoss.x + (Math.random() - 0.5) * deadBoss.size,
+        y: deadBoss.y + (Math.random() - 0.5) * deadBoss.size
+      };
+      makeExplosion(ex.x, ex.y, 0.85 + Math.random() * 0.55);
+    }
+
+    dropBossRewards(deadBoss);
+  }
+
+  function dropBossRewards(b) {
+    const rewardCount = b.reward || 1;
+    const rewardTypes = ["RAPID", "DOUBLE", "SUPPORT", "GRENADE", "BOMB", "REPAIR"];
+
+    for (let i = 0; i < rewardCount; i++) {
+      let type = rewardTypes[Math.floor(Math.random() * rewardTypes.length)];
+      if (b.id === 2) type = Math.random() < 0.5 ? "RAPID" : "DOUBLE";
+      if (b.id === 3) type = Math.random() < 0.45 ? "BOMB" : type;
+      if (b.id === 6) type = i === 0 ? "BOMB" : "REPAIR";
+      if (b.id === 9) type = i === 0 ? "BOMB" : i === 1 ? "REPAIR" : "DOUBLE";
+
+      items.push({
+        type,
+        x: clamp(b.x + (i - (rewardCount - 1) / 2) * 42, 35, W - 35),
+        y: b.y + 45,
+        vy: 95,
+        r: 22,
+        spin: 0
+      });
+    }
+  }
+
   function updateEnemies(dt) {
     const phase = elapsed < 20 ? 0 : elapsed < 45 ? 1 : elapsed < 75 ? 2 : 3;
     const spawnBase = [0.85, 0.68, 0.53, 0.42][phase];
     enemyTimer -= dt;
-    if (enemyTimer <= 0) {
+    if (!boss && enemyTimer <= 0) {
       enemyTimer = spawnBase * (0.85 + Math.random() * 0.55);
       spawnEnemy(phase);
     }
@@ -792,6 +1071,28 @@
   }
 
   function updateCollisions() {
+    // player bullets vs boss
+    // FIX: grenadeBurst() can also damage the boss. If the boss is destroyed
+    // inside this loop, continuing the loop would access boss.r while boss is null
+    // and stop the game. Keep the loop guarded and break immediately on boss death.
+    if (boss) {
+      for (const b of bullets) {
+        if (!boss) break;
+        const rr = (b.r + boss.r) * (b.r + boss.r);
+        if (dist2(b, boss) < rr) {
+          boss.hp -= b.dmg;
+          playSe("hit", 0.16);
+          spawnParticle(b.x, b.y, b.grenade ? "#ffcf40" : "#76eaff", 0, -40, 0.25);
+          if (b.grenade) grenadeBurst(b.x, b.y, b.r * 2.2);
+          if (!b.pierce) b.life = -1;
+          if (boss && boss.hp <= 0) {
+            destroyBoss();
+            break;
+          }
+        }
+      }
+    }
+
     // player bullets vs enemies
     for (const b of bullets) {
       for (const e of enemies) {
@@ -840,6 +1141,15 @@
       enemies = enemies.filter(e => e.hp > 0);
     }
 
+    // boss body vs player
+    if (boss && player.invincible <= 0) {
+      const pr = player.def.name === "ISSHIKI RIKKO" ? 25 : 18;
+      const br = boss.r * 0.72;
+      if (dist2(boss, player) < (br + pr) * (br + pr)) {
+        damagePlayer("BOSS COLLISION");
+      }
+    }
+
     // items
     for (const it of items) {
       if (dist2(it, player) < (it.r + 26) * (it.r + 26)) {
@@ -856,6 +1166,15 @@
       const dx = e.x - x, dy = e.y - y;
       const d = Math.hypot(dx, dy);
       if (d < radius + e.r) e.hp -= 1.8;
+    }
+    if (boss) {
+      const dx = boss.x - x, dy = boss.y - y;
+      const d = Math.hypot(dx, dy);
+      if (d < radius + boss.r) {
+        // Do not call destroyBoss() here. This function may be called from inside
+        // bullet collision loops, so the caller handles boss destruction safely.
+        boss.hp -= 1.8;
+      }
     }
   }
 
@@ -1051,7 +1370,7 @@
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255,255,255,0.65)";
     ctx.font = "13px system-ui, sans-serif";
-    ctx.fillText("Drag to move / Auto fire / 2-finger Bomb / Menu", W / 2, 768);
+    ctx.fillText("Drag to move / Auto fire / 2-finger Bomb / Boss fights", W / 2, 768);
     ctx.restore();
   }
 
@@ -1114,6 +1433,8 @@
       }
     }
 
+    if (boss) drawBoss();
+
     // supports
     if (player) {
       for (const s of supportPositions()) {
@@ -1141,6 +1462,7 @@
 
     drawHud();
     if (message) drawMessage();
+    if (bossWarning) drawBossWarning();
     if (dim) {
       ctx.fillStyle = "rgba(0,0,0,0.55)";
       ctx.fillRect(0, 0, W, H);
@@ -1215,6 +1537,57 @@
     ctx.restore();
   }
 
+
+  function drawBoss() {
+    if (!boss) return;
+
+    const alpha = boss.alpha ?? 1;
+    drawImageCentered(bossImages[boss.img], boss.x, boss.y, boss.size, alpha, 0);
+
+    const barW = W - 56;
+    const barH = 10;
+    const x = 28;
+    const y = 66;
+    const rate = Math.max(0, boss.hp / boss.maxHp);
+
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.66)";
+    roundRect(x, y, barW, barH, 5, true, false);
+    ctx.fillStyle = boss.phase === 3 ? "#ff334a" : boss.phase === 2 ? "#ffd348" : "#65f2ff";
+    roundRect(x, y, barW * rate, barH, 5, true, false);
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.lineWidth = 1;
+    roundRect(x, y, barW, barH, 5, false, true);
+
+    ctx.font = "900 13px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#00eaff";
+    ctx.shadowBlur = 8;
+    ctx.fillText(boss.name, W / 2, y - 10);
+    ctx.restore();
+  }
+
+  function drawBossWarning() {
+    if (!bossWarning) return;
+    const p = bossWarning.time / bossWarning.max;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, p * 2.4);
+    ctx.fillStyle = "rgba(255, 30, 45, 0.18)";
+    ctx.fillRect(0, 88, W, 82);
+    ctx.strokeStyle = "rgba(255, 60, 70, 0.75)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 88);
+    ctx.lineTo(W, 88);
+    ctx.moveTo(0, 170);
+    ctx.lineTo(W, 170);
+    ctx.stroke();
+    neonText("WARNING!!", W / 2, 119, 31, "center", "#ffffff");
+    neonText(bossWarning.name, W / 2, 150, bossWarning.name.length > 13 ? 16 : 19, "center", "#ffd3d3");
+    ctx.restore();
+  }
+
   function drawHud() {
     if (!player) return;
     ctx.save();
@@ -1230,7 +1603,8 @@
     ctx.font = "12px system-ui, sans-serif";
     ctx.fillStyle = "#9df8ff";
     const gr = player.grenadeTime > 0 ? ` G${Math.ceil(player.grenadeTime)}` : "";
-    ctx.fillText(`R${player.rapidLv} D${player.doubleLv} S${player.supportLv}${gr}`, W / 2, 43);
+    const bossInfo = boss ? ` / BOSS ${boss.id}/9` : bossDefeatedCount > 0 ? ` / BOSS ${bossDefeatedCount}/9` : "";
+    ctx.fillText(`R${player.rapidLv} D${player.doubleLv} S${player.supportLv}${gr}${bossInfo}`, W / 2, 43);
     ctx.textAlign = "right";
     ctx.font = "900 15px system-ui, sans-serif";
     ctx.fillStyle = "#fff";
