@@ -39,6 +39,11 @@
   const W = canvas.width;
   const H = canvas.height;
 
+  // Back to the 3SEC GAMES menu page.
+  // gate_heroes.html is expected to live in: games/3sec/games/gate_heroes/
+  const MENU_URL = "../../index.html";
+  const menuButton = { x: W - 142, y: H - 66, w: 116, h: 42 };
+
   // Image assets:
   // Put transparent PNG files in the same folder as this HTML.
   // 1-9: characters/enemies/boss, 11-19: gates/items, 21-29: bullets/effects.
@@ -1086,6 +1091,9 @@
     }
 
     ctx.restore();
+
+    // Keep MENU stable and clickable even when the screen shakes or flashes.
+    drawMenuButton();
   }
 
   function drawSky() {
@@ -1794,6 +1802,44 @@
     ctx.restore();
   }
 
+  function getCanvasPoint(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * W,
+      y: ((clientY - rect.top) / rect.height) * H
+    };
+  }
+
+  function isInsideMenuButton(x, y) {
+    return x >= menuButton.x && x <= menuButton.x + menuButton.w &&
+      y >= menuButton.y && y <= menuButton.y + menuButton.h;
+  }
+
+  function goToMenu() {
+    window.location.href = MENU_URL;
+  }
+
+  function drawMenuButton() {
+    ctx.save();
+    ctx.globalAlpha = 0.94;
+    ctx.fillStyle = "rgba(17,19,24,0.74)";
+    ctx.strokeStyle = "rgba(255,255,255,0.86)";
+    ctx.lineWidth = 2;
+    roundRect(menuButton.x, menuButton.y, menuButton.w, menuButton.h, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "900 21px Arial, sans-serif";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(0,0,0,0.58)";
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeText("MENU", menuButton.x + menuButton.w / 2, menuButton.y + menuButton.h / 2 + 1);
+    ctx.fillText("MENU", menuButton.x + menuButton.w / 2, menuButton.y + menuButton.h / 2 + 1);
+    ctx.restore();
+  }
+
   function drawDemoObjects() {
     const demoGate1 = { side: "left", lateral: -0.45, z: 0.62, label: "+5 HEROES", color: "#34c759" };
     const demoGate2 = { side: "right", lateral: 0.45, z: 0.62, label: "DAMAGE x2", color: "#2f80ed" };
@@ -1888,6 +1934,10 @@
       e.preventDefault();
       useBomb();
     }
+
+    if (e.code === "KeyM") {
+      goToMenu();
+    }
   });
 
   window.addEventListener("keyup", (e) => {
@@ -1896,9 +1946,29 @@
 
   canvas.addEventListener("mousemove", (e) => setMouseLateral(e.clientX));
   canvas.addEventListener("mousedown", (e) => {
+    const p = getCanvasPoint(e.clientX, e.clientY);
+    if (isInsideMenuButton(p.x, p.y)) {
+      goToMenu();
+      return;
+    }
+
     setMouseLateral(e.clientX);
     if (state === STATE.TITLE) startNewGame();
   });
+
+  canvas.addEventListener("touchstart", (e) => {
+    if (!e.touches.length) return;
+    const touch = e.touches[0];
+    const p = getCanvasPoint(touch.clientX, touch.clientY);
+    if (isInsideMenuButton(p.x, p.y)) {
+      e.preventDefault();
+      goToMenu();
+      return;
+    }
+
+    setMouseLateral(touch.clientX);
+    if (state === STATE.TITLE) startNewGame();
+  }, { passive: false });
 
   initClouds();
   requestAnimationFrame(loop);
