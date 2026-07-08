@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Gate Heroes v0.9 Promo Edition</title>
 <style>
   html, body {
@@ -21,9 +21,27 @@
   canvas {
     width: min(100vw, 1280px);
     height: min(100vh, 720px);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
     background: #8fd8ff;
     box-shadow: 0 10px 40px rgba(0,0,0,0.25);
     border: 1px solid rgba(255,255,255,0.7);
+  }
+
+  @media (max-width: 700px) and (orientation: portrait) {
+    body {
+      align-items: stretch;
+      justify-content: stretch;
+    }
+    canvas {
+      width: 100vw;
+      height: 100svh;
+      max-width: none;
+      max-height: none;
+      border: 0;
+      box-shadow: none;
+    }
   }
 </style>
 </head>
@@ -43,6 +61,36 @@
   // gate_heroes.html is expected to live in: games/3sec/games/gate_heroes/
   const MENU_URL = "../../index.html";
   const menuButton = { x: W - 142, y: H - 66, w: 116, h: 42 };
+
+  function isMobilePortraitDisplay() {
+    const rect = canvas.getBoundingClientRect();
+    return rect.width <= 700 && rect.height > rect.width * 1.1;
+  }
+
+  function getRoadLayout() {
+    if (isMobilePortraitDisplay()) {
+      return {
+        topHalf: 150,
+        bottomHalf: 590,
+        shadowTopHalf: 170,
+        shadowBottomHalf: 625,
+        routeTopHalf: 84,
+        routeBottomHalf: 355,
+        hitLineHalf: 535,
+        controlHalf: 560
+      };
+    }
+    return {
+      topHalf: 120,
+      bottomHalf: 440,
+      shadowTopHalf: 135,
+      shadowBottomHalf: 472,
+      routeTopHalf: 62,
+      routeBottomHalf: 235,
+      hitLineHalf: 365,
+      controlHalf: 430
+    };
+  }
 
   // Image assets:
   // Put transparent PNG files in the same folder as this HTML.
@@ -307,7 +355,8 @@
 
   function getRoadHalfWidth(z) {
     const d = depthFromZ(z);
-    return 120 + d * 320;
+    const layout = getRoadLayout();
+    return layout.topHalf + d * (layout.bottomHalf - layout.topHalf);
   }
 
   function getScreenY(z) {
@@ -450,12 +499,22 @@
     }
   }
 
-  function setMouseLateral(clientX) {
+  function setPointerLateral(clientX) {
     const rect = canvas.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * W;
     mouse.x = x;
     mouse.active = true;
-    player.lateral = clamp((x - centerX) / 430, -1, 1);
+    player.lateral = clamp((x - centerX) / getRoadLayout().controlHalf, -1, 1);
+  }
+
+  function handleTouchControl(touch) {
+    const p = getCanvasPoint(touch.clientX, touch.clientY);
+    if (isInsideMenuButton(p.x, p.y)) return "menu";
+
+    // Mobile control: use only the horizontal position of the finger.
+    // The finger can stay a little below the heroes, so it will not hide the player.
+    setPointerLateral(touch.clientX);
+    return "move";
   }
 
   function spawnObstacle() {
@@ -810,7 +869,7 @@
 
   function updateInput(dt) {
     if (mouse.active) {
-      const target = clamp((mouse.x - centerX) / 430, -1, 1);
+      const target = clamp((mouse.x - centerX) / getRoadLayout().controlHalf, -1, 1);
       player.lateral += (target - player.lateral) * Math.min(1, dt * 10);
     }
 
@@ -1130,13 +1189,14 @@
 
   function drawRoad() {
     ctx.save();
+    const layout = getRoadLayout();
 
     // Road shadow
     ctx.beginPath();
-    ctx.moveTo(centerX - 135, horizonY);
-    ctx.lineTo(centerX + 135, horizonY);
-    ctx.lineTo(centerX + 472, H + 18);
-    ctx.lineTo(centerX - 472, H + 18);
+    ctx.moveTo(centerX - layout.shadowTopHalf, horizonY);
+    ctx.lineTo(centerX + layout.shadowTopHalf, horizonY);
+    ctx.lineTo(centerX + layout.shadowBottomHalf, H + 18);
+    ctx.lineTo(centerX - layout.shadowBottomHalf, H + 18);
     ctx.closePath();
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fill();
@@ -1149,10 +1209,10 @@
     roadGrad.addColorStop(1, cfg.road3);
 
     ctx.beginPath();
-    ctx.moveTo(centerX - 120, horizonY);
-    ctx.lineTo(centerX + 120, horizonY);
-    ctx.lineTo(centerX + 440, H + 25);
-    ctx.lineTo(centerX - 440, H + 25);
+    ctx.moveTo(centerX - layout.topHalf, horizonY);
+    ctx.lineTo(centerX + layout.topHalf, horizonY);
+    ctx.lineTo(centerX + layout.bottomHalf, H + 25);
+    ctx.lineTo(centerX - layout.bottomHalf, H + 25);
     ctx.closePath();
     ctx.fillStyle = roadGrad;
     ctx.fill();
@@ -1161,10 +1221,10 @@
     ctx.strokeStyle = "#7a7a7a";
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(centerX - 120, horizonY);
-    ctx.lineTo(centerX - 440, H + 25);
-    ctx.moveTo(centerX + 120, horizonY);
-    ctx.lineTo(centerX + 440, H + 25);
+    ctx.moveTo(centerX - layout.topHalf, horizonY);
+    ctx.lineTo(centerX - layout.bottomHalf, H + 25);
+    ctx.moveTo(centerX + layout.topHalf, horizonY);
+    ctx.lineTo(centerX + layout.bottomHalf, H + 25);
     ctx.stroke();
 
     // Moving road stripes
@@ -1203,10 +1263,10 @@
     ctx.lineWidth = 3;
     ctx.setLineDash([14, 16]);
     ctx.beginPath();
-    ctx.moveTo(centerX - 62, horizonY + 8);
-    ctx.lineTo(centerX - 235, H + 20);
-    ctx.moveTo(centerX + 62, horizonY + 8);
-    ctx.lineTo(centerX + 235, H + 20);
+    ctx.moveTo(centerX - layout.routeTopHalf, horizonY + 8);
+    ctx.lineTo(centerX - layout.routeBottomHalf, H + 20);
+    ctx.moveTo(centerX + layout.routeTopHalf, horizonY + 8);
+    ctx.lineTo(centerX + layout.routeBottomHalf, H + 20);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
@@ -1218,8 +1278,8 @@
     ctx.lineWidth = 5;
     ctx.setLineDash([18, 12]);
     ctx.beginPath();
-    ctx.moveTo(centerX - 365, player.y + 36);
-    ctx.lineTo(centerX + 365, player.y + 36);
+    ctx.moveTo(centerX - layout.hitLineHalf, player.y + 36);
+    ctx.lineTo(centerX + layout.hitLineHalf, player.y + 36);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.textAlign = "left";
@@ -1228,8 +1288,8 @@
     ctx.lineWidth = 4;
     ctx.strokeStyle = "rgba(0,0,0,0.45)";
     ctx.fillStyle = "#ffffff";
-    ctx.strokeText("HIT LINE", centerX - 360, player.y + 16);
-    ctx.fillText("HIT LINE", centerX - 360, player.y + 16);
+    ctx.strokeText("HIT LINE", centerX - layout.hitLineHalf + 5, player.y + 16);
+    ctx.fillText("HIT LINE", centerX - layout.hitLineHalf + 5, player.y + 16);
     ctx.restore();
 
     ctx.restore();
@@ -1944,7 +2004,7 @@
     keys.delete(e.code);
   });
 
-  canvas.addEventListener("mousemove", (e) => setMouseLateral(e.clientX));
+  canvas.addEventListener("mousemove", (e) => setPointerLateral(e.clientX));
   canvas.addEventListener("mousedown", (e) => {
     const p = getCanvasPoint(e.clientX, e.clientY);
     if (isInsideMenuButton(p.x, p.y)) {
@@ -1952,22 +2012,26 @@
       return;
     }
 
-    setMouseLateral(e.clientX);
+    setPointerLateral(e.clientX);
     if (state === STATE.TITLE) startNewGame();
   });
 
   canvas.addEventListener("touchstart", (e) => {
     if (!e.touches.length) return;
-    const touch = e.touches[0];
-    const p = getCanvasPoint(touch.clientX, touch.clientY);
-    if (isInsideMenuButton(p.x, p.y)) {
-      e.preventDefault();
+    const result = handleTouchControl(e.touches[0]);
+    e.preventDefault();
+    if (result === "menu") {
       goToMenu();
       return;
     }
-
-    setMouseLateral(touch.clientX);
     if (state === STATE.TITLE) startNewGame();
+  }, { passive: false });
+
+  canvas.addEventListener("touchmove", (e) => {
+    if (!e.touches.length) return;
+    const result = handleTouchControl(e.touches[0]);
+    e.preventDefault();
+    if (result === "menu") return;
   }, { passive: false });
 
   initClouds();
