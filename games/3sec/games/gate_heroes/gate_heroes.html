@@ -1012,7 +1012,7 @@
 
       if (stage < maxStage) {
         addText(`STAGE ${stage} CLEAR!`, centerX, 315, "#34c759", 70, 1.5);
-        addText("PRESS ENTER FOR NEXT STAGE", centerX, 380, "#2f80ed", 34, 1.8);
+        addText("TAP OR PRESS ENTER FOR NEXT STAGE", centerX, 380, "#2f80ed", 34, 1.8);
       } else {
         addText("GAME CLEAR!", centerX, 315, "#34c759", 78, 1.8);
       }
@@ -1132,12 +1132,12 @@
       drawUI();
 
       if (state === STATE.PAUSED) drawOverlay("PAUSED", "Press P to Resume", "#333333");
-      if (state === STATE.GAMEOVER) drawOverlay("GAME OVER", `Score: ${score}   Choose better gates. Press R to Retry`, "#eb5757");
+      if (state === STATE.GAMEOVER) drawOverlay("GAME OVER", `Score: ${score}   Tap or press R to Retry`, "#eb5757");
       if (state === STATE.CLEAR) {
         if (stage < maxStage) {
-          drawOverlay(`STAGE ${stage} CLEAR!`, `Score: ${score}   Press Enter for Stage ${stage + 1} - Try another gate route`, "#34c759");
+          drawOverlay(`STAGE ${stage} CLEAR!`, `Score: ${score}   Tap or press Enter for Stage ${stage + 1}`, "#34c759");
         } else {
-          drawOverlay("GAME CLEAR!", `Score: ${score}   Max Combo: ${maxCombo}   Press R to Play Again`, "#34c759");
+          drawOverlay("GAME CLEAR!", `Score: ${score}   Max Combo: ${maxCombo}   Tap or press R to Play Again`, "#34c759");
         }
       }
     }
@@ -1971,14 +1971,35 @@
     requestAnimationFrame(loop);
   }
 
+  function handlePrimaryAction() {
+    if (state === STATE.TITLE) {
+      startNewGame();
+      return true;
+    }
+
+    if (state === STATE.CLEAR) {
+      if (stage < maxStage) {
+        stage++;
+        startStage(true);
+      } else {
+        startNewGame();
+      }
+      return true;
+    }
+
+    if (state === STATE.GAMEOVER) {
+      startNewGame();
+      return true;
+    }
+
+    return false;
+  }
+
   window.addEventListener("keydown", (e) => {
     keys.add(e.code);
 
-    if (e.code === "Enter" && state === STATE.TITLE) {
-      startNewGame();
-    } else if (e.code === "Enter" && state === STATE.CLEAR && stage < maxStage) {
-      stage++;
-      startStage(true);
+    if (e.code === "Enter") {
+      handlePrimaryAction();
     }
 
     if (e.code === "KeyR" && (state === STATE.GAMEOVER || state === STATE.CLEAR)) {
@@ -2012,8 +2033,8 @@
       return;
     }
 
+    if (handlePrimaryAction()) return;
     setPointerLateral(e.clientX);
-    if (state === STATE.TITLE) startNewGame();
   });
 
   canvas.addEventListener("touchstart", (e) => {
@@ -2024,7 +2045,7 @@
       goToMenu();
       return;
     }
-    if (state === STATE.TITLE) startNewGame();
+    handlePrimaryAction();
   }, { passive: false });
 
   canvas.addEventListener("touchmove", (e) => {
