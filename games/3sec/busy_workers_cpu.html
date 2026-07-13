@@ -1,0 +1,3224 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Busy Workers - Visual Upgrade v77</title><style>
+
+  :root{
+    --bg:#efe2c9;
+    --panel:#fff8e8;
+    --card:#fffdf5;
+    --ink:#2d2418;
+    --muted:#6f6049;
+    --line:#9b7b4d;
+    --accent:#5f7f4f;
+    --danger:#9b3b2f;
+    --good:#2e6b4f;
+    --shadow:rgba(62,42,18,.18);
+    --c1:#dff1d7;
+    --c2:#d9ebfa;
+    --c3:#fff0b8;
+    --c4:#ffd9a8;
+    --c5:#f7b8a8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,#f4ead5 0%,var(--bg) 100%);
+  }
+  header{
+    position:sticky;top:0;z-index:10;
+    background:rgba(255,248,232,.96);
+    border-bottom:2px solid var(--line);
+    box-shadow:0 2px 10px var(--shadow);
+    padding:10px 14px;
+  }
+  h1{margin:0;font-size:26px;letter-spacing:.02em;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  h1 small{font-size:14px;color:var(--muted);font-weight:600}
+  .status{
+    display:grid;
+    grid-template-columns:repeat(10,minmax(90px,1fr));
+    gap:6px;margin-top:8px;
+  }
+  .stat{
+    border:1px solid #d1b98b;background:#fffdf5;border-radius:8px;padding:6px 8px;
+    min-height:45px;
+  }
+  .stat .label{font-size:11px;color:var(--muted)}
+  .stat .value{font-size:18px;font-weight:800}
+  .toolbar{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  button{
+    cursor:pointer;border:1px solid #6b5434;background:#fffaf0;color:var(--ink);
+    border-radius:8px;padding:7px 10px;font-weight:700;box-shadow:0 1px 0 #fff inset;
+  }
+  button:hover{background:#fff2cc}
+  button.primary{background:#e5f0dc;border-color:#547242;color:#203b22}
+  button.danger{background:#f7ddd8;border-color:#9b3b2f;color:#6f2018}
+  button.small{font-size:12px;padding:5px 7px}
+  button:disabled{opacity:.45;cursor:not-allowed;background:#eee}
+  main{
+    display:grid;
+    grid-template-columns:380px minmax(420px,1fr) 340px;
+    gap:12px;padding:12px;max-width:1480px;margin:0 auto;
+  }
+  section{
+    background:rgba(255,248,232,.62);
+    border:1px solid #c5a978;border-radius:12px;padding:10px;min-height:200px;
+  }
+  h2{margin:0 0 8px;font-size:18px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  h2 span{font-size:12px;color:var(--muted);font-weight:600}
+  .cards{display:grid;gap:8px}
+  .building-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+  .hand-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+  .card,.workplace{
+    background:var(--card);border:2px solid var(--line);border-radius:10px;padding:8px;
+    box-shadow:0 3px 8px var(--shadow);position:relative;overflow:hidden;
+  }
+  .card.used{opacity:.55;filter:grayscale(.1)}
+  .card.selected{outline:4px solid #3a7fb6}
+  .card.clickable{cursor:pointer}
+  .card.clickable:hover{outline:3px solid #7aa36a}
+  .card .top,.workplace .top{
+    margin:-8px -8px 7px;padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.18);
+    display:flex;justify-content:space-between;align-items:center;gap:6px;
+    font-weight:900;
+  }
+  .cost1 .top{background:var(--c1)}
+  .cost2 .top{background:var(--c2)}
+  .cost3 .top{background:var(--c3)}
+  .cost4 .top{background:var(--c4)}
+  .cost5 .top{background:var(--c5)}
+  .workplace.used{opacity:.55;filter:grayscale(.1)}
+  .workplace .top{background:#ead6ad}
+  .name{font-size:15px;line-height:1.2}
+  .badge{font-size:12px;border:1px solid rgba(0,0,0,.25);border-radius:999px;padding:2px 6px;background:rgba(255,255,255,.55);white-space:nowrap}
+  .meta{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0}
+  .tag{font-size:11px;background:#eee0c8;border:1px solid #ceb58c;border-radius:999px;padding:2px 5px;color:#4b3d28}
+  .effect{font-size:13px;line-height:1.35;color:#372d20;min-height:34px}
+  .actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+  .hint{font-size:12px;color:var(--muted);line-height:1.45;margin:4px 0 8px}
+  .log{
+    max-height:210px;overflow:auto;background:#fffdf5;border:1px solid #c9b080;border-radius:10px;padding:8px;
+    font-size:13px;line-height:1.45;
+  }
+  .log p{margin:0 0 4px;border-bottom:1px dotted #dfcfac;padding-bottom:3px}
+  .bottom{max-width:1480px;margin:0 auto 18px;padding:0 12px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-back{
+    position:fixed;inset:0;background:rgba(30,20,10,.52);display:none;align-items:center;justify-content:center;z-index:100;
+  }
+  .modal{
+    width:min(900px,92vw);max-height:86vh;overflow:auto;background:#fff8e8;border:3px solid #6b5434;border-radius:14px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.35);
+  }
+  .modal h3{margin:0 0 8px;font-size:20px}
+  .modal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin:10px 0}
+  .choice{border:2px solid #c5a978;background:#fffdf5;border-radius:10px;padding:8px;cursor:pointer}
+  .choice.selected{outline:4px solid #3a7fb6}
+  .choice.disabled{opacity:.45;cursor:not-allowed}
+  .scorebox{background:#fffdf5;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:14px}
+  .scorebox table{width:100%;border-collapse:collapse}
+  .scorebox td{border-bottom:1px dotted #d8c39a;padding:5px}
+  .scorebox td:last-child{text-align:right;font-weight:800}
+  .final{font-size:24px;font-weight:900;color:var(--good)}
+  .summary{margin-top:10px;border-top:2px solid var(--line);padding-top:8px}
+  .summary h3{margin:6px 0;font-size:16px}
+  .summary small{color:var(--muted)}
+  .warn{color:var(--danger);font-weight:800}
+  .ok{color:var(--good);font-weight:800}
+  @media(max-width:1100px){main{grid-template-columns:1fr}.status{grid-template-columns:repeat(3,1fr)}.bottom{grid-template-columns:1fr}.hand-grid,.building-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}
+
+.player-area{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:1480px;margin:0 auto 12px;padding:0 12px}.player-panel{background:rgba(255,248,232,.62);border:1px solid #c5a978;border-radius:12px;padding:10px}.workplace.used{opacity:.45;filter:grayscale(.5)}.workplace.multi{border-style:dashed}.current-turn{font-weight:900;color:#7a3d1a}.cpu-card .actions button{display:none}.owner{font-size:11px;color:var(--muted);font-weight:800}@media(max-width:1100px){.player-area{grid-template-columns:1fr}}
+
+
+/* ===== Visual Upgrade v77 ===== */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(90,62,25,.05) 1px,transparent 1px);background-size:18px 18px;opacity:.35;z-index:-1}
+header{background:rgba(255,250,238,.97)}
+.status{grid-template-columns:repeat(6,minmax(115px,1fr))}
+.stat{position:relative;overflow:hidden;background:linear-gradient(180deg,#fffef9,#f8edd7);border:1px solid #cfb27c}
+.stat.major{border-width:2px;box-shadow:0 3px 10px rgba(62,42,18,.14)}
+.stat.turn{background:linear-gradient(180deg,#eef8e8,#dcefd4);border-color:#70945e}
+.stat.warnstat{background:linear-gradient(180deg,#fff4e8,#f7dccb);border-color:#b47355}
+.stat .value{line-height:1.15}
+.stat .sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.public-zone{background:linear-gradient(180deg,rgba(255,248,229,.92),rgba(239,222,187,.88));border:2px solid #b48b4f}
+.human-zone,.hand-zone{background:linear-gradient(180deg,rgba(241,250,237,.94),rgba(221,239,213,.88));border:2px solid #72915f}
+.cpu-zone{background:linear-gradient(180deg,rgba(255,244,239,.94),rgba(242,220,211,.88));border:2px solid #a57565}
+body.human-turn .human-zone,body.human-turn .hand-zone{box-shadow:0 0 0 3px rgba(87,132,70,.22),0 8px 22px rgba(62,42,18,.12)}
+body.cpu-turn .cpu-zone{box-shadow:0 0 0 3px rgba(151,91,72,.2),0 8px 22px rgba(62,42,18,.12)}
+
+.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.card,.workplace{display:flex;flex-direction:column;min-height:150px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.card .effect,.workplace .effect{flex:1}
+.card .actions,.workplace .actions{margin-top:auto}
+.workplace.available,.card.available{border-color:#4f8c52;box-shadow:0 0 0 3px rgba(79,140,82,.16),0 7px 14px rgba(48,80,40,.2);transform:translateY(-2px)}
+.workplace.available:hover,.card.available:hover{transform:translateY(-4px);box-shadow:0 0 0 3px rgba(79,140,82,.2),0 10px 18px rgba(48,80,40,.24)}
+.workplace.used::after,.card.used::after{content:"✓ 使用済";position:absolute;right:7px;bottom:7px;padding:3px 7px;border-radius:999px;background:rgba(80,80,80,.8);color:white;font-size:10px;font-weight:900}
+
+.card-badges{display:flex;gap:4px;align-items:center;white-space:nowrap}
+.cost-badge,.vp-badge,.round-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;border-radius:999px;padding:3px 7px;font-size:12px;font-weight:900;border:1px solid rgba(0,0,0,.22)}
+.cost-badge{background:#fff6cc;color:#5f4610}
+.vp-badge{background:#e6efff;color:#254f85}
+.round-badge{background:#eee2ca;color:#614c2d}
+.resource-row{display:flex;gap:5px;flex-wrap:wrap;margin:5px 0}
+.resource-chip{font-size:11px;background:rgba(255,255,255,.72);border:1px solid #cdb58d;border-radius:999px;padding:3px 7px}
+
+.worker-strip{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.worker{width:15px;height:20px;display:inline-block;position:relative;border-radius:5px 5px 4px 4px;background:#6f965d;box-shadow:inset 0 -2px 0 rgba(0,0,0,.15)}
+.worker::before{content:"";position:absolute;width:9px;height:9px;border-radius:50%;left:3px;top:-6px;background:inherit}
+.worker.used-worker{background:#aaa;opacity:.62}
+.worker.trainee-worker{background:#e1ad3d}
+.worker-label{font-size:11px;color:var(--muted);margin-left:3px}
+
+.turn-banner{font-weight:900;padding:6px 10px;border-radius:999px;background:#e3f1dc;border:1px solid #70945e}
+body.cpu-turn .turn-banner{background:#f4dfd7;border-color:#a57565}
+
+@media(max-width:1250px){.status{grid-template-columns:repeat(3,1fr)}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.status{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:1fr}.building-grid,.hand-grid{grid-template-columns:1fr}.card,.workplace{min-height:0}}
+
+
+  /* v78: 公共職場を見やすくする */
+  main > section:first-child{
+    min-width:0;
+  }
+  #publicPlaces{
+    grid-template-columns:repeat(2,minmax(165px,1fr));
+    gap:10px;
+  }
+  #publicPlaces .workplace{
+    min-height:138px;
+    padding:10px;
+  }
+  #publicPlaces .workplace .top{
+    margin:-10px -10px 8px;
+    padding:8px 10px;
+  }
+  #publicPlaces .effect{
+    font-size:13px;
+    line-height:1.45;
+  }
+  @media(max-width:1280px) and (min-width:1101px){
+    main{grid-template-columns:330px minmax(380px,1fr) 320px;}
+    #publicPlaces{grid-template-columns:1fr;}
+  }
+</style></head><body>
+<header><h1>Busy Workers <small>会社を育てる経済ゲーム / Visual Upgrade v77</small></h1><div class="status" id="status"></div><div class="toolbar"><button class="primary" id="endRoundBtn" disabled>ラウンド終了</button><button id="scoreBtn">得点予測</button><button id="helpBtn">ヘルプ</button><button class="danger" id="newBtn">新規ゲーム</button><span class="hint current-turn" id="phaseHint"></span></div></header>
+<main><section class="public-zone"><h2>公共職場 <span id="publicCount"></span></h2><p class="hint">公共職場は取り合いです。鉱山だけ何度でも使えます。売却された建物も公共職場になります。</p><div class="cards" id="publicPlaces"></div></section><section class="human-zone"><h2>あなたの建物 <span id="buildingCount"></span></h2><p class="hint">建築は大工・建設会社・ゼネコンなどから行います。</p><div class="building-grid" id="buildings"></div></section><section class="hand-zone"><h2>あなたの手札 <span id="handCount"></span></h2><p class="hint">消費財は建築コストや露店・市場・スーパーなどの支払いに使えます。</p><div class="hand-grid" id="hand"></div></section></main>
+<div class="player-area"><section class="player-panel cpu-zone"><h2>CPUの建物 <span id="cpuBuildingCount"></span></h2><div class="building-grid cpu-card" id="cpuBuildings"></div></section><section class="player-panel cpu-zone"><h2>CPUの手札 <span id="cpuHandCount"></span></h2><p class="hint">デバッグしやすいようにCPU手札を表示しています。</p><div class="hand-grid cpu-card" id="cpuHand"></div></section></div>
+<div class="bottom"><section><h2>ログ</h2><div class="log" id="log"></div></section><section><h2>得点・内訳</h2><div id="scoreArea" class="scorebox"></div></section></div><div class="modal-back" id="modalBack"><div class="modal" id="modal"></div></div>
+<script>
+'use strict';
+const MAX_ROUND=9; let uidCounter=1;
+const cardDefinitions = [
+  {id:'farm',name:'農場',cost:1,vp:6,count:8,effectText:'消費財カードを2枚得る。',tags:['farm'],sellable:true,icon:'farm',action:'drawGoods',drawCount:2},
+  {id:'slash_burn',name:'焼畑',cost:1,vp:0,count:2,effectText:'消費財カードを5枚得る。その後この建物は消滅する。',tags:['farm'],sellable:false,icon:'farm',action:'drawGoodsSelfTrash',drawCount:5},
+  {id:'coffee',name:'珈琲店',cost:1,vp:8,count:2,effectText:'家計から$5を得る。',tags:[],sellable:true,icon:'none',action:'gainMoney',amount:5},
+  {id:'design',name:'設計事務所',cost:1,vp:8,count:4,effectText:'山札から5枚公開し、1枚を手札に加え、残りを捨てる。',tags:[],sellable:true,icon:'none',action:'revealChoose',revealCount:5},
+
+  {id:'factory',name:'工場',cost:2,vp:12,count:8,effectText:'手札を2枚捨てて、カードを4枚引く。',tags:['factory'],sellable:true,icon:'factory',action:'discardDraw',discardCount:2,drawCount:4},
+  {id:'builder',name:'建設会社',cost:2,vp:10,count:4,effectText:'建物を1つ建てる。その建築コストを1下げる。',tags:[],sellable:true,icon:'none',action:'buildDiscount',discount:1},
+  {id:'warehouse',name:'倉庫',cost:2,vp:10,count:3,effectText:'手札上限+4。',tags:['handLimit','key'],sellable:false,icon:'none',action:'none'},
+  {id:'law',name:'法律事務所',cost:2,vp:8,count:1,effectText:'終了時、未払い賃金5ドル分までペナルティを免除する。',tags:['bonus','key'],sellable:false,icon:'none',action:'none'},
+  {id:'orchard',name:'果樹園',cost:2,vp:10,count:3,effectText:'手札が4枚になるまで消費財カードを得る。',tags:['farm'],sellable:true,icon:'farm',action:'drawUntilHand',target:4},
+  {id:'housing',name:'社宅',cost:2,vp:8,count:2,effectText:'労働者数上限+1。',tags:['workerLimit','key'],sellable:false,icon:'none',action:'none'},
+
+  {id:'realtor',name:'不動産屋',cost:3,vp:10,count:2,effectText:'終了時、所有建物1つにつき+3点。',tags:['bonus','key'],sellable:false,icon:'none',action:'none'},
+  {id:'settler',name:'開拓民',cost:3,vp:14,count:2,effectText:'手札にある農園系建物を1つ無料で建てる。',tags:['farm'],sellable:true,icon:'none',action:'freeBuildFarm'},
+  {id:'restaurant',name:'レストラン',cost:3,vp:16,count:2,effectText:'カードを1枚支払い、家計から$15を得る。',tags:[],sellable:true,icon:'none',action:'discardGain',discardCount:1,amount:15},
+  {id:'plantation',name:'大農園',cost:3,vp:12,count:3,effectText:'消費財カードを3枚得る。',tags:['farm'],sellable:true,icon:'farm',action:'drawGoods',drawCount:3},
+  {id:'coop',name:'農協',cost:3,vp:12,count:1,effectText:'終了時、残っている消費財カード1枚につき+3点。',tags:['bonus','farm','key'],sellable:false,icon:'none',action:'none'},
+
+  {id:'general_contractor',name:'ゼネコン',cost:4,vp:18,count:3,effectText:'建物を1つ建てる。その後カードを2枚引く。',tags:[],sellable:true,icon:'none',action:'buildThenDraw',drawCount:2},
+  {id:'steel',name:'製鉄所',cost:4,vp:20,count:3,effectText:'カードを3枚引く。',tags:['factory'],sellable:true,icon:'factory',action:'draw',drawCount:3},
+  {id:'mansion',name:'邸宅',cost:4,vp:28,count:1,effectText:'効果なし。高得点建物。',tags:['key'],sellable:false,icon:'none',action:'none'},
+  {id:'chemical',name:'化学工場',cost:4,vp:18,count:2,effectText:'カードを2枚引く。手札が0枚なら4枚引く。',tags:['factory'],sellable:true,icon:'factory',action:'chemicalDraw'},
+  {id:'union',name:'労働組合',cost:4,vp:0,count:1,effectText:'終了時、労働者1人につき+6点。',tags:['bonus','key'],sellable:false,icon:'none',action:'none'},
+
+  {id:'auto_factory',name:'自動車工場',cost:5,vp:24,count:3,effectText:'手札を3枚捨て、カードを7枚引く。',tags:['factory'],sellable:true,icon:'factory',action:'discardDraw',discardCount:3,drawCount:7},
+  {id:'hq',name:'本社ビル',cost:5,vp:20,count:1,effectText:'終了時、所有するカギタグ1つにつき+6点。',tags:['bonus','key'],sellable:false,icon:'none',action:'none'},
+  {id:'nikoshi',name:'二胡市建設',cost:5,vp:20,count:2,effectText:'同じコストの建物を2つ建てる。コストは1つ分だけ支払う。',tags:[],sellable:true,icon:'none',action:'buildTwoSameCost'},
+  {id:'railway',name:'鉄道',cost:5,vp:18,count:1,effectText:'終了時、所有する工場タグ1つにつき+8点。',tags:['bonus','key'],sellable:false,icon:'none',action:'none'}
+];
+const publicPlacesDef = [
+  {id:'mine',name:'鉱山',round:1,effectText:'カードを1枚引く。',action:'draw',drawCount:1},
+  {id:'quarry',name:'採石所',round:1,effectText:'カードを1枚引く。さらに次ラウンドの先手を取る。1人しか入れません。',action:'drawNextFirst',drawCount:1},
+  {id:'carpenter',name:'大工',round:1,effectText:'手札から建物を1つ建てる。',action:'build'},
+  {id:'school',name:'学校',round:1,effectText:'労働者を1人増やす。最大労働者数を超えられない。増えた労働者は研修中になり、次ラウンドから使える。',action:'setWorkers',amount:1},
+  {id:'stall',name:'露店',round:2,effectText:'カードを1枚支払い、家計から$6を得る。',action:'discardGain',discardCount:1,amount:6},
+  {id:'market',name:'市場',round:3,effectText:'カードを2枚支払い、家計から$12を得る。',action:'discardGain',discardCount:2,amount:12},
+  {id:'highschool',name:'高等学校',round:4,effectText:'労働者を4人まで増やす。増えた労働者は研修中になり、次ラウンドから使える。',action:'setWorkers',target:4},
+  {id:'supermarket',name:'スーパーマーケット',round:5,effectText:'カードを3枚支払い、家計から$18を得る。',action:'discardGain',discardCount:3,amount:18},
+  {id:'university',name:'大学',round:6,effectText:'労働者を5人まで増やす。増えた労働者は研修中になり、次ラウンドから使える。',action:'setWorkers',target:5},
+  {id:'department',name:'百貨店',round:7,effectText:'カードを4枚支払い、家計から$24を得る。',action:'discardGain',discardCount:4,amount:24},
+  {id:'vocational',name:'専門学校',round:8,effectText:'労働者を1人増やす。このラウンドからすぐ働ける。',action:'addWorkerNow',amount:1},
+  {id:'expo',name:'万博',round:9,effectText:'カードを5枚支払い、家計から$30を得る。',action:'discardGain',discardCount:5,amount:30}
+];
+publicPlacesDef.forEach(p=>{p.multiUse=p.id==='mine';});
+const game={round:1,maxRound:MAX_ROUND,household:0,deck:[],discard:[],publicBuildings:[],publicUsed:{},currentPlayerIndex:0,firstPlayerIndex:0,nextFirstPlayerIndex:null,players:[],log:[],gameOver:false,thinking:false,actionLock:false,roundEndReady:false,gameStats:{startTime:Date.now(),cpuDecisionLogs:0}};
+const $=id=>document.getElementById(id);
+const humanPlayer=()=>game.players.find(p=>!p.isCPU); const cpuPlayer=()=>game.players.find(p=>p.isCPU); const currentPlayer=()=>game.players[game.currentPlayerIndex]; const otherIndex=i=>i===0?1:0;
+function totalHandCount(p){return p.hand.length+p.goods;} function handLimit(p){return 5+p.buildings.filter(b=>b.id==='warehouse').length*4;} function workerLimit(p){return 5+p.buildings.filter(b=>b.id==='housing').length;} function totalWorkersIncludingTraining(p){return (p.workers||0)+(p.traineeWorkers||0);} function currentWage(){return [0,2,2,3,3,4,4,5,5,5][game.round]||5;}
+function addLog(m){game.log.unshift(m); if(game.log.length>220) game.log.length=220;} function escapeHtml(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function makeStats(){return{maxWorkers:0,actions:0,incomeActions:0,buildActions:0,workerActions:0,quarryActions:0,drawActions:0,goodsActions:0,lateLowVpBuilds:0,soldBuildings:0,unpaidEvents:0,unpaidAmount:0,roundsWithShortage:0,roundsPayFull:0,modeDanger:0,modeSafe:0,modeAttack:0,decisionLogCount:0,dangerBuildActions:0,dangerWorkerActions:0,dangerNonIncomeWithIncomeAvailable:0,cashActionSkipped:0,buildWhenCannotPayCash:0,wageRiskWorseActions:0,wageRiskBetterActions:0,stableActionLogs:0};}
+function ensureStats(p){if(!p.stats)p.stats=makeStats();return p.stats;}
+function updateStatsSnapshot(p){const st=ensureStats(p);st.maxWorkers=Math.max(st.maxWorkers,p.workers||0);}
+function trackActionStats(p,s){const st=ensureStats(p);st.actions++; if(!s)return; if(['gainMoney','discardGain'].includes(s.action))st.incomeActions++; if(cpuIsBuildAction && cpuIsBuildAction(s))st.buildActions++; if(['setWorkers','addWorkerNow'].includes(s.action))st.workerActions++; if(s.action==='drawNextFirst')st.quarryActions++; if(['draw','discardDraw','revealChoose','chemicalDraw'].includes(s.action))st.drawActions++; if(['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(s.action))st.goodsActions++;}
+function trackBuiltCardStats(p,card){if(!card)return;const st=ensureStats(p); if(game.round>=7 && card.vp<12)st.lateLowVpBuilds++; updateStatsSnapshot(p);}
+function playerSummaryObject(p){const st=ensureStats(p);const sc=score(p);return{score:sc.total,workers:p.workers,maxWorkers:st.maxWorkers,buildings:p.buildings.length,buildingVp:sc.buildingVp,money:p.money,goods:p.goods,sold:st.soldBuildings||p.soldBuildings||0,unpaidEvents:st.unpaidEvents,unpaidAmount:st.unpaidAmount,incomeActions:st.incomeActions,buildActions:st.buildActions,workerActions:st.workerActions,quarryActions:st.quarryActions,lateLowVpBuilds:st.lateLowVpBuilds,dangerBuildActions:st.dangerBuildActions||0,dangerWorkerActions:st.dangerWorkerActions||0,dangerNonIncomeWithIncomeAvailable:st.dangerNonIncomeWithIncomeAvailable||0,wageRiskWorseActions:st.wageRiskWorseActions||0,wageRiskBetterActions:st.wageRiskBetterActions||0};}
+
+function cloneCard(d){return {...d,uid:'c'+(uidCounter++),used:false,publicOwner:null};} function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;} function buildDeck(){const d=[];cardDefinitions.forEach(def=>{for(let i=0;i<def.count;i++)d.push(cloneCard(def));});return shuffle(d);}
+function initGame(){uidCounter=1;Object.assign(game,{round:1,household:0,deck:buildDeck(),discard:[],publicBuildings:[],publicUsed:{},nextFirstPlayerIndex:null,log:[],gameOver:false,thinking:false,actionLock:false,roundEndReady:false,processingRoundEnd:false}); const h={id:'human',name:'あなた',isCPU:false,money:5,workers:2,availableWorkers:2,traineeWorkers:0,goods:0,unpaidWages:0,soldBuildings:0,hand:[],buildings:[]}; const c={id:'cpu',name:'CPU',isCPU:true,money:5,workers:2,availableWorkers:2,traineeWorkers:0,goods:0,unpaidWages:0,soldBuildings:0,hand:[],buildings:[]}; game.players=[h,c]; game.firstPlayerIndex=Math.random()<.5?0:1; game.currentPlayerIndex=game.firstPlayerIndex; game.players[game.firstPlayerIndex].money=5; game.players[otherIndex(game.firstPlayerIndex)].money=6; drawCards(h,3,false); drawCards(c,3,false); addLog(`先手は${game.players[game.firstPlayerIndex].name}です。先手は$5、後手は$6で開始します。`); addLog('初期手札は両者3枚、家計$0、労働者2人です。'); render(); if(currentPlayer().isCPU) scheduleCpuTurn(600);}
+function drawCards(p,n,log=true){let d=0;for(let i=0;i<n;i++){if(game.deck.length===0&&game.discard.length>0){game.deck=shuffle(game.discard.splice(0));addLog('捨て札をシャッフルして山札に戻しました。');} if(game.deck.length===0)break; p.hand.push(game.deck.pop());d++;} if(log)addLog(`${p.name}はカードを${d}枚引きました。`);return d;} function gainGoods(p,n){n=Math.max(0,n|0);p.goods+=n;addLog(`${p.name}は消費財カードを${n}枚得ました。現在${p.goods}枚です。`);} function gainFromHousehold(p,a){if(game.household<a){addLog(`家計に$${a}がないため使えません。現在$${game.household}です。`);return false;}p.money+=a;game.household-=a;addLog(`${p.name}は家計から$${a}を得ました。`);return true;}
+function publicSources(){return publicPlacesDef.filter(p=>game.round>=p.round).map(p=>({...p,_key:p.id,sourceType:'public'})).concat(game.publicBuildings.map(b=>({...b,name:b.name+'（公共化）',_key:'sold_'+b.uid,sourceType:'sold',round:1,multiUse:false})));} function pkey(s){return s._key||s.id;} function usedPublic(s){return !!game.publicUsed[pkey(s)];} function markPublic(s){if(!s.multiUse)game.publicUsed[pkey(s)]=true;} function unmarkPublic(s){if(!s.multiUse)delete game.publicUsed[pkey(s)];}
+function normalizePlayer(p){
+  if(!p)return;
+  p.workers=Math.max(0, p.workers|0);
+  p.traineeWorkers=Math.max(0, p.traineeWorkers||0);
+  const cap=workerLimit(p);
+  if(p.workers>cap)p.workers=cap;
+  if(p.workers+p.traineeWorkers>cap)p.traineeWorkers=Math.max(0,cap-p.workers);
+  p.availableWorkers=Math.max(0, Math.min(p.availableWorkers|0, p.workers));
+}
+function normalizeAllPlayers(){game.players.forEach(normalizePlayer);}
+function spendWorker(p){
+  normalizePlayer(p);
+  if(p.availableWorkers<=0){addLog(`${p.name}には未配置労働者がいません。`);return false;}
+  p.availableWorkers--;
+  normalizePlayer(p);
+  return true;
+}
+function refundWorker(p){
+  normalizePlayer(p);
+  p.availableWorkers++;
+  normalizePlayer(p);
+}
+function canPay(p,n){return totalHandCount(p)>=n;} function canGain(a){return game.household>=a;} function highCost(p){return p.hand.some(c=>c.cost>=4);} function countKey(p){return p.buildings.filter(b=>b.tags.includes('key')).length;} function countFactoryIcon(p){return p.buildings.filter(b=>b.icon==='factory').length;}
+function evalCard(card,p){
+  let s=card.vp-card.cost*2;
+  const r=game.round;
+  if(card.vp>=18)s+=r>=7?18:6;
+  if(card.vp>=24)s+=r>=7?28:8;
+  // v39: 農場は序盤の燃料。ラウンド5以降に新しく建てる価値は低めにする。
+  if(card.id==='farm')s+=r<=4?14:(r<=6?-18:-45);
+  if(card.id==='plantation')s+=r<=6?16:(r<=8?7:1);
+  if(card.id==='factory')s+=r<=7?14:6;
+  if(card.id==='warehouse')s+=r<=5?10:1;
+  if(card.id==='housing')s+=r<=5?18:(r<=6?6:-10);
+  if(card.id==='builder')s+=r<=7?13:4;
+  if(card.id==='general_contractor')s+=r<=8?16:6;
+  if(card.id==='mansion')s+=r>=7?22:0;
+  if(card.id==='realtor')s+=p.buildings.length*3 + (r>=7?12:0);
+  if(card.id==='union')s+=p.workers*6 + (r>=7?8:0);
+  if(card.id==='hq')s+=countKey(p)*6 + (r>=7?10:0);
+  if(card.id==='railway')s+=countFactoryIcon(p)*8 + (r>=7?10:0);
+  // v36: 人間ログ由来の優先カードを、単なる点数以上に評価する。
+  s += cpuPriorityCardBonus(card, p);
+  return s;
+}
+// ===== v44: 終盤の低価値建築を抑える =====
+// v43では守備から建設へ戻る力が強すぎて、ラウンド6以降に農場・珈琲店・焼畑まで
+// 建ててすぐ売る動きが出た。CPUだけ、建築候補を選ぶ時にカード品質を強く見る。
+function cpuLateBuildQualityAdjustment(card,p,discount=0){
+  if(!card || !p || !p.isCPU)return 0;
+  const r=game.round;
+  let adj=0;
+  if(r>=5 && card.id==='slash_burn')adj-=2200;
+  if(r>=6 && ['farm','coffee'].includes(card.id))adj-=1300;
+  if(r>=6 && ['warehouse','housing'].includes(card.id))adj-=700;
+  if(r>=7 && card.vp<12)adj-=1500;
+  if(r>=7 && card.sellable && card.vp<=10)adj-=1800;
+  if(r>=6 && ['factory','steel','chemical','auto_factory','restaurant','builder','general_contractor','nikoshi','mansion','hq','railway','union','realtor'].includes(card.id))adj+=320;
+  if(r>=7 && card.vp>=16)adj+=260;
+  if(r>=7 && card.vp>=18)adj+=220;
+  if(r>=8 && card.vp>=20)adj+=220;
+  return adj;
+}
+function cpuLateBuildTargetIsGood(card,p){
+  if(!card)return false;
+  if(game.round<6)return true;
+  return cpuLateBuildQualityAdjustment(card,p,0)>-500;
+}
+function cpuBuildChoiceValue(card,p,discount=0){
+  let v=evalCard(card,p);
+  if(p&&p.isCPU)v+=cpuLateBuildQualityAdjustment(card,p,discount);
+  return v;
+}
+function bestBuild(p,discount=0,filter=null){
+  const cs=p.hand.filter(c=>(!filter||filter(c)) && totalHandCount(p)-1>=Math.max(0,c.cost-(discount>=999?c.cost:discount)));
+  return cs.sort((a,b)=>cpuBuildChoiceValue(b,p,discount)-cpuBuildChoiceValue(a,p,discount))[0]||null;
+} function canBuildTwo(p){const m={};p.hand.forEach(c=>m[c.cost]=(m[c.cost]||0)+1);return Object.keys(m).some(k=>m[k]>=2 && totalHandCount(p)-2>=Number(k));}
+function drawableCardsAvailable(){return game.deck.length+game.discard.length;}
+function needsDrawableCards(s){return ['draw','drawNextFirst','revealChoose','chemicalDraw'].includes(s.action);}
+function canExecute(p,s){if(s.action==='none')return false; if(needsDrawableCards(s)&&drawableCardsAvailable()<=0)return false; if(['gainMoney','discardGain'].includes(s.action)&&s.amount&&!canGain(s.amount))return false; if(['discardGain','discardDraw'].includes(s.action)&&!canPay(p,s.discardCount||0))return false; if(s.action==='setWorkers')return s.amount?totalWorkersIncludingTraining(p)<workerLimit(p):totalWorkersIncludingTraining(p)<Math.min(s.target||0,workerLimit(p)); if(s.action==='addWorkerNow')return totalWorkersIncludingTraining(p)<workerLimit(p); if(s.action==='build')return !!bestBuild(p,0,null); if(s.action==='buildDiscount')return !!bestBuild(p,s.discount||1,null); if(s.action==='buildThenDraw')return !!bestBuild(p,0,null); if(s.action==='freeBuildFarm')return !!bestBuild(p,999,c=>c.icon==='farm'); if(s.action==='buildTwoSameCost')return canBuildTwo(p); return true;}
+function cannotReason(p,s){
+  if(needsDrawableCards(s)&&drawableCardsAvailable()<=0)return `${s.name}は山札・捨て札が空のため、カードを引けません。`;
+  if(['gainMoney','discardGain'].includes(s.action)&&s.amount&&!canGain(s.amount))return `${s.name}は家計不足です。必要$${s.amount}、現在$${game.household}です。`;
+  if(['discardGain','discardDraw'].includes(s.action)&&!canPay(p,s.discardCount||0))return `${s.name}にはカード${s.discardCount}枚が必要です。建物${p.hand.length}枚＋消費財${p.goods}枚です。`;
+  if(s.action==='build')return buildCannotReason(p,0,null,s.name);
+  if(s.action==='buildDiscount')return buildCannotReason(p,s.discount||1,null,s.name);
+  if(s.action==='buildThenDraw')return buildCannotReason(p,0,null,s.name);
+  if(s.action==='freeBuildFarm')return buildCannotReason(p,999,c=>c.icon==='farm',s.name);
+  if(s.action==='buildTwoSameCost')return canBuildTwo(p)?`${s.name}は現在使えません。`:`${s.name}は同じコストの建物カード2枚と支払いカードが足りません。`;
+  if(s.action==='setWorkers')return `${s.name}は現在の労働者数・研修中労働者数では増やせません。`;
+  if(s.action==='addWorkerNow')return `${s.name}は社宅を含む労働者上限に達しているため使えません。`;
+  return `${s.name}は現在使えません。`;
+}
+function buildCannotReason(p,discount=0,filter=null,name='建築'){
+  const candidates=p.hand.filter(c=>!filter||filter(c));
+  if(candidates.length===0)return `${name}で建てられる建物カードが手札にありません。`;
+  const affordable=candidates.filter(c=>totalHandCount(p)-1>=Math.max(0,c.cost-(discount>=999?c.cost:discount)));
+  if(!affordable.length){
+    const best=candidates.slice().sort((a,b)=>Math.max(0,a.cost-(discount>=999?a.cost:discount))-Math.max(0,b.cost-(discount>=999?b.cost:discount)))[0];
+    const need=Math.max(0,best.cost-(discount>=999?best.cost:discount));
+    return `${name}で建てるには支払いカードが足りません。最小必要${need}枚分、現在は建物${p.hand.length-1}枚＋消費財${p.goods}枚です。`;
+  }
+  return `${name}は現在使えません。`;
+}
+function discardHand(p,uids){uids.forEach(uid=>{const i=p.hand.findIndex(c=>c.uid===uid);if(i>=0)game.discard.push(p.hand.splice(i,1)[0]);});}
+function cpuProtectedCard(card,p){
+  if(!card)return false;
+  if(card.vp>=18)return true;
+  if(['mansion','hq','railway','union','realtor','auto_factory','general_contractor','builder','nikoshi','factory','steel','chemical','restaurant','orchard','plantation'].includes(card.id))return true;
+  if(cpuPriorityCardTier(card)>=4)return true;
+  if(game.round>=7 && card.vp>=16)return true;
+  // v64: ここで cpuBuildPlan() を呼ぶと、
+  // cpuBuildPlan -> evalCard -> cpuPriorityCardBonus -> 二胡市ペア判定 -> lowCards -> cpuDiscardValue -> cpuProtectedCard
+  // の循環で Maximum call stack size exceeded になることがあるため、保護判定は単純条件だけにする。
+  return false;
+}
+function cpuDiscardValueBasic(card,p){
+  if(!card)return 0;
+  let v=card.vp + card.cost*0.5;
+  const tier=cpuPriorityCardTier(card);
+  if(card.vp>=18)v+=120;
+  if(['mansion','hq','railway','union','realtor','auto_factory','general_contractor','builder','nikoshi','factory','steel','chemical','restaurant','orchard','plantation'].includes(card.id))v+=120;
+  if(tier>=4)v+=180;
+  if(tier===3)v+=90;
+  if(game.round>=7 && card.vp>=14)v+=30;
+  if(card.id==='farm'&&game.round>=7)v-=20;
+  if(card.id==='warehouse'&&game.round>=7)v-=15;
+  return v;
+}
+function cpuDiscardValue(card,p){
+  // v64: 捨て札評価では evalCard() を使わない。evalCard() 側が二胡市評価で lowCards() を呼ぶため、再帰事故を避ける。
+  let v=cpuDiscardValueBasic(card,p);
+  if(cpuProtectedCard(card,p))v+=120;
+  return v;
+}
+function lowCards(p,n,exclude=[]){return p.hand.filter(c=>!exclude.includes(c.uid)).sort((a,b)=>cpuDiscardValue(a,p)-cpuDiscardValue(b,p)||a.cost-b.cost).slice(0,n);} 
+function lowCardsBasic(p,n,exclude=[]){return p.hand.filter(c=>!exclude.includes(c.uid)).sort((a,b)=>cpuDiscardValueBasic(a,p)-cpuDiscardValueBasic(b,p)||a.cost-b.cost).slice(0,n);} 
+function autoPay(p,cost,exclude=[]){let g=Math.min(p.goods,cost);p.goods-=g;let r=cost-g;if(r>0)discardHand(p,lowCards(p,r,exclude).map(c=>c.uid));addLog(`${p.name}は支払いとして消費財${g}枚、建物カード${r}枚を使いました。`);}
+function buildCard(p,uid,cost,payUids,goodsUsed){const i=p.hand.findIndex(c=>c.uid===uid);if(i<0)return false;if(payUids.length+goodsUsed!==cost||p.goods<goodsUsed)return false;const card=p.hand.splice(i,1)[0];p.goods-=goodsUsed;discardHand(p,payUids);card.used=false;if(p.isCPU&&['builder','general_contractor'].includes(card.id)){card.needsFirstUse=true;card.builtRound=game.round;}p.buildings.push(card);trackBuiltCardStats(p,card);addLog(`${p.name}は${card.name}を建てました。コストは建物カード${payUids.length}枚、消費財${goodsUsed}枚です。`);return true;} function cpuBuild(p,card,discount=0){const cost=discount>=999?0:Math.max(0,card.cost-discount);const g=Math.min(p.goods,cost);const r=cost-g;const pay=lowCards(p,r,[card.uid]).map(c=>c.uid);buildCard(p,card.uid,cost,pay,g);}
+// v58: 公共化した工場・レストラン・建築系など、支払い/選択モーダルを開く行動は
+// watchdogで途中復帰させない。v57では1.5秒watchdogがモーダル待ちを「停止」と誤判定し、
+// 労働者だけ使用済み・効果なしに見える事故が起きた。
+function humanPublicActionMayWaitForChoice(s){
+  return ['discardGain','discardDraw','build','buildDiscount','buildThenDraw','revealChoose','freeBuildFarm','buildTwoSameCost'].includes(s.action);
+}
+function isModalOpen(){
+  const m=$('modalBack');
+  return !!m && m.style.display==='flex';
+}
+function usePublic(id){
+  const p=currentPlayer();
+  if(recoverHumanInputIfStale(true))render();
+  if(p.isCPU||game.thinking||game.actionLock||game.gameOver)return;
+  const s=publicSources().find(x=>pkey(x)===id||x.id===id);
+  if(!s)return;
+  if(!s.multiUse&&usedPublic(s)){addLog('その公共職場は使用済みです。');render();return;}
+  if(!canExecute(p,s)){addLog(cannotReason(p,s));render();return;}
+  if(!spendWorker(p)){render();return;}
+  game.actionLock=true;
+  markPublic(s);
+
+  let settled=false;
+  const mayWait=humanPublicActionMayWaitForChoice(s);
+  const clearAndSettle=()=>{settled=true;if(humanWatchdog)clearTimeout(humanWatchdog);};
+  const humanWatchdog=mayWait?null:setTimeout(()=>{
+    if(settled || game.gameOver || isModalOpen())return;
+    clearAndSettle();
+    addLog(`${s.name}の処理が止まったため、安全復帰しました。`);
+    unmarkPublic(s);
+    refundWorker(p);
+    game.thinking=false;
+    game.actionLock=false;
+    render();
+  },2500);
+
+  const ok=()=>{
+    if(settled)return;
+    clearAndSettle();
+    finishAction(p);
+  };
+  const cancel=()=>{
+    if(settled)return;
+    clearAndSettle();
+    unmarkPublic(s);
+    refundWorker(p);
+    game.actionLock=false;
+    render();
+  };
+
+  try{
+    executeAction(p,s,null,ok,cancel);
+    // 支払い/建築/選択系はここでモーダルが開いていれば正常。OK/キャンセルまで待つ。
+    // モーダルが開かなかった場合でも、executeAction内で即時完了するものはok()が呼ばれている。
+    if(mayWait && !settled && !isModalOpen()){
+      addLog(`${s.name}の選択画面を開けなかったため、行動を取り消しました。`);
+      cancel();
+    }
+  }catch(e){
+    console.error('usePublic failed',e);
+    addLog(`${s.name}の処理でエラーが出たため、行動を取り消しました。`);
+    cancel();
+  }
+}
+function useBuilding(uid){
+  const p=humanPlayer();
+  if(recoverHumanInputIfStale(true))render();
+  if(game.thinking||game.actionLock||game.gameOver)return;
+  if(!currentPlayer() || currentPlayer().id!==p.id){addLog('今はあなたの手番ではありません。');render();return;}
+  const b=p.buildings.find(x=>x.uid===uid);
+  if(!b){addLog('その建物が見つかりません。');render();return;}
+  if(b.used||b.action==='none'||!canExecute(p,b)){
+    addLog(b.used?`${b.name}は使用済みです。`:cannotReason(p,b));
+    render();
+    return;
+  }
+  if(!spendWorker(p)){render();return;}
+  game.actionLock=true;
+  b.used=true;
+
+  // v51: 人間の建物使用をロック付きで原子的に処理する。
+  // クリック連打や0msのターン進行待ちで、労働者だけ消えて効果が見えない事故を防ぐ。
+  const cancel=()=>{b.used=false;refundWorker(p);game.actionLock=false;render();};
+  const ok=()=>{if(['builder','general_contractor'].includes(b.id))b.needsFirstUse=false;finishAction(p);};
+
+  // 製鉄所などの「支払いなし即時ドロー」は、ここで確実に実行する。
+  if(b.action==='draw'){
+    const drew=drawCards(p,b.drawCount||1);
+    if(drew<=0){addLog(`${b.name}は山札・捨て札が空のため、カードを引けませんでした。`);}
+    finishAction(p);
+    return;
+  }
+  if(b.action==='chemicalDraw'){
+    const drawN=p.hand.length===0?4:2;
+    const drew=drawCards(p,drawN);
+    if(drew<=0){addLog(`${b.name}は山札・捨て札が空のため、カードを引けませんでした。`);}
+    finishAction(p);
+    return;
+  }
+
+  executeAction(p,b,b,ok,cancel);
+}
+function executeAction(p,s,building,onOK,onCancel){switch(s.action){case'draw':drawCards(p,s.drawCount||1);onOK();break;case'drawNextFirst':drawCards(p,s.drawCount||1);game.nextFirstPlayerIndex=game.players.indexOf(p);addLog(`${p.name}は採石所でカードを1枚得ました。次ラウンドの先手を予約しました。`);onOK();break;case'drawGoods':gainGoods(p,s.drawCount||1);onOK();break;case'drawGoodsSelfTrash':gainGoods(p,s.drawCount||1);if(building){const i=p.buildings.findIndex(b=>b.uid===building.uid);if(i>=0)game.discard.push(p.buildings.splice(i,1)[0]);}onOK();break;case'gainMoney':gainFromHousehold(p,s.amount||0)?onOK():onCancel();break;case'discardGain':if(p.isCPU){autoPay(p,s.discardCount||0);gainFromHousehold(p,s.amount||0);onOK();}else openCostModal(p,s.discardCount||0,`${s.name}：支払い`,`カード${s.discardCount}枚分を支払い、家計から$${s.amount}を得ます。`,()=>{gainFromHousehold(p,s.amount||0);onOK();},onCancel);break;case'discardDraw':if(p.isCPU){autoPay(p,s.discardCount||0);drawCards(p,s.drawCount||0);onOK();}else humanDiscardDrawPay(p,s,onOK,onCancel);break;case'build':buildAction(p,0,null,onOK,onCancel);break;case'buildDiscount':buildAction(p,s.discount||1,null,onOK,onCancel);break;case'buildThenDraw':buildAction(p,0,null,()=>{drawCards(p,s.drawCount||2);onOK();},onCancel);break;case'setWorkers':{const before=totalWorkersIncludingTraining(p);const cap=workerLimit(p);const target=s.amount?Math.min(cap,before+(s.amount||1)):Math.min(s.target||p.workers,cap);const add=Math.max(0,target-before);if(add>0){p.traineeWorkers+=add;normalizePlayer(p);updateStatsSnapshot(p);addLog(`${p.name}は${s.name}で労働者${add}人を研修中にしました。次ラウンドから使えます。`);}else addLog(`${p.name}は${s.name}を使いましたが、労働者は増えませんでした。`);onOK();break;}case'addWorkerNow':{const add=Math.min(s.amount||1,Math.max(0,workerLimit(p)-totalWorkersIncludingTraining(p)));if(add>0){p.workers+=add;p.availableWorkers+=add;normalizePlayer(p);updateStatsSnapshot(p);addLog(`${p.name}は${s.name}で労働者が${p.workers}人になりました。このラウンドから使えます。`);}else addLog(`${p.name}は${s.name}を使いましたが、労働者上限に達しています。`);onOK();break;}case'drawUntilHand':gainGoods(p,Math.max(0,(s.target||4)-totalHandCount(p)));onOK();break;case'revealChoose':p.isCPU?cpuReveal(p,s.revealCount||5,onOK):revealChoose(p,s.revealCount||5,onOK);break;case'chemicalDraw':drawCards(p,p.hand.length===0?4:2);onOK();break;case'freeBuildFarm':buildAction(p,999,c=>c.icon==='farm',onOK,onCancel,true);break;case'buildTwoSameCost':p.isCPU?cpuBuildTwo(p,onOK,onCancel):openBuildTwoSameCost(p,onOK,onCancel);break;default:addLog('未実装の効果です。');onOK();}}
+
+function humanDiscardDrawPay(p,s,onOK,onCancel){
+  const cost=s.discardCount||0;
+  // v45: 工場/自動車工場で、消費財だけで支払える時にモーダル待ちで労働者だけ消える事故を防ぐ。
+  // 消費財は「支払いカード」として扱っているので、足りていれば即時に消費して効果まで進める。
+  if(cost>0 && p.goods>=cost){
+    p.goods-=cost;
+    addLog(`${p.name}は支払いとして建物カード0枚、消費財${cost}枚を使いました。`);
+    drawCards(p,s.drawCount||0);
+    onOK();
+    return;
+  }
+  openCostModal(p,cost,`${s.name}：支払い`,`カード${cost}枚分を支払い、カードを${s.drawCount||0}枚引きます。`,()=>{drawCards(p,s.drawCount||0);onOK();},onCancel);
+}
+
+function buildAction(p,discount,filter,onOK,onCancel){if(p.isCPU){const c=bestBuild(p,discount,filter);if(!c){onCancel();return;}cpuBuild(p,c,discount);onOK();}else openBuildModal(p,discount,filter,onOK,onCancel);}
+
+// v57: 人間の即時行動（採石所・鉱山など）で「処理中」の表示が残らないようにする。
+// 先に actionLock を解除してからターン進行する。advanceTurn 側も例外で止まらないように保護する。
+function finishAction(actor=null){
+  const actorPlayer=actor||currentPlayer();
+  game.actionLock=false;
+  const go=()=>{
+    try{
+      advanceTurn();
+    }catch(e){
+      console.error('advanceTurn failed',e);
+      addLog('ターン進行でエラーが出たため、安全復帰しました。');
+      game.thinking=false;
+      game.actionLock=false;
+      render();
+    }
+  };
+  if(actorPlayer&&actorPlayer.isCPU)setTimeout(go,250);
+  else go();
+}
+
+function advanceTurn(){
+  if(game.gameOver)return;
+  normalizeAllPlayers();
+  const a=game.players[0],b=game.players[1];
+  if(a.availableWorkers<=0&&b.availableWorkers<=0){
+    if(!game.roundEndReady){
+      game.roundEndReady=true;
+      addLog('全員の労働者を配置しました。ラウンド終了ボタンを押して給料支払いへ進んでください。');
+    }
+    render();
+    return;
+  }
+  game.roundEndReady=false;
+  const cur=game.currentPlayerIndex,oth=otherIndex(cur);
+  if(game.players[oth].availableWorkers>0)game.currentPlayerIndex=oth;
+  else if(game.players[cur].availableWorkers>0)game.currentPlayerIndex=cur;
+  render();
+  if(currentPlayer().isCPU)scheduleCpuTurn(600);
+}
+function openBuildModal(p,discount,filter,onOK,onCancel){const cand=p.hand.filter(c=>!filter||filter(c));if(!cand.length){addLog('建てられるカードがありません。');onCancel();return;}openModal(`<h3>建物を建てる</h3><p class="hint">建てたいカードを選んでください。割引：${discount>=999?'無料':discount}</p><div class="modal-grid" id="buildChoices"></div><div id="buildPay"></div><div class="actions"><button id="cancelModal">キャンセル</button></div>`);$('cancelModal').onclick=()=>{closeModal();onCancel();};const w=$('buildChoices');cand.forEach(c=>{const d=document.createElement('div');d.className=`choice cost${c.cost}`;d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}<br><span class="hint">${c.effectText}</span>`;d.onclick=()=>{[...w.children].forEach(x=>x.classList.remove('selected'));d.classList.add('selected');renderBuildPay(p,c,discount,onOK);};w.appendChild(d);});}
+function renderBuildPay(p,card,discount,onOK){const cost=discount>=999?0:Math.max(0,card.cost-discount);const payables=p.hand.filter(c=>c.uid!==card.uid);const area=$('buildPay');if(payables.length+p.goods<cost){area.innerHTML=`<p class="warn">支払い不足です。必要${cost}枚分、建物${payables.length}枚＋消費財${p.goods}枚です。</p>`;return;}area.innerHTML=`<h3>コスト支払い</h3><div>使う消費財：<button class="small" id="gm">−</button> <b id="gn">0</b> 枚 <button class="small" id="gp">＋</button></div><div class="modal-grid" id="payGrid"></div><div class="actions"><button class="primary" id="ok" disabled>建てる</button></div>`;let g=Math.min(p.goods,cost);const sel=new Set();const grid=$('payGrid');payables.forEach(c=>{const d=document.createElement('div');d.className=`choice cost${c.cost}`;d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}`;d.onclick=()=>{if(sel.has(c.uid)){sel.delete(c.uid);d.classList.remove('selected');}else if(sel.size+g<cost){sel.add(c.uid);d.classList.add('selected');}up();};grid.appendChild(d);});function up(){$('gn').textContent=g;$('ok').disabled=(sel.size+g)!==cost;}$('gm').onclick=()=>{if(g>0){g--;up();}};$('gp').onclick=()=>{if(g<p.goods&&g<cost&&sel.size+g<cost){g++;up();}};$('ok').onclick=()=>{buildCard(p,card.uid,cost,[...sel],g);closeModal();onOK();};up();}
+function openCostModal(p,cost,title,msg,onOK,onCancel){if(totalHandCount(p)<cost){onCancel();return;}openModal(`<h3>${title}</h3><p class="hint">${msg}</p><div>使う消費財：<button class="small" id="gm">−</button> <b id="gn">0</b> 枚 <button class="small" id="gp">＋</button></div><div class="modal-grid" id="payGrid"></div><div class="actions"><button class="primary" id="ok" disabled>実行</button><button id="cancelModal">キャンセル</button></div>`);let g=Math.min(p.goods,cost);const sel=new Set();const grid=$('payGrid');p.hand.forEach(c=>{const d=document.createElement('div');d.className=`choice cost${c.cost}`;d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}`;d.onclick=()=>{if(sel.has(c.uid)){sel.delete(c.uid);d.classList.remove('selected');}else if(sel.size+g<cost){sel.add(c.uid);d.classList.add('selected');}up();};grid.appendChild(d);});function up(){$('gn').textContent=g;$('ok').disabled=(sel.size+g)!==cost;}$('gm').onclick=()=>{if(g>0){g--;up();}};$('gp').onclick=()=>{if(g<p.goods&&g<cost&&sel.size+g<cost){g++;up();}};$('ok').onclick=()=>{p.goods-=g;discardHand(p,[...sel]);addLog(`${p.name}は支払いとして建物カード${sel.size}枚、消費財${g}枚を使いました。`);closeModal();onOK();};$('cancelModal').onclick=()=>{closeModal();onCancel();};up();}
+function revealChoose(p,n,onOK){const r=reveal(n);if(!r.length){onOK();return;}openModal(`<h3>設計事務所：1枚選ぶ</h3><div class="modal-grid" id="rev"></div>`);const grid=$('rev');r.forEach(c=>{const d=document.createElement('div');d.className=`choice cost${c.cost}`;d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}`;d.onclick=()=>{p.hand.push(c);r.filter(x=>x.uid!==c.uid).forEach(x=>game.discard.push(x));addLog(`${p.name}は設計事務所で${c.name}を手札に加えました。`);closeModal();onOK();};grid.appendChild(d);});} function reveal(n){const r=[];for(let i=0;i<n;i++){if(game.deck.length===0&&game.discard.length>0)game.deck=shuffle(game.discard.splice(0));if(!game.deck.length)break;r.push(game.deck.pop());}return r;} function cpuReveal(p,n,onOK){const r=reveal(n);if(!r.length){onOK();return;}const b=r.sort((a,b)=>evalCard(b,p)-evalCard(a,p))[0];p.hand.push(b);r.filter(x=>x.uid!==b.uid).forEach(x=>game.discard.push(x));addLog(`${p.name}は設計事務所で${b.name}を手札に加えました。`);onOK();}
+
+function openBuildTwoSameCost(p,onOK,onCancel){
+  const groups={};
+  p.hand.forEach(c=>(groups[c.cost]??=[]).push(c));
+  const validCosts=Object.keys(groups).filter(k=>groups[k].length>=2).map(Number);
+  if(!validCosts.length){addLog('同じコストの建物カードが2枚ありません。');onCancel();return;}
+  openModal(`<h3>二胡市建設：同じコストの建物を2つ建てる</h3><p class="hint">同じコストの建物カードを2枚選んでください。支払いは1枚分のコストだけです。消費財も使えます。</p><div class="modal-grid" id="twoBuildChoices"></div><div id="twoBuildPay"></div><div class="actions"><button id="cancelModal">キャンセル</button></div>`);
+  $('cancelModal').onclick=()=>{closeModal();onCancel();};
+  const selected=[];
+  const grid=$('twoBuildChoices');
+  p.hand.forEach(c=>{
+    const ok=validCosts.includes(c.cost);
+    const d=document.createElement('div');
+    d.className=`choice cost${c.cost} ${ok?'':'disabled'}`;
+    d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}<br><span class="hint">${c.effectText}</span>`;
+    if(ok){
+      d.onclick=()=>{
+        const i=selected.findIndex(x=>x.uid===c.uid);
+        if(i>=0){selected.splice(i,1);d.classList.remove('selected');}
+        else if(selected.length<2 && (selected.length===0 || selected[0].cost===c.cost)){selected.push(c);d.classList.add('selected');}
+        else if(selected.length===2){addLog('二胡市建設では同じコストのカードを2枚だけ選びます。');}
+        else {addLog('同じコストのカードを選んでください。');}
+        renderTwoBuildPay(p,selected,onOK);
+      };
+    }
+    grid.appendChild(d);
+  });
+}
+function renderTwoBuildPay(p,selected,onOK){
+  const area=$('twoBuildPay');
+  if(selected.length!==2){area.innerHTML='<p class="hint">同じコストの建物カードを2枚選ぶと、支払い選択に進みます。</p>';return;}
+  const cost=selected[0].cost;
+  const selectedUids=selected.map(c=>c.uid);
+  const payables=p.hand.filter(c=>!selectedUids.includes(c.uid));
+  if(payables.length+p.goods<cost){area.innerHTML=`<p class="warn">支払い不足です。必要${cost}枚分、支払い候補は建物${payables.length}枚＋消費財${p.goods}枚です。</p>`;return;}
+  area.innerHTML=`<h3>コスト支払い</h3><p class="hint">${selected[0].name} と ${selected[1].name} を建てます。追加で${cost}枚分を支払ってください。</p><div>使う消費財：<button class="small" id="gm">−</button> <b id="gn">0</b> 枚 <button class="small" id="gp">＋</button></div><div class="modal-grid" id="twoPayGrid"></div><div class="actions"><button class="primary" id="ok" disabled>2枚建てる</button></div>`;
+  let g=Math.min(p.goods,cost);
+  const sel=new Set();
+  const grid=$('twoPayGrid');
+  payables.forEach(c=>{
+    const d=document.createElement('div');
+    d.className=`choice cost${c.cost}`;
+    d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}`;
+    d.onclick=()=>{if(sel.has(c.uid)){sel.delete(c.uid);d.classList.remove('selected');}else if(sel.size+g<cost){sel.add(c.uid);d.classList.add('selected');}up();};
+    grid.appendChild(d);
+  });
+  function up(){ $('gn').textContent=g; $('ok').disabled=(sel.size+g)!==cost; }
+  $('gm').onclick=()=>{if(g>0){g--;up();}};
+  $('gp').onclick=()=>{if(g<p.goods&&g<cost&&sel.size+g<cost){g++;up();}};
+  $('ok').onclick=()=>{
+    p.goods-=g;
+    discardHand(p,[...sel]);
+    selected.forEach(s=>{const i=p.hand.findIndex(c=>c.uid===s.uid);if(i>=0){const b=p.hand.splice(i,1)[0];b.used=false;p.buildings.push(b);}});
+    addLog(`${p.name}は二胡市建設で${selected[0].name}と${selected[1].name}を建てました。コストは建物カード${sel.size}枚、消費財${g}枚です。`);
+    closeModal();
+    onOK();
+  };
+  up();
+}
+
+function cpuBuildTwo(p,onOK,onCancel){const groups={};p.hand.forEach(c=>(groups[c.cost]??=[]).push(c));let best=null;Object.keys(groups).forEach(k=>{const cost=+k,arr=groups[k];if(arr.length>=2&&totalHandCount(p)-2>=cost){const top=[...arr].sort((a,b)=>evalCard(b,p)-evalCard(a,p)).slice(0,2);const val=evalCard(top[0],p)+evalCard(top[1],p);if(!best||val>best.val)best={cost,cards:top,val};}});if(!best){onCancel();return;}let g=Math.min(p.goods,best.cost);let r=best.cost-g;const pay=lowCards(p,r,best.cards.map(c=>c.uid)).map(c=>c.uid);p.goods-=g;discardHand(p,pay);best.cards.forEach(s=>{const i=p.hand.findIndex(c=>c.uid===s.uid);if(i>=0){const b=p.hand.splice(i,1)[0];b.used=false;p.buildings.push(b);trackBuiltCardStats(p,b);}});addLog(`${p.name}は二胡市建設で${best.cards[0].name}と${best.cards[1].name}を建てました。`);onOK();}
+function wageWorkers(p){return totalWorkersIncludingTraining(p);}
+function cpuNeedsMoney(p){return Math.max(0,wageWorkers(p)*currentWage()-p.money);} 
+function cpuSellableValue(p){return p.buildings.filter(b=>b.sellable).reduce((sum,b)=>sum+b.vp,0);}
+function cpuWageDue(p){return wageWorkers(p)*currentWage();}
+function cpuSolvency(p){return p.money+cpuSellableValue(p)-cpuWageDue(p);}
+function cpuEmergency(p){return cpuSolvency(p)<0;}
+function cpuCashSurplus(p){return p.money-cpuWageDue(p);}
+function cpuSafetyMargin(){return game.round<=3?3:(game.round<=6?6:10);}
+function cpuSafetyLine(p,extraWorkers=0){return (wageWorkers(p)+extraWorkers)*currentWage()+cpuSafetyMargin();}
+function cpuSafetyGap(p){return Math.max(0,cpuSafetyLine(p)-p.money);}
+function cpuBuildingGoal(){return [0,2,3,4,5,6,6,7,8,8][game.round]||8;}
+function cpuBehindBuildingGoal(p){return Math.max(0,cpuBuildingGoal()-p.buildings.length);}
+function cpuBuildPlan(p){
+  if(!p.hand.length)return null;
+  let best=null;
+  p.hand.forEach(c=>{
+    const need=Math.max(0,c.cost);
+    const canNow=totalHandCount(p)-1>=need;
+    let v=evalCard(c,p)+c.vp+cpuPriorityCardBonus(c,p);
+    if(game.round>=7)v+=c.vp*1.4;
+    if(c.vp>=18)v+=25;
+    if(c.sellable && c.vp>=16)v+= game.round>=7 ? 45 : 18;
+    v+=cpuPriorityCardBonus(c,p)*0.35;
+    if(['mansion','hq','railway','union','realtor','auto_factory','nikoshi'].includes(c.id))v+=20;
+    if(!canNow)v-=Math.max(0,need-(totalHandCount(p)-1))*10;
+    if(!best||v>best.value)best={card:c,value:v,need,canNow};
+  });
+  return best;
+}
+function cpuReservedCostNeed(p){const plan=cpuBuildPlan(p);if(!plan)return 0;return Math.max(0,plan.need-p.goods);}
+function cpuActionUsesProtectedCards(p,cost){const handUse=Math.max(0,cost-Math.min(p.goods,cost));if(handUse<=0)return 0;return lowCards(p,handUse).filter(c=>cpuProtectedCard(c,p)).length;}
+function cpuDrawValue(){return game.round<=3?8:(game.round<=6?6:(game.round<=8?5:3));}
+function cpuGoodsValue(p){
+  const hasPriorityHigh=p.hand.some(c=>c.cost>=3 && cpuPriorityCardTier(c)>=3);
+  const lowGoods=p.goods<=1;
+  if(game.round<=4)return highCost(p)||hasPriorityHigh ? (lowGoods?10:8) : 6;
+  if(game.round<=6)return highCost(p)||hasPriorityHigh ? (lowGoods?9:6) : 4;
+  if(game.round<=8)return highCost(p)||hasPriorityHigh ? (lowGoods?6:4) : 2;
+  return highCost(p)||hasPriorityHigh ? 2 : -2;
+}
+function cpuBuildBias(){return game.round<=3?18:(game.round<=6?32:(game.round<=8?62:82));}
+function cpuBuildActionTypes(){return ['build','buildDiscount','buildThenDraw','freeBuildFarm','buildTwoSameCost'];}
+
+// ===== v36: 人間ログ由来のCPU判断ヘルパー =====
+// 人間の強い動き：建設会社・ゼネコンで点数化、果樹園/大農園/レストランで燃料確保、
+// 工場/製鉄所/化学工場で手札を再生、二胡市建設は来た時だけ高く見る。
+function cpuPriorityCardTier(card){
+  if(!card)return 0;
+  if(['builder','general_contractor'].includes(card.id))return 5;          // 建築エンジン
+  if(card.id==='nikoshi')return 5;                                         // 高得点2枚建て狙い
+  if(['factory','steel','chemical','auto_factory'].includes(card.id))return 4; // 手札再生
+  if(['orchard','plantation','restaurant'].includes(card.id))return 4;      // 消費財/現金エンジン
+  if(['mansion','hq','railway','realtor','coop','union'].includes(card.id))return 3; // 終盤得点源
+  if(card.vp>=18)return 3;
+  if(card.vp>=16)return 2;
+  return 0;
+}
+function cpuIsEngineCard(card){return cpuPriorityCardTier(card)>=4;}
+function cpuPriorityCardBonus(card,p){
+  if(!card)return 0;
+  const r=game.round;
+  let b=0;
+  const tier=cpuPriorityCardTier(card);
+  if(tier>=5)b+=r>=6?160:110;
+  else if(tier>=4)b+=r>=6?115:80;
+  else if(tier>=3)b+=r>=7?90:35;
+  if(card.id==='factory')b+=r<=7?95:50;                 // コスト2で4枚引く準備を作る
+  if(card.id==='steel')b+=r>=6?130:75;                  // 20点+3枚引き
+  if(card.id==='chemical')b+=r>=6?110:65;
+  if(card.id==='restaurant')b+=r>=5?135:75;             // 16点+$15+売却保険
+  if(card.id==='orchard')b+=totalHandCount(p)<=3?100:45; // 手札合計4枚まで消費財
+  if(card.id==='plantation')b+=p.goods<=2?80:35;
+  if(card.id==='builder')b+=p.hand.length>=2?100:60;
+  if(card.id==='general_contractor')b+=p.hand.length>=2?125:75;
+  if(card.id==='nikoshi'){
+    const pair=cpuBestTwoBuildPair(p);
+    const pairAfter=cpuBestTwoBuildPairAfterBuilding(p,card,0);
+    if(pair)b+=pair.val>=38?260:(pair.val>=30?180:90);
+    if(pairAfter)b+=pairAfter.val>=38?340:(pairAfter.val>=30?260:130);
+    b+=cpuNikoshiTimingBonus(p,card,0);
+  }
+  // 消費財があるほど高コスト建物を建てやすい。人間ログではここが強い。
+  if(card.cost>=4 && p.goods>=2)b+=45;
+  if(card.cost>=4 && p.goods>=3)b+=45;
+  // v39: ラウンド5以降、農場を新規建築する優先度を下げる。果樹園・大農園は維持。
+  if(card.id==='farm' && r>=5)b-=r>=7?120:70;
+  return b;
+}
+function cpuSimplePairCardValue(c,p){
+  return c.vp + cpuPriorityCardTier(c)*12 + (c.id==='mansion'?18:0) + (c.id==='union'?p.workers*6:0) + (c.id==='realtor'?p.buildings.length*3:0) + (c.id==='coop'?p.goods*3:0);
+}
+function cpuBestTwoBuildPairFromCards(p,cards,goodsLeft){
+  const groups={};
+  cards.forEach(c=>(groups[c.cost]??=[]).push(c));
+  let best=null;
+  Object.keys(groups).forEach(k=>{
+    const cost=+k, arr=groups[k];
+    if(arr.length<2 || (cards.length+goodsLeft)-2<cost)return;
+    const top=arr.slice().sort((a,b)=>cpuSimplePairCardValue(b,p)-cpuSimplePairCardValue(a,p)).slice(0,2);
+    const val=top[0].vp+top[1].vp;
+    const evalv=cpuSimplePairCardValue(top[0],p)+cpuSimplePairCardValue(top[1],p);
+    if(!best||evalv>best.evalv)best={cost,cards:top,val,evalv};
+  });
+  return best;
+}
+function cpuBestTwoBuildPair(p){
+  return cpuBestTwoBuildPairFromCards(p,p.hand,p.goods);
+}
+function cpuBestTwoBuildPairAfterBuilding(p,card,discount=0){
+  if(!card)return null;
+  const cost=discount>=999?0:Math.max(0,card.cost-discount);
+  const goodsUsed=Math.min(p.goods,cost);
+  const handNeed=Math.max(0,cost-goodsUsed);
+  const payUids=new Set(lowCardsBasic(p,handNeed,[card.uid]).map(c=>c.uid));
+  const rest=p.hand.filter(c=>c.uid!==card.uid && !payUids.has(c.uid));
+  return cpuBestTwoBuildPairFromCards(p,rest,p.goods-goodsUsed);
+}
+function cpuNikoshiTimingBonus(p,card,discount=0){
+  if(!card || card.id!=='nikoshi')return 0;
+  const r=game.round;
+  const pairAfter=cpuBestTwoBuildPairAfterBuilding(p,card,discount);
+  let b=0;
+  if(r>=5 && r<=7){
+    b+=180;
+    if(pairAfter)b += pairAfter.val>=30 ? 260 : 140;
+  }else if(r>=8){
+    if(pairAfter && pairAfter.val>=30 && p.availableWorkers>=2)b+=180;
+    else b-=280;
+  }
+  return b;
+}
+function cpuStrongPublicHumanValue(s,p){
+  if(!s || (!s.multiUse && usedPublic(s)))return 0;
+  let v=0;
+  // 取り合いで強い公共化/公共職場。
+  if(s.sourceType==='sold')v+=180;
+  if(cpuIsBuildAction(s))v+=520;
+  if(s.action==='buildDiscount')v+=260;
+  if(s.action==='buildThenDraw')v+=340;
+  if(s.action==='buildTwoSameCost')v+=420;
+  if(['builder','general_contractor','nikoshi','steel','chemical','auto_factory','restaurant','factory','orchard','plantation'].includes(s.id))v+=360;
+  if(['drawGoods','drawUntilHand'].includes(s.action))v+=game.round<=7?160:80;
+  if(s.action==='discardGain' && s.id==='restaurant')v+=220;
+  if(s.action==='draw' && (s.drawCount||0)>=3)v+=240;
+  if(s.action==='discardDraw')v+=220+(s.drawCount||0)*55-(s.discardCount||0)*20;
+  if(s.vp>=16)v+=s.vp*10;
+  if(s.sellable && s.vp>=16)v+=s.vp*9;
+  return v;
+}
+
+// v75: 相手の次手を読む公共職場妨害ボーナス。
+// 大工・公共化した建設会社/ゼネコン/二胡市建設を、人間に渡すと大きく点数化される場合は先取りする。
+function cpuOpponentBlockBonus(p,s){
+  if(!p || !p.isCPU || !s)return 0;
+  if(s.id==='mine')return 0; // 鉱山は複数使用なので妨害価値なし。
+  if(!s.multiUse && usedPublic(s))return 0;
+  const opp=game.players.find(x=>x && x.id!==p.id);
+  if(!opp || opp.availableWorkers<=0)return 0;
+  if(!canExecute(opp,s))return 0;
+
+  const r=game.round;
+  let bonus=0;
+
+  // 相手が建築職場で高得点・高優先カードを建てられるなら、公共職場を先取りする価値が高い。
+  if(cpuIsBuildAction(s)){
+    if(s.action==='buildTwoSameCost'){
+      const pair=cpuBestTwoBuildPair(opp);
+      if(pair){
+        if(pair.val>=24)bonus+=320;
+        if(pair.val>=30)bonus+=520;
+        if(pair.val>=38)bonus+=420;
+        if(pair.cards.some(c=>cpuPriorityCardTier(c)>=4))bonus+=360;
+      }
+    }else{
+      const target=cpuBuildResultCardForAction(opp,s);
+      if(target){
+        if(target.vp>=12)bonus+=140;
+        if(target.vp>=16)bonus+=260;
+        if(target.vp>=18)bonus+=260;
+        if(target.vp>=24)bonus+=360;
+        bonus+=cpuPriorityCardTier(target)*85;
+        if(target.id==='nikoshi')bonus+=420;
+        if(['builder','general_contractor'].includes(target.id))bonus+=260;
+      }
+    }
+
+    // 建設系の公共化カード自体は、使われる前に取る。
+    if(s.action==='buildDiscount')bonus+=180;
+    if(s.action==='buildThenDraw')bonus+=260;
+    if(s.action==='buildTwoSameCost')bonus+=340;
+    if(s.id==='carpenter')bonus+=r>=7?240:120;
+  }
+
+  // 売却で公共化した強カードは相手も使えるため、通常の大工より妨害価値を上げる。
+  if(s.sourceType==='sold'){
+    if(['builder','general_contractor','nikoshi'].includes(s.id))bonus+=520;
+    if(['steel','chemical','auto_factory','factory'].includes(s.id))bonus+=300;
+    if(['restaurant','plantation','orchard'].includes(s.id))bonus+=180;
+    if((s.vp||0)>=16)bonus+=Math.min(360,(s.vp||0)*12);
+  }
+
+  // 相手が現金不足で、この収入職場に入ると給料事故を回避できる場合は小さく妨害。
+  if(['gainMoney','discardGain'].includes(s.action) && (s.amount||0)>0){
+    const oppNeed=cpuNeedsMoney(opp);
+    if(oppNeed>0 && (s.amount||0)>=Math.min(oppNeed,12))bonus+=220;
+  }
+
+  // 終盤は1手の価値が大きい。ただし最終ラウンドは自分の得点を優先しすぎないよう少し抑える。
+  if(r>=7)bonus=Math.round(bonus*1.22);
+  if(r>=9)bonus=Math.round(bonus*0.78);
+
+  // 自分側の実行価値が極端に低い妨害は避ける。終盤の農場・低価値建築だけの先取りを抑制。
+  const selfTarget=cpuIsBuildAction(s) ? cpuBuildResultCardForAction(p,s) : null;
+  if(selfTarget && r>=7 && selfTarget.vp<12 && cpuPriorityCardTier(selfTarget)<3)bonus=Math.round(bonus*0.35);
+  if(cpuSafetyGap(p)>0 && !['gainMoney','discardGain'].includes(s.action))bonus=Math.round(bonus*0.45);
+
+  return Math.min(1400,Math.max(0,bonus));
+}
+function cpuBestStrongPublicPower(p){
+  return publicSources()
+    .filter(s=>s.id!=='mine' && s.id!=='quarry' && (s.multiUse||!usedPublic(s)) && canExecute(p,s))
+    .reduce((best,s)=>Math.max(best,cpuStrongPublicHumanValue(s,p)),0);
+}
+function cpuActionBuildsPriorityCard(p,a){
+  if(!a||!cpuIsBuildAction(a.s))return false;
+  if(a.s.action==='buildTwoSameCost'){
+    const pair=cpuBestTwoBuildPair(p);
+    return !!pair && (pair.val>=30 || pair.cards.some(c=>cpuPriorityCardTier(c)>=3));
+  }
+  const c=cpuBuildResultCardForAction(p,a.s);
+  return cpuPriorityCardTier(c)>=3;
+}
+function cpuHumanStyleOverride(p,acts){
+  if(!acts.length)return null;
+  const r=game.round;
+  const wageDue=cpuWageDue(p);
+  const allowedUnpaid=r>=8?6:(r>=7?4:0);
+  const fatalDanger = p.money + cpuSellableValue(p) + allowedUnpaid < wageDue;
+  const bestIncome=cpuBestIncomeActionByScore(acts);
+
+  // 0) 二胡市建設をすでに持っているなら、使える時に使い切る。
+  // 人間ログでは、二胡市建設は「建てる」よりも「何度も使って2枚建てる」ことが強かった。
+  const ownedNiko=acts.find(a=>a.type==='building' && a.s.id==='nikoshi' && a.s.action==='buildTwoSameCost');
+  const ownedNikoPair=cpuBestTwoBuildPair(p);
+  if(ownedNiko && ownedNikoPair){
+    const incomeScore=bestIncome?bestIncome.score:-999;
+    const strongPair=ownedNikoPair.val>=30 || ownedNikoPair.cards.some(c=>cpuPriorityCardTier(c)>=3);
+    if(strongPair && (!fatalDanger || ownedNikoPair.val>=34 || r>=8) && ownedNiko.score>incomeScore-120)return ownedNiko;
+  }
+
+  // 1) 建設会社・ゼネコンを建てたら、現金に逃げる前にそれを使って点数化する。
+  const ownBuildEngine=acts.filter(a=>a.type==='building' && ['builder','general_contractor'].includes(a.s.id) && cpuIsBuildAction(a.s))
+    .map(a=>{
+      const c=cpuBuildResultCardForAction(p,a.s);
+      let h=a.score + 260;
+      if(c)h+=cpuPriorityCardBonus(c,p)+cpuPriorityCardTier(c)*80+c.vp*3;
+      return {...a,humanEngineUseScore:h,buildCard:c};
+    })
+    .sort((x,y)=>y.humanEngineUseScore-x.humanEngineUseScore)[0]||null;
+  if(ownBuildEngine && ownBuildEngine.buildCard && cpuPriorityCardTier(ownBuildEngine.buildCard)>=2){
+    const incomeScore=bestIncome?bestIncome.score:-999;
+    if(ownBuildEngine.humanEngineUseScore>incomeScore+(r>=6?10:40) && (!fatalDanger || cpuBuildCreatesWageInsurance(p,ownBuildEngine)))return ownBuildEngine;
+  }
+
+  // 2) 二胡市建設が本当に強い時は最優先。来ない時は無理に待たない。
+  const niko=acts.find(a=>a.s.action==='buildTwoSameCost');
+  const pair=cpuBestTwoBuildPair(p);
+  if(niko && pair && (pair.val>=30 || (r>=7 && pair.val>=24)) && (!fatalDanger || pair.val>=38))return niko;
+
+  // 3) 建設会社・ゼネコン・大工で優先カードを建てられるなら、現金行動より優先。
+  const buildActs=acts.filter(a=>cpuIsBuildAction(a.s)).map(a=>{
+    const c=cpuBuildResultCardForAction(p,a.s);
+    const pair= a.s.action==='buildTwoSameCost' ? cpuBestTwoBuildPair(p) : null;
+    let h=a.score;
+    if(c){
+      const discount=(a.s.action==='buildDiscount')?(a.s.discount||1):(a.s.action==='freeBuildFarm'?999:0);
+      h+=cpuPriorityCardBonus(c,p)+cpuPriorityCardTier(c)*70+cpuNikoshiTimingBonus(p,c,discount);
+      h+=cpuLateBuildCashRiskPenalty(p,a.s,c);
+      if(c.id==='nikoshi'){
+        const pairAfter=cpuBestTwoBuildPairAfterBuilding(p,c,discount);
+        if(game.round>=8 && (!pairAfter || pairAfter.val<30 || p.availableWorkers<2))h-=420;
+      }
+    }
+    if(pair)h+=pair.evalv + (pair.val>=30?180:0);
+    if(a.s.sourceType==='sold')h+=180;
+    return {...a,humanBuildScore:h,buildCard:c,pair};
+  }).sort((x,y)=>y.humanBuildScore-x.humanBuildScore);
+  const build=buildActs[0]||null;
+  if(build && (build.buildCard || build.pair)){
+    const isImportant = (build.buildCard && cpuPriorityCardTier(build.buildCard)>=3) || (build.pair && build.pair.val>=24);
+    const incomeScore=bestIncome?bestIncome.score:-999;
+    const margin=r>=7?20:55;
+    if(isImportant && build.humanBuildScore > incomeScore + margin && (!fatalDanger || cpuBuildCreatesWageInsurance(p,build) || r>=8))return build;
+    // v43: 現金・消費財が安全なら、公共化レストラン等に流れすぎず建設へ戻す。
+    if(cpuAttackReady(p) && p.buildings.length<=5 && build.humanBuildScore > incomeScore - 420 && cpuLateBuildTargetIsGood(build.buildCard,p) && cpuLateBuildCashRiskPenalty(p,build.s,build.buildCard)>-2500)return build;
+  }
+
+  // 4) 強い公共化建物は、露店・市場・スーパーより優先。
+  const strongPublic=acts.filter(a=>a.type==='public' && a.s.id!=='mine' && a.s.id!=='quarry')
+    .map(a=>({...a,humanPublicScore:a.score+cpuStrongPublicHumanValue(a.s,p)+cpuOpponentBlockBonus(p,a.s)}))
+    .sort((x,y)=>y.humanPublicScore-x.humanPublicScore)[0]||null;
+  if(strongPublic && (cpuStrongPublicHumanValue(strongPublic.s,p)+cpuOpponentBlockBonus(p,strongPublic.s))>=520){
+    const incomeScore=bestIncome?bestIncome.score:-999;
+    if(strongPublic.humanPublicScore > incomeScore + (r>=7?10:60) && (!fatalDanger || r>=8 || cpuIsBuildAction(strongPublic.s)))return strongPublic;
+  }
+
+  // 5) 採石所は常時ではなく、次ラウンドに強い公共化/建築職場を先取りしたい時だけ。
+  // ただし候補で採石所が大きく出ている時は、鉱山や小銭行動で潰さない。
+  const quarry=acts.find(a=>a.s.id==='quarry' && a.s.action==='drawNextFirst');
+  const futurePower=cpuBestStrongPublicPower(p);
+  const severeCashDanger = p.money + cpuSellableValue(p) + allowedUnpaid < wageDue - 8;
+  if(quarry && r>=6 && r<=8 && p.availableWorkers>=1){
+    const incomeScore=bestIncome?bestIncome.score:-999;
+    const st=ensureStats(p);
+    const cashSafeForQuarry = p.money>=cpuWageDue(p)+6 && cpuSafetyGap(p)===0 && (st.quarryActions||0)<=1;
+    // v52: 採石所は勝っている時の先手予約。給料不足中・未払い後・採石所連打中は取らない。
+    if(cashSafeForQuarry && (futurePower>=620 || quarry.score>incomeScore+220 || quarry.score>=820) && !severeCashDanger)return quarry;
+  }
+
+  return null;
+}
+function cpuIsBuildAction(s){return cpuBuildActionTypes().includes(s.action);}
+function cpuBuildShortageBonus(p,c=null){
+  const behind=cpuBehindBuildingGoal(p);
+  let bonus=behind*(game.round>=7?42:32);
+  if(game.round>=5 && p.buildings.length<4) bonus+=45;
+  if(game.round>=7 && p.buildings.length<5) bonus+=75;
+  if(game.round>=8 && p.buildings.length<6) bonus+=95;
+  if(c){
+    if(c.vp>=16)bonus+=18;
+    if(c.vp>=18)bonus+=28;
+    if(c.vp>=24)bonus+=35;
+  }
+  return bonus;
+}
+function cpuSellableInsuranceBonus(p,c){
+  if(!c || !c.sellable)return 0;
+  let bonus=0;
+  if(c.vp>=16)bonus+=c.vp*(game.round>=7?2.2:1.2);
+  else if(c.vp>=12)bonus+=c.vp*(game.round>=7?1.4:.8);
+  if(cpuCashSurplus(p)<0)bonus+=Math.min(c.vp,cpuWageDue(p))*2.4;
+  if(cpuSafetyGap(p)>0)bonus+=Math.min(c.vp,cpuSafetyGap(p))*2.8;
+  if(cpuEmergency(p))bonus+=c.vp*3.6;
+  return bonus;
+}
+function cpuLateCashPenalty(p,s){
+  if(game.round<6 || !['gainMoney','discardGain'].includes(s.action))return 0;
+  const amount=s.amount||0;
+  const cost=s.discardCount||0;
+  const hardNeed=Math.max(0,cpuWageDue(p)-p.money);
+  const safetyNeed=cpuSafetyGap(p);
+  // 終盤の現金行動は、給料穴埋め以外では勝利点に直結しにくい。
+  // 特に露店・市場・スーパーマーケットは手札を点数に変えず現金にしてしまうため弱める。
+  let base=game.round>=9 ? 240 : (game.round>=8 ? 190 : (game.round>=7 ? 120 : 45));
+  if(['stall','market','supermarket'].includes(s.id))base += game.round>=8 ? 180 : (game.round>=7 ? 120 : 60);
+  if(game.round>=6 && ['stall','market','supermarket'].includes(s.id) && (cpuHasUsableBuildEngine(p) || bestBuild(p,0,null)))base += 80;
+  if(s.id==='restaurant')base -= 120;
+  if(cost>=3 && game.round>=7)base += 70;
+  if(hardNeed>0){
+    const allowedUnpaid = game.round>=8 ? 6 : (game.round>=7 ? 4 : 0);
+    if(amount + allowedUnpaid >= hardNeed)return Math.max(30,base-120);
+    return Math.max(70,base-55);
+  }
+  if(safetyNeed>0){
+    return amount>=safetyNeed ? Math.max(55,base-80) : Math.max(95,base-45);
+  }
+  return base;
+}
+function cpuPublicPower(s){
+  if(!s || (!s.multiUse && usedPublic(s)))return 0;
+  let v=0;
+  if(s.sourceType==='sold')v+=120;
+  if(cpuIsBuildAction(s))v+=420;
+  if(s.action==='buildDiscount')v+=180;
+  if(s.action==='buildThenDraw')v+=260+(s.drawCount||0)*45;
+  if(s.action==='buildTwoSameCost')v+=320;
+  if(s.action==='draw' && (s.drawCount||0)>=3)v+=180+(s.drawCount||0)*55;
+  if(s.action==='discardDraw')v+=150+(s.drawCount||0)*55-(s.discardCount||0)*25;
+  if(s.action==='revealChoose')v+=game.round<=7?120:55;
+  if(s.vp>=16)v+=s.vp*8;
+  if(s.vp>=20)v+=80;
+  if(s.sellable && s.vp>=16)v+=s.vp*8;
+  if(['general_contractor','builder','nikoshi','steel','auto_factory','chemical','restaurant','factory','orchard','plantation'].includes(s.id))v+=220;
+  v += cpuStrongPublicHumanValue(s, cpuPlayer()||currentPlayer())*0.35;
+  return v;
+}
+function cpuBestPublicPower(){
+  return publicSources()
+    .filter(s=>s.id!=='mine' && s.id!=='quarry' && (s.multiUse||!usedPublic(s)))
+    .reduce((best,s)=>Math.max(best,cpuPublicPower(s)),0);
+}
+function cpuCanTolerateSmallUnpaid(p){
+  const allowed = game.round>=8 ? 6 : (game.round>=7 ? 4 : 0);
+  return p.money + cpuSellableValue(p) + allowed >= cpuWageDue(p);
+}
+function cpuHasEngine(p){return p.buildings.some(b=>['factory','steel','auto_factory','restaurant','coffee','general_contractor','builder'].includes(b.id));}
+function cpuHasUsableBuildEngine(p){return p.buildings.some(b=>!b.used && ['builder','general_contractor'].includes(b.id) && canExecute(p,b));}
+
+// ===== v50: 4人化後に危険モードへ閉じ込められないための基盤判定 =====
+// v49のサマリーでは、CPUは4人化できたが「危険23 / 攻撃0」で、
+// 4人の給料を維持できず建設に戻れなかった。
+// ここでは、4人化前の収入見込みと、攻撃モード復帰条件を少し緩める。
+function cpuIncomeOpportunity(p){
+  return publicSources().some(s=>{
+    if(!(s.multiUse||!usedPublic(s)))return false;
+    if(!['gainMoney','discardGain'].includes(s.action))return false;
+    if(!canExecute(p,s))return false;
+    return (s.amount||0)>=6;
+  }) || p.buildings.some(b=>!b.used && ['gainMoney','discardGain'].includes(b.action) && canExecute(p,b));
+}
+function cpuStrongBuildCandidate(p){
+  const c=bestBuild(p,0,null) || bestBuild(p,1,null);
+  if(!c)return null;
+  return cpuLateBuildTargetIsGood(c,p) && (c.vp>=16 || cpuPriorityCardTier(c)>=3) ? c : null;
+}
+function cpuGrowthPrepared(p,afterWorkers){
+  const afterWage=afterWorkers*currentWage();
+  if(afterWorkers<=3)return true;
+  const hasFuel=p.goods>=1 || p.hand.length>=3;
+  const hasEngine=cpuHasEngine(p)||cpuHasUsableBuildEngine(p)||cpuIncomeOpportunity(p)||p.buildings.length<=2;
+  // v75: 研修中労働者も給料対象。4人化は価値が高いが、当ラウンド給料も見て判断する。
+  if(afterWorkers===4){
+    const assets=p.money+cpuSellableValue(p);
+    if(p.money>=afterWage-2 && hasFuel)return true;
+    if(assets>=afterWage && hasFuel)return true;
+    if(game.round<=6 && hasFuel && hasEngine && p.money>=cpuWageDue(p))return true;
+    return false;
+  }
+  return p.money>=afterWage*1.5 && hasFuel && hasEngine;
+}
+function cpuGrowthReserveNeeded(afterWorkers){return afterWorkers*currentWage() + (game.round<=4?4:(game.round<=6?6:10));}
+function cpuWorkerAfterAction(p,s){
+  if(!s)return p.workers;
+  if(s.action==='addWorkerNow')return p.workers+(s.amount||1);
+  if(s.action==='setWorkers')return s.amount?Math.min(workerLimit(p),p.workers+(s.amount||1)):Math.max(p.workers,s.target||p.workers);
+  return p.workers;
+}
+function cpuWorkerGrowthRisk(p,afterWorkers){
+  const afterWage=afterWorkers*currentWage();
+  const assets=p.money + cpuSellableValue(p);
+  const hardShort=afterWage-p.money;
+  const assetShort=afterWage-assets;
+  let risk=0;
+  if(hardShort>0)risk+=hardShort*(game.round>=7?90:55);
+  if(assetShort>0)risk+=assetShort*(game.round>=7?180:100);
+  if((p.soldBuildings||0)>=2 && p.money<afterWage*1.3)risk+=450;
+  return risk;
+}
+function cpuCanGrowTo(p,afterWorkers){
+  // v50: 4人化は勝つために重要だが、現金基盤なしでは危険モードが続く。
+  // 3人化は早めに許可、4人化は「給料を払える現金」または「収入機会」を条件にする。
+  if(afterWorkers<=3)return true;
+  if(afterWorkers===4){
+    if(game.round<=3)return cpuGrowthPrepared(p,4) && p.money>=4*currentWage();
+    return cpuGrowthPrepared(p,4);
+  }
+  // 5人目は基本的に事故要因。かなり余裕がある時だけ。
+  return cpuGrowthPrepared(p,afterWorkers) && p.buildings.length>=6 && p.goods>=3;
+}
+function cpuSafeCash(p,extraWorkers=0){return p.money >= (wageWorkers(p)+extraWorkers)*currentWage();}
+function cpuEffectiveCostPenalty(p,cost){
+  const goodsUse=Math.min(p.goods,cost);
+  const handUse=Math.max(0,cost-goodsUse);
+  let pen=goodsUse*(game.round>=8?4:2) + handUse*(game.round>=8?24:(game.round>=6?18:11));
+  if(handUse>0 && p.hand.length<=4) pen+=18;
+  if(game.round>=8 && cost>0) pen+=cost*6;
+  const protectedUse=cpuActionUsesProtectedCards(p,cost);
+  if(protectedUse>0) pen+=protectedUse*(game.round>=7?90:55);
+  const reserveNeed=cpuReservedCostNeed(p);
+  if(handUse>0 && reserveNeed>0) pen+=Math.min(handUse,reserveNeed)*28;
+  return pen;
+}
+
+// ===== v40: CPU給料安全ガード =====
+// 人間ログ分析から、CPUの最大の負け筋は「建てた建物を給料不足で売る」こと。
+// そのため、ラウンド6以降は現金確保、ラウンド7以降は売却回避を強く評価する。
+function cpuProjectedMoneyAfterAction(p,s){
+  let m=p.money;
+  if(['gainMoney','discardGain'].includes(s.action) && canGain(s.amount||0))m += s.amount||0;
+  return m;
+}
+function cpuProjectedWorkersAfterAction(p,s){
+  const base=wageWorkers(p);
+  if(s.action==='addWorkerNow')return base+(s.amount||1);
+  // v75: 学校・高等学校・大学で増えた研修中労働者も、そのラウンド終了時の給料対象。
+  if(s.action==='setWorkers')return s.amount?Math.min(workerLimit(p),base+(s.amount||1)):Math.max(base,s.target||base);
+  return base;
+}
+function cpuProjectedWageDueAfterAction(p,s){
+  return cpuProjectedWorkersAfterAction(p,s)*currentWage();
+}
+function cpuLikelySalaryShortAfterAction(p,s){
+  return cpuProjectedMoneyAfterAction(p,s) < cpuProjectedWageDueAfterAction(p,s);
+}
+function cpuLikelyBuildingSaleAfterAction(p,s){
+  if(game.round<7)return false;
+  if(!cpuLikelySalaryShortAfterAction(p,s))return false;
+  // この行動後に労働者が残らないなら、給料時に売却がかなり濃厚。
+  // 労働者が残る場合でも、現金不足が大きく収入行動でないなら危険扱いにする。
+  const projectedShort=cpuProjectedWageDueAfterAction(p,s)-cpuProjectedMoneyAfterAction(p,s);
+  const workersLeftAfterThis=Math.max(0,p.availableWorkers-1);
+  const isIncome=['gainMoney','discardGain'].includes(s.action);
+  if(workersLeftAfterThis<=0)return true;
+  return !isIncome && projectedShort>=8;
+}
+
+// ===== v46: 終盤に建てた建物をそのまま給料で売る動きを止める =====
+// v45でもラウンド8〜9に、現金が足りないのに建設会社で工場を建て、
+// 直後の給料でその工場を売る動きが残った。
+// 建物の点数ではなく「給料後に残せるか」を強く見る。
+function cpuLateBuildCashRiskPenalty(p,s,target){
+  if(!p || !p.isCPU || !target || !cpuIsBuildAction(s))return 0;
+  if(game.round<7)return 0;
+  const wageDue=cpuProjectedWageDueAfterAction(p,s);
+  const cashAfter=cpuProjectedMoneyAfterAction(p,s);
+  const allowedUnpaid=game.round>=8?6:4;
+  const shortage=Math.max(0,wageDue-cashAfter);
+  if(shortage<=allowedUnpaid)return 0;
+
+  const workersLeftAfterThis=Math.max(0,p.availableWorkers-1);
+  let pen=0;
+
+  // 最後の労働者で現金不足のまま建てると、ほぼ売却確定。
+  if(workersLeftAfterThis<=0)pen-=5200;
+  else pen-=2200 + shortage*90;
+
+  // ラウンド8以降は、低〜中VPの売却可能建物を「給料担保」として建てない。
+  if(game.round>=8 && target.sellable)pen-=900;
+  if(game.round>=8 && target.sellable && target.vp<=12)pen-=1600;
+
+  // 工場は強いが、終盤に現金不足のまま建てると売却ループになりやすい。
+  if(game.round>=8 && ['factory','coffee','farm','orchard'].includes(target.id))pen-=1800;
+
+  // ただし高得点・非売却の最終得点カードは少しだけ許容する。
+  if(!target.sellable && target.vp>=18)pen+=900;
+  if(target.vp>=24)pen+=700;
+  return pen;
+}
+function cpuSalaryGuardMode(p){
+  const due=cpuWageDue(p);
+  const st=ensureStats(p);
+  // v52: 売却だけでなく、未払いが2回以上出た時点でも守備モードへ入る。
+  // 今回のログでは売却1回でも未払い6回になっていたため、未払い癖を早めに止める。
+  // v75: 建物が少なすぎる段階で守備モードに入ると、現金行動だけで沈む。
+  // 売却/未払い後でも、序中盤かつ建物0〜1枚なら強い建築で復帰できる余地を残す。
+  const trouble=((p.soldBuildings||0)>=2 || (st.unpaidEvents||0)>=2 || (st.unpaidAmount||0)>=10);
+  if(!trouble || cpuAttackReady(p) || p.money>=due+12)return false;
+  if(game.round<=6 && p.buildings.length<2 && cpuStrongBuildCandidate(p))return false;
+  return true;
+}
+function cpuSalaryGuardReleased(p){
+  const st=ensureStats(p);
+  return ((p.soldBuildings||0)>=2 || (st.unpaidEvents||0)>=2 || (st.unpaidAmount||0)>=10) && cpuAttackReady(p);
+}
+
+// ===== v43: 守備から攻撃へ戻る判定 =====
+// v40でCPUは破産しにくくなったが、終盤に公共職場へ寄りすぎることがあった。
+// 現金と消費財に余裕がある時は、建設を再び強く評価する。
+function cpuAttackReady(p){
+  const wageDue=cpuWageDue(p);
+  if(game.round<7 || wageDue<=0)return false;
+  const strongBuild=!!cpuStrongBuildCandidate(p);
+  // v50: 4人だと給料2回分は$40になり、攻撃モードに一度も入れなかった。
+  // 「次給料 + 10」または「次給料を払える＋強い建築候補」で攻撃復帰を許可する。
+  if(p.money>=wageDue+10 && (p.goods>=1 || p.hand.length>=3 || strongBuild))return true;
+  if(p.money>=wageDue && p.goods>=2 && strongBuild)return true;
+  if(game.round>=8 && p.money>=wageDue+4 && strongBuild && p.buildings.length<=3)return true;
+  return false;
+}
+function cpuAttackBuildBonus(p){
+  let b=820;
+  if(p.buildings.length<=2)b+=1250;
+  else if(p.buildings.length<=3)b+=950;
+  else if(p.buildings.length<=5)b+=520;
+  b+=cpuBehindBuildingGoal(p)*145;
+  if(game.round>=8)b+=260;
+  return b;
+}
+function cpuAttackIncomePenalty(p){
+  if(!cpuAttackReady(p))return 0;
+  let pen=360;
+  if(p.buildings.length<=3)pen+=620;
+  else if(p.buildings.length<=5)pen+=300;
+  if(game.round>=8)pen+=160;
+  return pen;
+}
+
+function cpuIncomeScore(p,amount,cost){
+  const need=cpuNeedsMoney(p);
+  const emergency=cpuEmergency(p);
+  const safetyGap=cpuSafetyGap(p);
+  const wageDue=cpuWageDue(p);
+  const cashShort=Math.max(0,wageDue-p.money);
+  const goodsUse=Math.min(p.goods,cost);
+  const handUse=Math.max(0,cost-goodsUse);
+  let sc=0;
+  if(emergency){
+    const gap=Math.max(0,-cpuSolvency(p));
+    // 未払い回避中は現金を最優先。カードを捨てても未払いを減らす価値が高い。
+    sc += 160 + amount*8 + Math.min(amount,Math.max(gap,cashShort))*14;
+    if(amount>=cashShort) sc += 70;
+    if(handUse>0) sc -= handUse*(game.round>=8?10:6);
+    if(goodsUse>0) sc -= goodsUse*2;
+    return sc;
+  }else if(safetyGap>0 || cashShort>0){
+    const target=Math.max(safetyGap,cashShort);
+    sc += 80 + Math.min(amount,target)*8 + Math.max(0,amount-target)*1.2;
+    if(amount>=target)sc+=35;
+    sc -= handUse*(game.round>=8?14:8);
+    sc -= goodsUse*2;
+    return sc;
+  }else if(need>0){
+    sc += Math.min(amount,need)*5 + Math.max(0,amount-need)*0.8;
+  }else{
+    sc += amount*(game.round>=7?0.12:0.35);
+    if(game.round>=7) sc-=32;
+  }
+  sc -= cpuEffectiveCostPenalty(p,cost);
+  if(game.round>=8 && cost>0 && safetyGap===0 && !emergency) sc-=30;
+  return sc;
+}
+function cpuWorkerScore(p,s){
+  const r=game.round;
+  const after = cpuWorkerAfterAction(p,s);
+  const add = Math.max(0,after-p.workers);
+  if(add<=0)return -80;
+  let risk=cpuWorkerGrowthRisk(p,after);
+  // v75: 研修中労働者も給料対象なので、学校系のリスクは軽減しない。
+  let sc=0;
+
+  // 3人目は最優先級。2人のままでは行動回数が足りない。
+  if(after<=3){
+    sc += r<=2 ? 1450 : (r<=3 ? 1050 : (r<=5 ? 650 : 260));
+    sc -= risk*0.45;
+    return sc;
+  }
+
+  // 4人目はCPUの基本ゴール。ラウンド4〜6で強く取り、7以降でも3人以下ならまだ狙う。
+  if(after===4){
+    if(r<=3)sc += 180;             // 早すぎる4人化は少し控えめ
+    else if(r<=6)sc += 1250;       // 本命タイミング
+    else if(r<=8)sc += 820;        // 終盤でも4人未満なら価値あり
+    else sc += 300;
+    if(p.workers<=2)sc += 260;     // 2人から一気に4人にできるなら強い
+    if(!cpuCanGrowTo(p,4))sc -= r<=6 ? 950 : 1150;
+    else if(cpuIncomeOpportunity(p) || cpuStrongBuildCandidate(p))sc += 220;
+    sc -= risk*0.55;
+    return sc;
+  }
+
+  // 5人目は原則抑制。給料2回分級の余裕がある時だけ小さく評価。
+  if(after>=5){
+    sc += cpuCanGrowTo(p,after) ? 180 : -1300;
+    sc -= risk*0.8;
+    if(r>=7)sc-=420;
+    return sc;
+  }
+  return -80;
+}
+
+function evalSource(s,p,isPub){
+  let sc=isPub&&s.id!=='mine'?3:0;
+  const r=game.round;
+  const emergency=cpuEmergency(p);
+  const safetyGap=cpuSafetyGap(p);
+  const behind=cpuBehindBuildingGoal(p);
+  const plan=cpuBuildPlan(p);
+  const beforeSolvency=cpuSolvency(p);
+  switch(s.action){
+    case'draw': sc+=(s.drawCount||1)*cpuDrawValue(); if(p.hand.length<=2)sc+=8; if(r>=7)sc-=12; if(plan&&!plan.canNow&&r<=7)sc+=6; break;
+    case'drawGoods':
+    case'drawGoodsSelfTrash': {
+      sc+=(s.drawCount||1)*cpuGoodsValue(p);
+      if(plan&&!plan.canNow&&plan.need>p.goods)sc+=Math.min((s.drawCount||1),plan.need-p.goods)*18;
+      if(p.hand.some(c=>cpuPriorityCardTier(c)>=3 && c.cost>=3))sc+=(s.drawCount||1)*(r<=7?18:8);
+      if(['orchard','plantation'].includes(s.id))sc+=r<=7?90:35;
+      if(r>=8 && !bestBuild(p,0,null))sc-=22;
+      break;
+    }
+    case'gainMoney': sc+=cpuIncomeScore(p,s.amount||0,0); break;
+    case'discardGain': sc+=cpuIncomeScore(p,s.amount||0,s.discardCount||0); if(s.id==='restaurant')sc+=game.round>=5?120:70; break;
+    case'discardDraw': sc=(s.drawCount||0)*cpuDrawValue()-cpuEffectiveCostPenalty(p,s.discardCount||0); if(p.hand.length<=2)sc+=12; if(['factory','auto_factory'].includes(s.id))sc+=r<=7?85:35; if(r>=7)sc-=25; break;
+    case'build': {
+      const c=bestBuild(p,0,null);
+      sc=c?evalCard(c,p)+cpuBuildBias()+cpuBuildShortageBonus(p,c)+cpuSellableInsuranceBonus(p,c)+cpuPriorityCardBonus(c,p)+cpuNikoshiTimingBonus(p,c,0):-999;
+      if(c){ sc+=behind*24; if(r>=7)sc+=c.vp*1.4; if(plan&&plan.card&&plan.card.uid===c.uid)sc+=30; if(safetyGap>0)sc+=c.sellable?20:-90; if(r>=7 && p.money<cpuWageDue(p))sc+=c.sellable?35:-140; }
+      if(c && emergency){
+        // v46: 終盤は売却目的の建築をしない。序中盤だけ売却保険を少し評価。
+        sc += game.round>=7 ? (c.sellable ? -900 : -120) : (c.sellable ? c.vp*2 : -45);
+      }
+      break;
+    }
+    case'buildDiscount': {
+      const c=bestBuild(p,s.discount||1,null);
+      sc=c?evalCard(c,p)+cpuBuildBias()+8+cpuBuildShortageBonus(p,c)+cpuSellableInsuranceBonus(p,c)+cpuPriorityCardBonus(c,p)+cpuNikoshiTimingBonus(p,c,s.discount||1):-999;
+      if(c){ sc+=behind*24; if(r>=7)sc+=c.vp*1.4; if(plan&&plan.card&&plan.card.uid===c.uid)sc+=32; if(safetyGap>0)sc+=c.sellable?20:-90; if(r>=7 && p.money<cpuWageDue(p))sc+=c.sellable?35:-140; }
+      if(c && emergency) sc += game.round>=7 ? (c.sellable ? -900 : -120) : (c.sellable ? c.vp*2 : -45);
+      break;
+    }
+    case'buildThenDraw': {
+      const c=bestBuild(p,0,null);
+      sc=c?evalCard(c,p)+cpuBuildBias()+8+(s.drawCount||2)*cpuDrawValue()+cpuBuildShortageBonus(p,c)+cpuSellableInsuranceBonus(p,c)+cpuPriorityCardBonus(c,p)+cpuNikoshiTimingBonus(p,c,0):-999;
+      if(c){ sc+=behind*24; if(r>=7)sc+=c.vp*1.4; if(plan&&plan.card&&plan.card.uid===c.uid)sc+=32; if(safetyGap>0)sc+=c.sellable?20:-90; if(r>=7 && p.money<cpuWageDue(p))sc+=c.sellable?35:-140; }
+      if(c && emergency) sc += game.round>=7 ? (c.sellable ? -900 : -120) : (c.sellable ? c.vp*2 : -45);
+      break;
+    }
+    case'setWorkers':
+    case'addWorkerNow': sc=cpuWorkerScore(p,s); break;
+    case'revealChoose': sc=(r<=6?16:4); if(p.hand.length<=2)sc+=8; if(r>=8)sc-=12; break;
+    case'chemicalDraw': sc=(p.hand.length===0?4:2)*cpuDrawValue(); break;
+    case'freeBuildFarm': {
+      const c=bestBuild(p,999,c=>c.icon==='farm');
+      sc=c?evalCard(c,p)+cpuBuildBias()+4+cpuBuildShortageBonus(p,c)+cpuSellableInsuranceBonus(p,c)+cpuPriorityCardBonus(c,p)+cpuNikoshiTimingBonus(p,c,999):-999;
+      if(c && emergency) sc += game.round>=7 ? (c.sellable ? -900 : -120) : (c.sellable ? c.vp*2 : -45);
+      if(r>=8)sc-=20;
+      break;
+    }
+    case'buildTwoSameCost': sc=canBuildTwo(p)?cpuBuildBias()+60+behind*28+cpuBuildShortageBonus(p,null)+(r>=7?55:0):-999; break;
+    case'drawUntilHand': sc=Math.max(0,(s.target||4)-totalHandCount(p))*cpuGoodsValue(p); break;
+    default: sc=0;
+  }
+
+
+  // v44: ラウンド6以降、建設会社・大工・ゼネコンで低価値建物を建てる動きは強く抑える。
+  // 低価値建物を増やして給料時に売るループを防ぎ、製鉄所・工場・レストラン・高VP建物へ寄せる。
+  if(cpuIsBuildAction(s)){
+    const target=cpuBuildResultCardForAction(p,s);
+    if(target){
+      sc += cpuLateBuildQualityAdjustment(target,p,(s.action==='buildDiscount')?(s.discount||1):(s.action==='freeBuildFarm'?999:0));
+      if(game.round>=6 && !cpuLateBuildTargetIsGood(target,p))sc-=900;
+      sc += cpuLateBuildCashRiskPenalty(p,s,target);
+    }
+  }
+
+  // 強い公共化建物や強い建築職場は取り合いなので高く評価する。
+  if(isPub){
+    const pp=cpuPublicPower(s);
+    if(pp>0)sc += pp*(r>=7?0.9:0.45);
+    const block=cpuOpponentBlockBonus(p,s);
+    if(block>0)sc += block;
+    if(cpuIsBuildAction(s) && r>=7)sc += 180;
+  }
+
+  // 未払い回避モード：現金か売却可能資産につながらない行動は強く下げる。
+  if(emergency){
+    const isIncome=['gainMoney','discardGain'].includes(s.action);
+    const isBuild=['build','buildDiscount','buildThenDraw','freeBuildFarm','buildTwoSameCost'].includes(s.action);
+    if(!isIncome && !isBuild) sc-=70;
+    if(['draw','drawGoods','drawGoodsSelfTrash','revealChoose','discardDraw','chemicalDraw','drawUntilHand'].includes(s.action)) sc-=35;
+  }
+
+  // 給料安全ライン：不足している時は現金収入を優先し、準備行動を抑える。
+  if(safetyGap>0){
+    if(['gainMoney','discardGain'].includes(s.action))sc+=Math.min(s.amount||0,safetyGap)*4;
+    else if(!['build','buildDiscount','buildThenDraw','freeBuildFarm','buildTwoSameCost'].includes(s.action))sc-=35;
+  }
+  // v40: ラウンド6以降、給料不足になりそうなら現金行動を強く加点する。
+  if(r>=6 && ['gainMoney','discardGain'].includes(s.action) && cpuLikelySalaryShortAfterAction(p,s)){
+    sc += 1000;
+  }
+
+  // v40: ラウンド7以降、給料時に建物売却が起きそうな行動は大きく減点する。
+  if(r>=7 && cpuLikelyBuildingSaleAfterAction(p,s)){
+    sc -= 3000;
+  }
+
+  // v40: CPUが2回以上建物を売った後は、給料2回分の現金を持つまで守備的にする。
+  if(cpuSalaryGuardMode(p)){
+    const noBuildingRecovery=(p.buildings.length===0 && game.round>=5);
+    if(['gainMoney','discardGain'].includes(s.action))sc += (noBuildingRecovery?360:1100) + Math.min(s.amount||0, cpuSafetyGap(p)+8)*12;
+    if(cpuIsBuildAction(s))sc += noBuildingRecovery ? 1250 : -950;
+    if(s.action==='drawNextFirst')sc -= 1300;
+    if(['setWorkers','addWorkerNow'].includes(s.action))sc -= 900;
+    if(['draw','revealChoose','discardDraw','chemicalDraw'].includes(s.action))sc -= 320;
+    if(['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(s.action))sc += 20;
+  }
+
+  // v40: ただし現金が給料2回分を超えたら、守備モードを解除して建設重視に戻す。
+  if(cpuSalaryGuardReleased(p) && cpuIsBuildAction(s)){
+    sc += 650 + behind*80;
+  }
+
+  // v43: 給料2回分以上の現金＋消費財2枚以上なら、守備から攻撃へ戻す。
+  if(cpuAttackReady(p)){
+    if(cpuIsBuildAction(s))sc += cpuAttackBuildBonus(p);
+    else if(['gainMoney','discardGain'].includes(s.action) && cpuNeedsMoney(p)===0)sc -= cpuAttackIncomePenalty(p);
+    else if(['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(s.action) && bestBuild(p,0,null))sc -= 90;
+
+    // v44: 安全圏で$5〜$6の小銭行動へ流れ続けるのを抑える。
+    if(['gainMoney','discardGain'].includes(s.action) && cpuNeedsMoney(p)===0){
+      const amt=s.amount||0;
+      if(amt<=6)sc-=950;
+      else if(amt<=12)sc-=420;
+    }
+    if(game.round>=8 && ['farm','slash_burn','orchard'].includes(s.id) && bestBuild(p,0,null))sc-=260;
+  }
+
+  // v50: 攻撃復帰条件を満たしたら、守備パッチより建設を上に押し戻す。
+  if(cpuAttackReady(p)){
+    if(cpuIsBuildAction(s)){
+      const target=cpuBuildResultCardForAction(p,s);
+      if(target && cpuLateBuildTargetIsGood(target,p))sc += 520;
+    }
+    if(['gainMoney','discardGain'].includes(s.action) && cpuNeedsMoney(p)===0){
+      const amt=s.amount||0;
+      if(amt<=12)sc-=300;
+    }
+  }
+
+  // ラウンド別目標：建物枚数が遅れている時は建築を強く優先する。
+  if(behind>0){
+    if(cpuIsBuildAction(s))sc+=behind*(r>=7?42:30);
+    if(r>=5 && ['gainMoney','discardGain'].includes(s.action) && safetyGap===0)sc-=behind*(r>=8?48:22);
+  }
+  // 終盤の現金行動は、給料穴埋め以外では点になりにくい。
+  sc-=cpuLateCashPenalty(p,s);
+  // 終盤の得点効率：点にならない準備行動を大きく下げる。
+  if(r>=8 && !cpuIsBuildAction(s) && !['gainMoney','discardGain'].includes(s.action))sc-=35;
+  // 現金が給料分より少ないラウンド後半は、準備行動を避ける。
+  if(r>=6 && cpuCashSurplus(p)<0 && ['draw','drawGoods','drawGoodsSelfTrash','revealChoose','discardDraw','chemicalDraw','drawUntilHand'].includes(s.action)) sc-=25;
+  if(r>=7 && ['market','supermarket','department','expo','stall'].includes(s.id) && cpuNeedsMoney(p)===0 && !emergency)sc-=24;
+  if(r>=8 && ['university','vocational'].includes(s.id))sc-=90;
+  if(r>=8 && ['school','highschool'].includes(s.id) && p.workers>=4)sc-=50;
+  if(beforeSolvency<5 && ['school','highschool','university','vocational'].includes(s.id))sc-=60;
+  if(s.action==='drawNextFirst'){
+    const publicPower=cpuBestPublicPower();
+    const st=ensureStats(p);
+    sc += cpuDrawValue();
+    // v52: 採石所連打で先手を取っても、現金不足だと未払いが増えるだけ。
+    // 先手予約は「給料を払える＋強い奪い先がある＋まだ取りすぎていない」時だけ高評価。
+    sc += game.round<=2 ? 20 : (game.round<=6 ? 35 : 45);
+    if(publicPower>0)sc += Math.min(420, publicPower*.45);
+    if(game.nextFirstPlayerIndex===game.players.indexOf(p)) sc -= 80;
+    if((st.quarryActions||0)>=2) sc -= 650;
+    if((st.quarryActions||0)>=3) sc -= 1200;
+    if(emergency || safetyGap>0 || p.money<cpuWageDue(p)+6) sc -= 900;
+    if(publicPower<620 && game.round>=6) sc -= 320;
+    if(game.round>=9) sc -= 999;
+  }
+  // デバッグ表示で極端なマイナスが並ぶと、判断不能に見えるため下限を設ける。
+  // ただし順位付けは保つため、完全な0固定ではなく軽い下限にする。
+  if(sc<-5000)sc=-5000;
+  return sc;
+}
+function cpuActions(p){
+  const a=[];
+  publicSources().forEach(s=>{if((s.multiUse||!usedPublic(s))&&canExecute(p,s))a.push({type:'public',s,label:s.name,score:evalSource(s,p,true)});});
+  p.buildings.forEach(b=>{if(!b.used&&b.action!=='none'&&canExecute(p,b))a.push({type:'building',s:b,label:b.name,score:evalSource(b,p,false)});});
+  return a.sort((x,y)=>y.score-x.score);
+}
+function cpuScoreText(score){
+  const n=Math.round(score);
+  // CPU候補ログはプレイヤー向け表示なので、マイナス点をそのまま出さない。
+  // 内部評価は負のまま使うが、表示は 0〜 に丸める。
+  const shown=Math.max(0,n);
+  return (shown>0?'+':'')+shown;
+}
+
+function cpuMode(p){
+  const due=cpuWageDue(p);
+  if(cpuAttackReady(p))return 'attack';
+  if(p.money<due)return 'danger';
+  return 'safe';
+}
+function cpuModeLabel(mode){return mode==='danger'?'危険':mode==='safe'?'安全':'攻撃';}
+function cpuModePolicyText(p,mode){
+  if(mode==='danger')return '給料不足回避。現金行動を優先し、建設・増員は原則抑える。';
+  if(p.workers<3)return '3人化を急ぐ。給料が払える範囲で学校を狙う。';
+  if(p.workers<4)return '4人化を狙う。現金を守りながら高等学校を評価。';
+  if(mode==='safe')return '給料1回分は確保。強い建設だけ通し、低価値建築は避ける。';
+  return '攻撃復帰条件を満たした。強い建設・得点源を優先し、小銭行動を抑える。';
+}
+function cpuActionDetail(p,a){
+  if(!a||!a.s)return '';
+  const s=a.s;
+  const parts=[];
+  if(['gainMoney','discardGain'].includes(s.action))parts.push(`収入$${s.amount||0}`);
+  if(['setWorkers','addWorkerNow'].includes(s.action))parts.push(`労働者${p.workers}→${cpuWorkerAfterAction(p,s)}`);
+  if(cpuIsBuildAction(s)){
+    const c=cpuBuildResultCardForAction(p,s);
+    if(c)parts.push(`建築候補:${c.name}(${c.vp}点)`);
+    else if(s.action==='buildTwoSameCost'){
+      const pair=cpuBestTwoBuildPair(p);
+      if(pair)parts.push(`2枚建築:${pair.cards.map(c=>c.name).join('＋')}`);
+    }
+  }
+  if(s.action==='drawNextFirst')parts.push('次ラウンド先手');
+  if(a&&a.type==='public'&&cpuOpponentBlockBonus(p,s)>0)parts.push('相手妨害');
+  if(['draw','discardDraw','chemicalDraw'].includes(s.action))parts.push(`ドロー${s.drawCount||''}`);
+  if(['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(s.action))parts.push('消費財');
+  return parts.length?`［${parts.join(' / ')}］`:'';
+}
+function logCpuState(p,acts){
+  const mode=cpuMode(p);
+  const st=ensureStats(p);
+  if(mode==='danger')st.modeDanger++; else if(mode==='safe')st.modeSafe++; else st.modeAttack++;
+  st.decisionLogCount++;
+  const due=cpuWageDue(p);
+  const sellCover=p.money+cpuSellableValue(p);
+  const top=acts.slice(0,3).map(a=>`${a.label}${cpuScoreText(a.score)}`).join(' / ')||'なし';
+  addLog(`CPU状態：${cpuModeLabel(mode)}モード / 現金$${p.money} / 次給料$${due} / 労働者${p.workers}人 / 建物${p.buildings.length}枚 / 売却込み$${sellCover}`);
+  addLog(`CPU方針：${cpuModePolicyText(p,mode)}`);
+  addLog(`CPU候補：${top}`);
+}
+
+// v65: CPU安定化調整用ログ。
+// 「止まった場所」ではなく、「なぜ危険時に建設したか」「行動後に給料安全度が改善したか」を追う。
+function cpuActionCategory(a){
+  const s=a&&a.s;
+  if(!s)return '不明';
+  if(['gainMoney','discardGain'].includes(s.action))return '現金';
+  if(cpuIsBuildAction(s))return '建設';
+  if(['setWorkers','addWorkerNow'].includes(s.action))return '増員';
+  if(['draw','drawNextFirst','discardDraw','revealChoose','chemicalDraw'].includes(s.action))return 'ドロー';
+  if(['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(s.action))return '消費財';
+  return 'その他';
+}
+function cpuSnapshot(p){
+  const due=cpuWageDue(p);
+  const sellable=cpuSellableValue(p);
+  return {round:game.round,money:p.money,due,workers:p.workers,available:p.availableWorkers,buildings:p.buildings.length,hand:p.hand.length,goods:p.goods,totalCards:totalHandCount(p),household:game.household,sellable,cashGap:p.money-due,assetGap:p.money+sellable-due,mode:cpuMode(p)};
+}
+function cpuSnapshotText(x){
+  return `現金$${x.money} / 次給料$${x.due} / 現金差${x.cashGap>=0?'+':''}${x.cashGap} / 売却込差${x.assetGap>=0?'+':''}${x.assetGap} / 手札${x.hand}+消費財${x.goods} / 建物${x.buildings} / 家計$${x.household}`;
+}
+function cpuActionOutcomeText(before,after){
+  const dm=after.money-before.money, dc=after.totalCards-before.totalCards, dg=after.goods-before.goods, db=after.buildings-before.buildings, da=after.assetGap-before.assetGap;
+  const cashPay=after.cashGap>=0?'現金で次給料OK':'現金不足';
+  const assetPay=after.assetGap>=0?'売却込みOK':'売却込み不足';
+  return `現金${dm>=0?'+':''}${dm} / カード${dc>=0?'+':''}${dc} / 消費財${dg>=0?'+':''}${dg} / 建物${db>=0?'+':''}${db} / 売却込差${da>=0?'+':''}${da} / ${cashPay} / ${assetPay}`;
+}
+function cpuBestIncomeAvailable(acts){
+  return (acts||[]).filter(a=>a&&a.s&&['gainMoney','discardGain'].includes(a.s.action)).sort((x,y)=>y.score-x.score)[0]||null;
+}
+function cpuLogAdjustmentBefore(p,a,acts,reason){
+  if(!game.autoTestMode || !a)return null;
+  const before=cpuSnapshot(p);
+  const st=ensureStats(p);
+  st.stableActionLogs++;
+  const cat=cpuActionCategory(a);
+  const income=cpuBestIncomeAvailable(acts);
+  const top=(acts||[]).slice(0,5).map(x=>`${x.label}(${cpuActionCategory(x)}${cpuScoreText(x.score)})`).join(' / ')||'なし';
+  addLog(`調整ログ BEFORE：${p.name} R${game.round} ${cpuModeLabel(before.mode)} / ${cpuSnapshotText(before)}`);
+  addLog(`調整ログ CHOICE：${a.label} / 分類=${cat} / 理由=${reason||'通常'} / 評価=${cpuScoreText(a.score)} / 詳細=${cpuActionDetail(p,a)||'なし'}`);
+  addLog(`調整ログ TOP5：${top}`);
+  if(a.v68CrisisReason)addLog(`調整ログ v68：${a.v68CrisisReason}`);
+  if(income && cat!=='現金'){
+    st.cashActionSkipped++;
+    addLog(`調整ログ NOTE：現金候補あり=${income.label}${cpuScoreText(income.score)}。今回は${cat}を選択。`);
+  }
+  if(before.cashGap<0 && cat==='建設'){
+    st.dangerBuildActions++;
+    if(before.assetGap<0)st.buildWhenCannotPayCash++;
+    addLog(`調整ログ WARNING：現金不足中に建設。現金差${before.cashGap}、売却込差${before.assetGap}。`);
+  }
+  if(before.cashGap<0 && cat==='増員'){
+    st.dangerWorkerActions++;
+    addLog(`調整ログ WARNING：現金不足中に増員。次給料負担が増える可能性。`);
+  }
+  if(before.cashGap<0 && income && cat!=='現金'){
+    st.dangerNonIncomeWithIncomeAvailable++;
+    addLog(`調整ログ WARNING：現金不足かつ現金候補ありなのに非現金行動。調整対象。`);
+  }
+  return before;
+}
+function cpuLogAdjustmentAfter(p,a,before){
+  if(!game.autoTestMode || !a || !before)return;
+  const after=cpuSnapshot(p);
+  const st=ensureStats(p);
+  const beforeRisk=before.assetGap;
+  const afterRisk=after.assetGap;
+  if(afterRisk<beforeRisk)st.wageRiskWorseActions++;
+  else if(afterRisk>beforeRisk)st.wageRiskBetterActions++;
+  addLog(`調整ログ AFTER：${p.name} ${a.label} 結果 / ${cpuActionOutcomeText(before,after)}`);
+  if(afterRisk<0)addLog(`調整ログ RISK：行動後も売却込みで次給料不足。差${afterRisk}。`);
+  else if(beforeRisk<0 && afterRisk>=0)addLog(`調整ログ GOOD：売却込み不足を解消。${beforeRisk}→${afterRisk}`);
+  else if(afterRisk<beforeRisk)addLog(`調整ログ CHECK：給料安全度が悪化。${beforeRisk}→${afterRisk}`);
+}
+
+function cpuDesiredWorkers(p=cpuPlayer()){
+  // v75: 4人化で建物を全部売る事故が出たため、まず3人で会社基盤を作る。
+  // 4人目は「建物2枚以上＋次給料を現金でほぼ払える」時だけ目標にする。
+  if(!p)return 3;
+  if(game.round<=2)return 3;
+  const due4=4*currentWage();
+  const hasBase=p.buildings.length>=2 || cpuStrongBuildCandidate(p);
+  const cashReady=p.money>=due4+(game.round<=6?4:8);
+  if(game.round>=4 && game.round<=7 && hasBase && cashReady)return 4;
+  return 3;
+}
+
+function cpuWorkerOverride(p,acts){
+  const target=cpuDesiredWorkers(p);
+  if(p.workers>=target)return null;
+  // 現金が本当に危ない時は、先に収入行動を優先する。
+  if(cpuWageDue(p)>p.money && cpuSafetyGap(p)>0)return null;
+  const workerActs=acts.filter(a=>['setWorkers','addWorkerNow'].includes(a.s.action));
+  if(!workerActs.length)return null;
+  const useful=workerActs
+    .map(a=>{
+      const after=cpuWorkerAfterAction(p,a.s);
+      const add=Math.max(0,after-p.workers);
+      let priority=a.score;
+      if(add<=0)priority-=9999;
+      if(after>=3 && p.workers<3)priority+=game.round<=2?900:520;
+      if(after>=4 && p.workers<4){
+        priority += game.round>=4 && game.round<=6 ? 900 : 420;
+        priority += cpuCanGrowTo(p,4) ? 320 : -520;
+      }
+      // 5人化は、4人化の邪魔なら強く抑える。
+      if(after>=5 && p.workers<5){
+        priority += cpuCanGrowTo(p,after) ? -120 : -1800;
+      }
+      return {...a,workerPriority:priority,after,add};
+    })
+    .filter(a=>a.add>0)
+    .sort((x,y)=>y.workerPriority-x.workerPriority);
+  const best=useful[0]||null;
+  if(!best)return null;
+  if(!cpuV67DangerWorkerAllowed(p,best))return null;
+  // 3人目は使えるなら強制。
+  if(p.workers<3 && best.after>=3)return best;
+  // 4人目は中盤なら多少強引に狙う。終盤は安全条件を満たす時だけ。
+  if(p.workers<4 && best.after>=4){
+    // v75: 4人化は強いが、建物ゼロ〜1枚で行くと給料地獄になる。
+    // 建物2枚以上、または強い建築候補を持ち、現金で次給料を払える時だけ許可。
+    const due4=4*currentWage();
+    const baseReady=p.buildings.length>=2 || cpuStrongBuildCandidate(p);
+    const cashReady=p.money>=due4+(game.round<=6?4:8);
+    if(baseReady && cashReady && game.round>=4 && game.round<=7 && cpuCanGrowTo(p,4) && best.workerPriority>120)return best;
+  }
+  // 5人目は基本取らない。
+  if(p.workers<5 && best.after>=5 && cpuCanGrowTo(p,best.after) && p.workers>=4)return best;
+  return null;
+}
+
+
+function cpuBuildResultCardForAction(p,s){
+  if(!s)return null;
+  if(s.action==='build')return bestBuild(p,0,null);
+  if(s.action==='buildDiscount')return bestBuild(p,s.discount||1,null);
+  if(s.action==='buildThenDraw')return bestBuild(p,0,null);
+  if(s.action==='freeBuildFarm')return bestBuild(p,999,c=>c.icon==='farm');
+  return null;
+}
+function cpuBestBuildAction(acts,p){
+  const builds=acts.filter(a=>cpuIsBuildAction(a.s));
+  builds.forEach(a=>{a.buildResultCard=cpuBuildResultCardForAction(p,a.s);});
+  return builds.sort((x,y)=>y.score-x.score)[0]||null;
+}
+function cpuBestIncomeActionByScore(acts){
+  return acts.filter(a=>['gainMoney','discardGain'].includes(a.s.action)).sort((x,y)=>y.score-x.score)[0]||null;
+}
+function cpuBuildCreatesWageInsurance(p,a){
+  if(!a)return false;
+  const c=a.buildResultCard||cpuBuildResultCardForAction(p,a.s);
+  if(!c || !c.sellable)return false;
+  return p.money + cpuSellableValue(p) + c.vp >= cpuWageDue(p);
+}
+function cpuBuildOverride(p,acts){
+  const build=cpuBestBuildAction(acts,p);
+  if(!build)return null;
+  if(!cpuV67DangerBuildAllowed(p,build))return null;
+  const income=cpuBestIncomeActionByScore(acts);
+  const bestOther=acts.filter(a=>!cpuIsBuildAction(a.s)).sort((x,y)=>y.score-x.score)[0]||null;
+  const behind=cpuBehindBuildingGoal(p);
+  const coveredByAssets = p.money + cpuSellableValue(p) >= cpuWageDue(p);
+  const coveredByBuild = cpuBuildCreatesWageInsurance(p,build);
+  const tolerateSmallUnpaid = cpuCanTolerateSmallUnpaid(p);
+  const attackReady = cpuAttackReady(p);
+  const goodLateBuildTarget = cpuLateBuildTargetIsGood(build.buildResultCard,p);
+  const cashRiskPenalty = cpuLateBuildCashRiskPenalty(p,build.s,build.buildResultCard);
+  if(game.round>=7 && cashRiskPenalty<=-3000 && !(cpuAttackReady(p) && goodLateBuildTarget && build.buildResultCard && build.buildResultCard.vp>=18))return null;
+
+  // v44: 安全圏に戻っても、農場・珈琲店・焼畑などの低価値建築では復帰しない。
+  if(attackReady && goodLateBuildTarget && cashRiskPenalty>-2500 && (p.buildings.length<=5 || game.round>=8)){
+    const incomeGap = income ? build.score - income.score : 999;
+    const otherGap = bestOther ? build.score - bestOther.score : 999;
+    if(incomeGap>=-450 && otherGap>=-300)return build;
+  }
+
+  // 建築候補が現金候補より少しでも明確に高ければ建築を優先する。
+  // 以前の+150では安全運転すぎたため、終盤は+25で建築へ寄せる。
+  if(income && (game.round<6 || goodLateBuildTarget) && build.score > income.score + (game.round>=7?25:60) && (coveredByAssets || coveredByBuild || tolerateSmallUnpaid || game.round>=8))return build;
+  if(!income && bestOther && (game.round<6 || goodLateBuildTarget) && build.score > bestOther.score + (game.round>=7?20:60) && (coveredByAssets || coveredByBuild || tolerateSmallUnpaid))return build;
+
+  // 建物枚数が少ない時は建築を強制寄りにする。
+  if(behind>=2 && (game.round<6 || goodLateBuildTarget) && (coveredByAssets || coveredByBuild || tolerateSmallUnpaid || game.round<=6))return build;
+  if(game.round>=7 && goodLateBuildTarget && p.buildings.length<5 && (coveredByAssets || coveredByBuild || tolerateSmallUnpaid))return build;
+  if(game.round>=8 && goodLateBuildTarget && p.buildings.length<6 && (!bestOther || build.score >= bestOther.score-40) && (coveredByAssets || coveredByBuild || tolerateSmallUnpaid))return build;
+  return null;
+}
+
+
+// v75: 序盤に現金行動へ逃げ続けて建物ゼロになる事故を防ぐ。
+function cpuEarlyBuildOverride(p,acts){
+  if(!p || !acts || !acts.length)return null;
+  if(game.round>6)return null;
+  if(p.buildings.length>=2)return null;
+  const build=cpuBestBuildAction(acts,p);
+  if(!build || !cpuActionStillUsable(p,build) || !cpuV67DangerBuildAllowed(p,build))return null;
+  const target=build.buildResultCard||cpuBuildResultCardForAction(p,build.s);
+  if(!target)return null;
+  const strong=target.vp>=10 || target.sellable || cpuPriorityCardTier(target)>=3;
+  if(!strong)return null;
+  const income=cpuBestIncomeActionByScore(acts);
+  const afterGap=cpuV67BuildInsuranceGap(p,build);
+  // 売却込みで大崩れしないなら、最低限の会社基盤を優先。
+  if(afterGap>=-4 && (!income || build.score>=income.score-260)){
+    build.v75EarlyBuild=true;
+    return build;
+  }
+  return null;
+}
+
+// v66: 危険時の現金強制ルール。
+// v65ログでは「現金候補があるのに鉱山・工場・建設へ逃げる」ケースが多かった。
+// 現金差がマイナスなら、実行可能な現金行動を最優先する。
+function cpuStrictCashOverride(p,acts){
+  if(!p || !acts || !acts.length)return null;
+  const wageDue=cpuWageDue(p);
+  const cashGap=p.money-wageDue;
+  if(cashGap>=0)return null;
+
+  const income=acts
+    .filter(a=>a && a.s && ['gainMoney','discardGain'].includes(a.s.action) && cpuActionStillUsable(p,a))
+    .map(a=>{
+      const amount=a.s.amount||0;
+      const cost=a.s.discardCount||0;
+      const goodsUse=Math.min(p.goods,cost);
+      const handUse=Math.max(0,cost-goodsUse);
+      const afterCash=p.money+amount;
+      const afterGap=afterCash-wageDue;
+      const clearsCash=afterGap>=0;
+      const improvesBy=Math.min(amount,Math.max(0,-cashGap));
+      let strictScore=0;
+      strictScore += amount*100;
+      strictScore += improvesBy*180;
+      if(clearsCash)strictScore += 1200;
+      if(afterGap>=-3)strictScore += 360;
+      // 終盤でもカードを全部捨てて小銭を取るより、支払い効率を少し見る。
+      // v77: 建物0枚の時に収入行動で建物カードを捨て続けると復帰不能になるため重く見る。
+      strictScore -= handUse*(p.buildings.length===0 ? (game.round>=8?420:300) : (game.round>=8?120:75));
+      strictScore -= goodsUse*20;
+      // 家計が少ない時は金額が小さくても、今取れる現金を優先。
+      if(game.round>=7)strictScore += 260;
+      return {...a,strictCashScore:strictScore,strictAfterGap:afterGap};
+    })
+    .sort((x,y)=>y.strictCashScore-x.strictCashScore);
+  const best=income[0]||null;
+  if(!best)return null;
+
+  // v73: 現金不足でも、強い建設で売却保険を作れる場合は現金行動の強制を少し緩める。
+  // v72では露店・市場にカードを払い続けて、CPUが建物1枚のまま終盤へ行くことがあった。
+  const build=cpuBestBuildAction(acts,p);
+  if(build && cpuActionStillUsable(p,build)){
+    const target=build.buildResultCard||cpuBuildResultCardForAction(p,build.s);
+    const afterGap=cpuV67BuildInsuranceGap(p,build);
+    const workersLeft=Math.max(0,p.availableWorkers-1);
+    const strongTarget=target && (target.vp>=12 || cpuPriorityCardTier(target)>=3);
+    const incomeClears=best.strictAfterGap>=0;
+    const buildClearlyBetter=(build.score||0)>(best.score||0)+(game.round>=6?180:260);
+    if(strongTarget && afterGap>=0 && workersLeft>=1 && (!incomeClears || buildClearlyBetter)){
+      return null;
+    }
+  }
+
+  const bestNonIncome=acts.filter(a=>a && a.s && !['gainMoney','discardGain'].includes(a.s.action)).sort((x,y)=>y.score-x.score)[0]||null;
+  const assetGap=p.money+cpuSellableValue(p)-wageDue;
+  const hardDanger=assetGap<0;
+  const lateDanger=game.round>=6;
+  const clearOrNear=best.strictAfterGap>=-3;
+
+  // v75: 序盤に建物が少ない時は、売却込みで大崩れしない建築を現金強制より優先させる。
+  if(game.round<=5 && p.buildings.length<2){
+    const earlyBuild=cpuEarlyBuildOverride(p,acts);
+    if(earlyBuild)return null;
+  }
+
+  // 売却込みでも不足、または中盤以降で現金不足なら強制。
+  if(hardDanger || lateDanger || clearOrNear || (best.score||0)>=500){
+    best.v66StrictCash=true;
+    best.v66StrictCashReason=`現金差${cashGap} / 売却込差${assetGap} / 現金候補${best.label}`;
+    return best;
+  }
+
+  // 序盤は、非現金が圧倒的に強い時だけ許す。
+  if(bestNonIncome && bestNonIncome.score > best.score + 900)return null;
+  best.v66StrictCash=true;
+  best.v66StrictCashReason=`序盤現金不足 / 現金候補${best.label}`;
+  return best;
+}
+
+function cpuIncomeOverride(p,acts){
+  const wageDue=cpuWageDue(p);
+  const hardNeed=Math.max(0,wageDue-p.money);
+  const sellableCover=p.money+cpuSellableValue(p);
+  const allowedUnpaid = game.round>=8 ? 6 : (game.round>=7 ? 4 : 0);
+  const trueDanger=sellableCover+allowedUnpaid<wageDue;
+  const st=ensureStats(p);
+  const cashGuardDanger = game.round>=4 && p.money < wageDue + 6;
+  const unpaidGuardDanger = (st.unpaidEvents||0)>=2 && p.money < wageDue + 12;
+
+  // v52: 売却込みで払えるから大丈夫、という判定を弱める。
+  // 実戦では売却込み安全でも未払いが連発したため、現金そのものを次給料+αまで戻す。
+  if(!trueDanger && !cashGuardDanger && !unpaidGuardDanger)return null;
+
+  const scoreIncomeAction=a=>{
+    const amount=a.s.amount||0;
+    const cost=a.s.discardCount||0;
+    const handUse=Math.max(0,cost-Math.min(p.goods,cost));
+    const targetNeed=Math.max(hardNeed, Math.max(0, wageDue+6-p.money));
+    let sc=amount*12 + Math.min(amount,targetNeed)*24 - handUse*(game.round>=8?20:10);
+    if(amount>=hardNeed && hardNeed>0)sc+=120;
+    if(amount>=targetNeed && targetNeed>0)sc+=90;
+    if(game.round>=8)sc-=20;
+    return sc;
+  };
+
+  const income=acts.filter(a=>['gainMoney','discardGain'].includes(a.s.action));
+  income.forEach(a=>{a.emergencyScore=scoreIncomeAction(a);});
+  const bestNow=income.slice().sort((x,y)=>y.emergencyScore-x.emergencyScore)[0]||null;
+  const build=cpuBestBuildAction(acts,p);
+  const bestIncomeByScore=cpuBestIncomeActionByScore(acts);
+
+  // v52: 現金ガード中は、かなり強い建築以外では現金を優先する。
+  // ただし高得点で売却保険にもなる建築だけは通す。
+  if(build && bestIncomeByScore){
+    const target=build.buildResultCard||cpuBuildResultCardForAction(p,build.s);
+    // v73: 20点以上だけでなく、工場・建設会社・レストラン級でも建設復帰を許可する。
+    const veryStrongBuild = target && (target.vp>=16 || cpuPriorityCardTier(target)>=3 || cpuBuildCreatesWageInsurance(p,build)) && cpuBuildCreatesWageInsurance(p,build) && build.score > bestIncomeByScore.score + (game.round>=6?90:150);
+    if(veryStrongBuild)return null;
+  }
+
+  // v66: 現金不足中に、現金候補があるのに鉱山へ逃げる動きを止める。
+  // 未来の大きい収入を狙う鉱山挟みは、今すぐ取れる現金がない時だけ許可する。
+  const mine=acts.find(a=>a.s.id==='mine'&&a.s.action==='draw');
+  if(!bestNow && mine && p.availableWorkers>=2){
+    const currentCards=totalHandCount(p);
+    const futureIncome=publicSources()
+      .filter(s=>(s.multiUse||!usedPublic(s)) && ['gainMoney','discardGain'].includes(s.action) && (!s.amount||canGain(s.amount)))
+      .map(s=>{
+        const cost=s.discardCount||0;
+        const drawNeed=Math.max(0,cost-currentCards);
+        const workersNeed=drawNeed+1;
+        const amount=s.amount||0;
+        let value=amount*10 + Math.min(amount,hardNeed)*24 - drawNeed*8;
+        if(amount>=hardNeed && hardNeed>0)value+=110;
+        if(game.round>=8)value-=35;
+        return {s,cost,drawNeed,workersNeed,amount,value};
+      })
+      .filter(x=>x.drawNeed>0 && x.workersNeed<=p.availableWorkers);
+    const bestFuture=futureIncome.sort((a,b)=>b.value-a.value)[0]||null;
+    const bestNowAmount=bestNow?(bestNow.s.amount||0):0;
+    const bestNowScore=bestNow?bestNow.emergencyScore:-999;
+    if(bestFuture && (bestFuture.amount>bestNowAmount+3 || bestFuture.value>bestNowScore+25)){
+      mine.emergencyScore=bestFuture.value;
+      mine.deferIncomeTarget=bestFuture.s.name;
+      return mine;
+    }
+  }
+
+  // ラウンド6以降、スーパー・市場・露店は本当に他に手がない時だけ。
+  // 建築エンジンや強い公共化建物があるなら、現金行動の強制を止める。
+  if(bestNow && game.round>=6 && ['stall','market','supermarket'].includes(bestNow.s.id)){
+    const build=cpuBestBuildAction(acts,p);
+    const strongPublic=acts.filter(a=>a.type==='public' && a.s.id!=='mine' && a.s.id!=='quarry')
+      .some(a=>cpuStrongPublicHumanValue(a.s,p)>=420);
+    if((build && (build.score>bestNow.score-80 || cpuActionBuildsPriorityCard(p,build))) || strongPublic){
+      const stillFatal=p.money+cpuSellableValue(p)+(game.round>=8?3:0)<cpuWageDue(p)-8;
+      if(!stillFatal)return null;
+    }
+  }
+  return bestNow;
+}
+// ===== v56: CPUターン制御を小さく安全に作り直し =====
+// CPU思考ロジックは「候補を選ぶ」だけにし、実行直前に必ず再検証する。
+// どこで失敗しても thinking/actionLock が残らないように、完了処理を1か所に集約する。
+function cpuActionStillUsable(p,a){
+  if(!p || !a || !a.s || p.availableWorkers<=0)return false;
+  if(a.type==='public'){
+    if(!a.s.multiUse && usedPublic(a.s))return false;
+  }else if(a.type==='building'){
+    if(!p.buildings.some(b=>b.uid===a.s.uid))return false;
+    if(a.s.used || a.s.action==='none')return false;
+  }else{
+    return false;
+  }
+  return canExecute(p,a.s);
+}
+
+// v67: 危険モード中の建設・増員をさらに抑制する。
+// v66で現金候補スキップは0になったが、危険建設・危険増員が残ったため、
+// 最終選択直前にも安全条件を確認する。
+function cpuV67BuildInsuranceGap(p,a){
+  if(!p || !a || !a.s)return -999;
+  const target=a.buildResultCard||cpuBuildResultCardForAction(p,a.s);
+  const addSellable=(target && target.sellable)?target.vp:0;
+  return p.money + cpuSellableValue(p) + addSellable - cpuProjectedWageDueAfterAction(p,a.s);
+}
+function cpuV67DangerBuildAllowed(p,a){
+  if(!p || !a || !cpuIsBuildAction(a.s))return true;
+  const due=cpuProjectedWageDueAfterAction(p,a.s);
+  const cashGap=p.money-due;
+  if(cashGap>=0)return true;
+
+  const target=a.buildResultCard||cpuBuildResultCardForAction(p,a.s);
+  if(!target)return false;
+  const assetGap=p.money+cpuSellableValue(p)-due;
+  const afterGap=cpuV67BuildInsuranceGap(p,a);
+  const workersLeft=Math.max(0,p.availableWorkers-1);
+  const cashEngine=['restaurant','coffee'].includes(target.id);
+  const strongEngine=['factory','steel','chemical','auto_factory','general_contractor','builder','nikoshi','plantation','orchard'].includes(target.id);
+
+  // 序盤〜中盤は、建物が少なすぎると売却保険も点数も作れないため、完全には止めない。
+  if(game.round<=6){
+    if(afterGap>=0 && target.vp>=10)return true;
+    if(cashEngine && workersLeft>=1)return true;
+    if(strongEngine && afterGap>=-4)return true;
+    return false;
+  }
+
+  // 終盤は「建てた直後に売るだけ」を抑える。ただし売却保険が増える高VP・現金エンジンは許可。
+  if(assetGap<0){
+    if(cashEngine && workersLeft>=1 && afterGap>=6)return true;
+    if(target.vp>=18 && afterGap>=12)return true;
+    return false;
+  }
+  if(assetGap<10){
+    if(cashEngine && workersLeft>=1 && afterGap>=8)return true;
+    if(target.vp>=16 && afterGap>=12)return true;
+    if(strongEngine && afterGap>=15)return true;
+    return false;
+  }
+  if(afterGap<10 && !cashEngine)return false;
+  return target.vp>=12 || cashEngine || strongEngine;
+}
+function cpuV67DangerWorkerAllowed(p,a){
+  if(!p || !a || !a.s || !['setWorkers','addWorkerNow'].includes(a.s.action))return true;
+  const due=cpuWageDue(p);
+  const cashGap=p.money-due;
+  const assetGap=p.money+cpuSellableValue(p)-due;
+  const after=cpuWorkerAfterAction(p,a.s);
+  // v75: 4人目以降は、会社基盤と現金がない場合は最終選択でも止める。
+  if(after>=4 && p.workers<4){
+    const afterDue=after*currentWage();
+    const baseReady=p.buildings.length>=2 || cpuStrongBuildCandidate(p);
+    const cashReady=p.money>=afterDue+(game.round<=6?4:8);
+    if(!baseReady || !cashReady)return false;
+  }
+  if(after>=5)return false;
+  // v75: 学校系の研修中労働者も給料対象。増員後の給料を払えるかで許可する。
+  if(a.s.action==='setWorkers'){
+    const afterDue=after*currentWage();
+    const afterCashGap=p.money-afterDue;
+    const afterAssetGap=p.money+cpuSellableValue(p)-afterDue;
+    if(afterCashGap>=0 && after<=4)return true;
+    if(game.round<=6 && after<=4 && afterAssetGap>=-2)return true;
+  }
+  if(cashGap>=10 || assetGap>=20)return true;
+  // 2人から3人への増員だけは序盤に少し許可する。
+  if(game.round<=2 && p.workers<3 && after>=3 && assetGap>=0)return true;
+  return false;
+}
+function cpuV67ActionAllowed(p,a){
+  if(!a || !a.s)return false;
+  if(cpuIsBuildAction(a.s))return cpuV67DangerBuildAllowed(p,a);
+  if(['setWorkers','addWorkerNow'].includes(a.s.action))return cpuV67DangerWorkerAllowed(p,a);
+  return true;
+}
+function cpuV67BestSafeAction(p,acts){
+  return (acts||[]).filter(a=>cpuActionStillUsable(p,a) && cpuV67ActionAllowed(p,a)).sort((x,y)=>y.score-x.score)[0]||null;
+}
+function cpuV67BlockReason(p,a){
+  if(!a || !a.s)return '';
+  const due=cpuProjectedWageDueAfterAction(p,a.s);
+  const cashGap=p.money-due;
+  const assetGap=p.money+cpuSellableValue(p)-due;
+  if(cpuIsBuildAction(a.s)){
+    const target=a.buildResultCard||cpuBuildResultCardForAction(p,a.s);
+    const afterGap=cpuV67BuildInsuranceGap(p,a);
+    return `危険建設抑制：${a.label} / 現金差${cashGap} / 売却込差${assetGap} / 建設後差${afterGap}${target?` / 候補${target.name}(${target.vp}点)`:''}`;
+  }
+  if(['setWorkers','addWorkerNow'].includes(a.s.action)){
+    return `危険増員抑制：${a.label} / 現金差${cashGap} / 売却込差${assetGap}`;
+  }
+  return '';
+}
+
+
+// v68: 売却込みでも不足している危険状態では、消費財だけ増やしても給料問題が解決しない。
+// 現金候補がない時は、1) 売れる建物で売却保険を作る、2) ドローで現金行動の材料を探す、
+// 3) 手札上限に余裕がある時だけ消費財、の順にする。
+function cpuV68ProjectedAssetGap(p,a){
+  if(!p || !a || !a.s)return -999;
+  const s=a.s;
+  if(cpuIsBuildAction(s))return cpuV67BuildInsuranceGap(p,a);
+  return p.money + cpuSellableValue(p) - cpuProjectedWageDueAfterAction(p,s);
+}
+function cpuV68IsUsefulDraw(a){
+  const act=a&&a.s&&a.s.action;
+  return ['draw','drawNextFirst','discardDraw','revealChoose','chemicalDraw'].includes(act);
+}
+function cpuV68IsGoodsAction(a){
+  const act=a&&a.s&&a.s.action;
+  return ['drawGoods','drawGoodsSelfTrash','drawUntilHand'].includes(act);
+}
+function cpuV68CrisisOverride(p,acts){
+  if(!p || cpuMode(p)!=='danger')return null;
+  const due=cpuWageDue(p);
+  const beforeGap=p.money+cpuSellableValue(p)-due;
+  if(beforeGap>=0)return null;
+  const usable=(acts||[]).filter(a=>cpuActionStillUsable(p,a));
+  if(!usable.length)return null;
+
+  // 現金候補がある時はv66の現金強制に任せる。
+  const income=cpuBestIncomeActionByScore(usable);
+  if(income)return null;
+
+  const handRoom=handLimit(p)-totalHandCount(p);
+  const buildCandidates=usable
+    .filter(a=>cpuIsBuildAction(a.s))
+    .map(a=>{
+      const target=a.buildResultCard||cpuBuildResultCardForAction(p,a.s);
+      const afterGap=cpuV68ProjectedAssetGap(p,a);
+      const sellableVp=(target&&target.sellable)?target.vp:0;
+      let crisisScore=afterGap*40 + (target?target.vp:0)*8 + (a.score||0)/10;
+      if(afterGap>=0)crisisScore+=500;
+      if(sellableVp>=12)crisisScore+=220;
+      if(!target || !target.sellable)crisisScore-=900;
+      if(game.round>=8 && target && target.vp>=18)crisisScore+=160;
+      return {...a,v68AfterGap:afterGap,v68Target:target,v68CrisisScore:crisisScore};
+    })
+    .filter(a=>a.v68Target && a.v68Target.sellable && a.v68Target.vp>=10 && a.v68AfterGap>beforeGap)
+    .sort((x,y)=>y.v68CrisisScore-x.v68CrisisScore);
+  const bestBuild=buildCandidates[0]||null;
+  if(bestBuild && (bestBuild.v68AfterGap>=0 || bestBuild.v68AfterGap>=beforeGap+8 || game.round>=8)){
+    bestBuild.v68CrisisReason=`売却込み不足${beforeGap}→建設後${bestBuild.v68AfterGap}`;
+    return bestBuild;
+  }
+
+  // 建設で解決できないなら、消費財よりドローを優先して現金行動の材料を探す。
+  const draw=usable.filter(cpuV68IsUsefulDraw).sort((x,y)=>{
+    const ax=cpuV68IsGoodsAction(x)?-1000:0;
+    const ay=cpuV68IsGoodsAction(y)?-1000:0;
+    return (y.score+ay)-(x.score+ax);
+  })[0]||null;
+  if(draw){
+    draw.v68CrisisReason=`売却込み不足${beforeGap}。現金候補なしのためドロー優先`;
+    return draw;
+  }
+
+  // 消費財は、すでに十分ある時や手札上限が近い時は選ばない。
+  const goods=usable.filter(cpuV68IsGoodsAction)
+    .filter(a=>p.goods<3 && handRoom>=3)
+    .sort((x,y)=>y.score-x.score)[0]||null;
+  if(goods){
+    goods.v68CrisisReason=`売却込み不足${beforeGap}。手札余裕ありのため消費財`;
+    return goods;
+  }
+  return null;
+}
+
+
+// ===== v76: 人間ログ学習CPU補正 =====
+// 今回の人間ログ: 5人化 + 大量ドロー + 二胡市建設2枚建て + 終盤高得点建築で106点。
+// CPUが安全運転だけで57点に止まるのを防ぐため、終盤だけ少しリスクを許容する。
+function cpuV76ActionTargetCard(p,a){
+  if(!a || !a.s)return null;
+  try{
+    if(typeof cpuBuildResultCardForAction==='function')return cpuBuildResultCardForAction(p,a.s);
+  }catch(e){}
+  return null;
+}
+function cpuV76IsWorkerAction(a){
+  return !!(a && a.s && ['setWorkers','addWorkerNow'].includes(a.s.action));
+}
+function cpuV76IsBigDrawAction(a){
+  if(!a || !a.s)return false;
+  const s=a.s;
+  if(s.action==='discardDraw' && (s.drawCount||0)>=4)return true;
+  if(['draw','chemicalDraw','revealChoose'].includes(s.action) && (s.drawCount||0)>=3)return true;
+  if(['steel','factory','auto_factory','chemical'].includes(s.id))return true;
+  return false;
+}
+function cpuV76PairValue(p,card=null){
+  try{
+    const pair = card && typeof cpuBestTwoBuildPairAfterBuilding==='function'
+      ? cpuBestTwoBuildPairAfterBuilding(p,card,0)
+      : (typeof cpuBestTwoBuildPair==='function' ? cpuBestTwoBuildPair(p) : null);
+    return pair ? pair.val : 0;
+  }catch(e){return 0;}
+}
+function cpuV76BuildPotentialScore(p,a){
+  if(!a || !a.s || !cpuIsBuildAction(a.s))return -999999;
+  const c=cpuV76ActionTargetCard(p,a);
+  let v=a.score||0;
+  if(c){
+    v += c.vp*18;
+    if(c.vp>=16)v+=380;
+    if(c.vp>=18)v+=520;
+    if(c.vp>=20)v+=420;
+    if(['nikoshi','general_contractor','builder','auto_factory','steel','chemical','mansion','hq','railway','union','realtor'].includes(c.id))v+=520;
+    if(game.round>=7 && c.vp<12)v-=900;
+  }
+  if(a.s.id==='nikoshi' || (c && c.id==='nikoshi')){
+    const pairVal=cpuV76PairValue(p,c);
+    v+=900 + pairVal*28;
+    if(pairVal>=24)v+=450;
+    if(pairVal>=30)v+=700;
+    if(pairVal>=36)v+=900;
+  }
+  if(a.s.action==='buildTwoSameCost'){
+    const pairVal=cpuV76PairValue(p,null);
+    v+=pairVal*30;
+    if(pairVal>=24)v+=500;
+    if(pairVal>=30)v+=800;
+  }
+  return v;
+}
+function cpuV76HumanLearningOverride(p,acts){
+  if(!p || !p.isCPU || !acts || !acts.length)return null;
+  const usable=acts.filter(a=>cpuActionStillUsable(p,a));
+  if(!usable.length)return null;
+  const wageDue=cpuWageDue(p);
+  const cashGap=p.money-wageDue;
+  const assetGap=p.money+cpuSellableValue(p)-wageDue;
+  const r=game.round;
+
+  // 1. R4〜R6で3人のままなら、4人化をかなり強める。
+  //    現金がギリギリでも、売却込みで給料を見られるなら増員する。
+  if(r>=4 && r<=6 && p.workers<4){
+    const worker=usable
+      .filter(cpuV76IsWorkerAction)
+      .filter(a=>{
+        const after=cpuWorkerAfterAction(p,a.s);
+        return after>=4;
+      })
+      .sort((x,y)=>(y.score||0)-(x.score||0))[0]||null;
+    if(worker && (assetGap>=-2 || cashGap>=0 || p.money>=wageDue-4)){
+      worker.v76Reason='R4-R6で3人止まりを回避。4人化を優先';
+      worker.score=(worker.score||0)+1800;
+      return worker;
+    }
+  }
+
+  // 2. R6以降で3人以下なら、大学/専門学校/高等学校をまだ評価する。
+  if(r>=6 && p.workers<5){
+    const worker=usable
+      .filter(cpuV76IsWorkerAction)
+      .filter(a=>assetGap>=0 || r>=8 || p.money>=wageDue)
+      .sort((x,y)=>(y.score||0)-(x.score||0))[0]||null;
+    if(worker && (r<=7 || p.availableWorkers>=2)){
+      worker.v76Reason='終盤の行動数不足を回避。増員を優先';
+      worker.score=(worker.score||0)+900;
+      return worker;
+    }
+  }
+
+  // 3. 二胡市建設コンボ・高得点建設を、現金行動より優先できる場面を作る。
+  const bestBuild=usable
+    .filter(a=>cpuIsBuildAction(a.s))
+    .map(a=>({...a,v76Score:cpuV76BuildPotentialScore(p,a),v76Target:cpuV76ActionTargetCard(p,a)}))
+    .sort((x,y)=>y.v76Score-x.v76Score)[0]||null;
+  const bestIncome=usable
+    .filter(a=>a.s && ['gainMoney','discardGain'].includes(a.s.action))
+    .sort((x,y)=>(y.score||0)-(x.score||0))[0]||null;
+
+  if(bestBuild){
+    const c=bestBuild.v76Target;
+    const high = c && (c.vp>=18 || ['nikoshi','general_contractor','auto_factory','steel','chemical','mansion','hq','railway','union'].includes(c.id));
+    const nikoshi = bestBuild.s.id==='nikoshi' || (c && c.id==='nikoshi') || bestBuild.s.action==='buildTwoSameCost';
+    const incomeScore=bestIncome ? (bestIncome.score||0) : -999999;
+    const gap=bestBuild.v76Score-incomeScore;
+
+    if(r>=6 && r<=7 && (high || nikoshi) && assetGap>=-2 && gap>=-250){
+      bestBuild.v76Reason='R6-R7の高得点建設/二胡市建設を優先';
+      bestBuild.score=(bestBuild.score||0)+1200;
+      return bestBuild;
+    }
+    if(r>=8 && (high || nikoshi) && assetGap>=-8 && gap>=-900){
+      bestBuild.v76Reason='終盤は売却リスクより最終点を優先';
+      bestBuild.score=(bestBuild.score||0)+1600;
+      return bestBuild;
+    }
+  }
+
+  // 4. 高得点建築が見えている時は、大量ドローを現金行動より少し上に見る。
+  const hasBigCard=p.hand.some(c=>c.vp>=18 || ['nikoshi','general_contractor','auto_factory','steel','chemical','mansion','hq','railway','union'].includes(c.id));
+  if(r>=6 && hasBigCard && assetGap>=0){
+    const bigDraw=usable
+      .filter(cpuV76IsBigDrawAction)
+      .sort((x,y)=>(y.score||0)-(x.score||0))[0]||null;
+    if(bigDraw){
+      bigDraw.v76Reason='高得点建築の材料作り。大量ドローを優先';
+      bigDraw.score=(bigDraw.score||0)+650;
+      return bigDraw;
+    }
+  }
+  return null;
+}
+
+// ===== v77: 建物0枚スパイラル脱出補正 =====
+// v76では4人化には成功したが、給料不足判定が強すぎて、
+// CPUが「収入→支払いで手札を失う→建物0枚→また収入」に落ちることがあった。
+// 人間の強いログは、多少売却しても建物を残し、建築エンジンから点を作っている。
+// そのため、R5以降に建物が0〜1枚なら、現金強制より先に「売却保険になる建設」を許す。
+function cpuV77ProjectedAssetGapAfterBuild(p,a){
+  const target=(a&&a.v76Target)||cpuV76ActionTargetCard(p,a);
+  const addSell=(target && target.sellable)?target.vp:0;
+  return p.money + cpuSellableValue(p) + addSell - cpuWageDue(p);
+}
+function cpuV77RecoveryBuildScore(p,a){
+  const target=(a&&a.v76Target)||cpuV76ActionTargetCard(p,a);
+  if(!target)return -999999;
+  const workersLeft=Math.max(0,(p.availableWorkers||0)-1);
+  const afterGap=cpuV77ProjectedAssetGapAfterBuild(p,a);
+  let v=(a.score||0) + target.vp*45 + cpuPriorityCardTier(target)*260;
+  if(target.sellable)v += target.vp*35;
+  if(target.vp>=12)v += 450;
+  if(target.vp>=16)v += 700;
+  if(target.vp>=18)v += 950;
+  if(['factory','builder','general_contractor','steel','chemical','auto_factory','nikoshi','restaurant','plantation','orchard'].includes(target.id))v += 850;
+  if(target.id==='nikoshi')v += 1200 + cpuV76PairValue(p,target)*24;
+  if(a.s && a.s.action==='buildTwoSameCost')v += cpuV76PairValue(p,null)*30 + 900;
+  // 最後の労働者で現金不足のまま建てると、直後に売却して終わるので避ける。
+  if(workersLeft<=0 && p.money<cpuWageDue(p))v -= 5000;
+  // 売却込みでも賃金に届かない建設は、建物0枚の時だけ小さく許す。
+  if(afterGap<0)v += afterGap*180;
+  if(p.buildings.length===0)v += 1300;
+  else if(p.buildings.length===1)v += 650;
+  // 手札を大きく消費する収入行動より、建設復帰を優先するための固定加点。
+  if(game.round>=6)v += 900;
+  if(game.round>=8)v += 700;
+  return v;
+}
+function cpuV77NoBuildingRecoveryOverride(p,acts){
+  if(!p || !p.isCPU || !acts || !acts.length)return null;
+  const r=game.round;
+  if(r<5)return null;
+  const usable=acts.filter(a=>cpuActionStillUsable(p,a));
+  if(!usable.length)return null;
+  const lowBuildings=p.buildings.length<=1;
+  const noCompany=p.buildings.length===0;
+  if(!lowBuildings)return null;
+
+  const workersLeftAfter=Math.max(0,(p.availableWorkers||0)-1);
+  const wageDue=cpuWageDue(p);
+  const assetGap=p.money+cpuSellableValue(p)-wageDue;
+
+  const builds=usable
+    .filter(a=>a && a.s && cpuIsBuildAction(a.s))
+    .map(a=>({...a,v76Target:cpuV76ActionTargetCard(p,a)}))
+    .filter(a=>{
+      const c=a.v76Target;
+      if(!c)return false;
+      if(r>=7 && c.vp<10 && cpuPriorityCardTier(c)<3)return false;
+      if(workersLeftAfter<=0 && p.money<wageDue)return false;
+      const afterGap=cpuV77ProjectedAssetGapAfterBuild(p,a);
+      // 建物0枚なら少し赤字でも売却保険を作る。1枚あるなら安全寄り。
+      return noCompany ? afterGap>=-6 : afterGap>=-2;
+    })
+    .map(a=>({...a,v77Score:cpuV77RecoveryBuildScore(p,a)}))
+    .sort((x,y)=>y.v77Score-x.v77Score);
+
+  const best=builds[0]||null;
+  if(!best)return null;
+
+  const income=usable
+    .filter(a=>a.s && ['gainMoney','discardGain'].includes(a.s.action))
+    .map(a=>{
+      const cost=a.s.discardCount||0;
+      const handUse=Math.max(0,cost-Math.min(p.goods,cost));
+      return {...a,v77IncomeScore:(a.score||0) - handUse*(noCompany?520:320)};
+    })
+    .sort((x,y)=>y.v77IncomeScore-x.v77IncomeScore)[0]||null;
+
+  const buildClearlyUseful = best.v77Score >= ((income&&income.v77IncomeScore)||-999999) - 250;
+  const desperateNoCompany = noCompany && workersLeftAfter>=1 && best.v77Score>-2000;
+  const safeEnough = assetGap>=-8 || p.money>=wageDue-8 || r>=8;
+  if((buildClearlyUseful || desperateNoCompany) && safeEnough){
+    best.v77Reason = `建物${p.buildings.length}枚スパイラルを脱出。収入連打より建設を優先`;
+    best.v76Reason = best.v77Reason;
+    best.score=(best.score||0)+2200;
+    return best;
+  }
+  return null;
+}
+
+
+// ===== v78: 終盤の強行動優先＋安全な5人化 =====
+// v77で建物0〜1枚スパイラルは脱出できたが、終盤に「現金不足」の名目で
+// 百貨店・スーパーへ流れ、公共化した製鉄所/自動車工場/建設系を逃す場面が残った。
+// 売却込みで給料を見られる時は、終盤の1手を現金より得点源へ寄せる。
+function cpuV78StrongActionScore(p,a){
+  if(!p || !a || !a.s)return -999999;
+  const s=a.s;
+  let v=(a.score||0);
+  const target=cpuIsBuildAction(s) ? cpuBuildResultCardForAction(p,s) : null;
+  const pair=s.action==='buildTwoSameCost' ? cpuBestTwoBuildPair(p) : null;
+
+  if(target){
+    v += target.vp*42 + cpuPriorityCardTier(target)*260;
+    if(target.sellable)v += target.vp*24;
+    if(target.vp>=16)v += 500;
+    if(target.vp>=18)v += 650;
+    if(['nikoshi','general_contractor','builder','auto_factory','steel','chemical','mansion','hq','railway','union','realtor'].includes(target.id))v += 620;
+  }
+  if(pair){
+    v += pair.val*45;
+    if(pair.val>=24)v += 420;
+    if(pair.val>=30)v += 700;
+  }
+
+  // 売却で公共化した強い建物は、相手に使わせる前に取りたい。
+  if(s.sourceType==='sold'){
+    if(['auto_factory','steel','chemical','factory'].includes(s.id))v += 900;
+    if(['builder','general_contractor','nikoshi'].includes(s.id))v += 1050;
+    if(['restaurant','plantation','orchard'].includes(s.id))v += 360;
+    if((s.vp||0)>=16)v += (s.vp||0)*32;
+  }
+  if(['discardDraw','draw','chemicalDraw'].includes(s.action) && (s.drawCount||0)>=3)v += 520;
+  if(s.action==='discardDraw' && (s.drawCount||0)>=4)v += 580;
+  if(cpuIsBuildAction(s))v += 520;
+  return v;
+}
+function cpuV78FifthWorkerOverride(p,acts){
+  if(!p || !p.isCPU || !acts || !acts.length)return null;
+  const r=game.round;
+  if(r<6 || r>8)return null;
+  if(p.workers!==4)return null;
+  if((p.availableWorkers||0)<2)return null;
+  const wageDue=cpuWageDue(p);
+  const sellable=cpuSellableValue(p);
+  // 5人化は強いが、v76のような給料地獄に戻らない条件だけ通す。
+  if(p.money < wageDue + 10)return null;
+  if(p.money + sellable < wageDue + 28)return null;
+  if(p.buildings.length<3)return null;
+  const worker=acts
+    .filter(a=>cpuActionStillUsable(p,a) && cpuV76IsWorkerAction(a))
+    .filter(a=>cpuWorkerAfterAction(p,a.s)>=5)
+    .sort((x,y)=>(y.score||0)-(x.score||0))[0]||null;
+  if(!worker)return null;
+  worker.v76Reason='v78：給料余裕あり。終盤の行動数差を埋めるため5人化';
+  worker.score=(worker.score||0)+1400;
+  return worker;
+}
+function cpuV78LateScoreOverride(p,acts){
+  if(!p || !p.isCPU || !acts || !acts.length)return null;
+  const r=game.round;
+  if(r<7)return null;
+  const usable=acts.filter(a=>cpuActionStillUsable(p,a));
+  if(!usable.length)return null;
+
+  const fifth=cpuV78FifthWorkerOverride(p,usable);
+  if(fifth)return fifth;
+
+  const wageDue=cpuWageDue(p);
+  const assetGap=p.money+cpuSellableValue(p)-wageDue;
+  const hardFatal=p.money+cpuSellableValue(p)+(r>=8?6:3) < wageDue-5;
+  if(hardFatal)return null;
+
+  const income=usable
+    .filter(a=>a.s && ['gainMoney','discardGain'].includes(a.s.action))
+    .map(a=>{
+      const cost=a.s.discardCount||0;
+      const handUse=Math.max(0,cost-Math.min(p.goods,cost));
+      return {...a,v78IncomeScore:(a.score||0) - handUse*(r>=8?180:120)};
+    })
+    .sort((x,y)=>y.v78IncomeScore-x.v78IncomeScore)[0]||null;
+  const incomeScore=income?income.v78IncomeScore:-999999;
+
+  const strong=usable
+    .filter(a=>{
+      const s=a.s;
+      if(['gainMoney','discardGain'].includes(s.action))return false;
+      if(cpuV76IsWorkerAction(a))return false;
+      if(cpuIsBuildAction(s)){
+        const c=cpuBuildResultCardForAction(p,s);
+        if(!c && s.action!=='buildTwoSameCost')return false;
+        if(c && c.vp<10 && cpuPriorityCardTier(c)<3)return false;
+        return true;
+      }
+      if(s.sourceType==='sold'){
+        if(['auto_factory','steel','chemical','factory','builder','general_contractor','nikoshi','restaurant','plantation','orchard'].includes(s.id))return true;
+        if((s.vp||0)>=16)return true;
+      }
+      if(['discardDraw','draw','chemicalDraw'].includes(s.action) && (s.drawCount||0)>=3)return true;
+      return false;
+    })
+    .map(a=>({...a,v78Score:cpuV78StrongActionScore(p,a)}))
+    .sort((x,y)=>y.v78Score-x.v78Score)[0]||null;
+  if(!strong)return null;
+
+  const workersLeftAfter=Math.max(0,(p.availableWorkers||0)-1);
+  const cashNeed=wageDue-p.money;
+  // 最後の労働者で現金が大きく足りない時だけは、さすがに現金を取る。
+  if(workersLeftAfter<=0 && cashNeed>6 && assetGap<10)return null;
+
+  const margin = r>=8 ? -520 : -160;
+  const enough = strong.v78Score >= incomeScore + margin;
+  const assetSafe = assetGap>=-4 || r>=8;
+  if(enough && assetSafe){
+    strong.v76Reason='v78：終盤は現金連打より、強い公共化/建設/大量ドローを優先';
+    strong.score=(strong.score||0)+1500;
+    return strong;
+  }
+  return null;
+}
+
+function cpuV76FinalAllow(p,a){
+  if(!a || !a.v76Reason)return false;
+  const r=game.round;
+  if(cpuV76IsWorkerAction(a)){
+    const after=cpuWorkerAfterAction(p,a.s);
+    const afterDue=after*currentWage();
+    const afterAssetGap=p.money+cpuSellableValue(p)-afterDue;
+    return r<=7 && after<=4 && afterAssetGap>=-2;
+  }
+  if(cpuIsBuildAction(a.s)){
+    const target=a.v76Target || cpuV76ActionTargetCard(p,a);
+    const high=target && (target.vp>=18 || ['nikoshi','general_contractor','auto_factory','steel','chemical','mansion','hq','railway','union'].includes(target.id));
+    const nikoshi=a.s.id==='nikoshi' || (target && target.id==='nikoshi') || a.s.action==='buildTwoSameCost';
+    const afterGap=cpuV67BuildInsuranceGap(p,a);
+    if(r>=8 && (high||nikoshi) && afterGap>=-8)return true;
+    if(r>=6 && r<=7 && (high||nikoshi) && afterGap>=-2)return true;
+  }
+  return false;
+}
+
+function cpuFallbackAction(p,acts=[]){
+  const usableActs=(acts||[]).filter(a=>cpuActionStillUsable(p,a));
+  if(usableActs.length)return usableActs[0];
+
+  // 最後の保険：公共職場から、今本当に実行できるものだけを選ぶ。
+  const publicFallbacks=publicSources()
+    .filter(s=>(s.multiUse||!usedPublic(s)) && canExecute(p,s))
+    .map(s=>({type:'public',s,label:s.name,score:-999}));
+  const mine=publicFallbacks.find(a=>a.s.id==='mine');
+  if(mine)return mine;
+  return publicFallbacks[0]||null;
+}
+
+function cpuChooseActionSafely(p){
+  let acts=[];
+  try{
+    acts=cpuActions(p)||[];
+  }catch(e){
+    console.error('cpuActions failed',e);
+    addLog('CPU候補作成でエラーが出たため、安全行動に切り替えました。');
+    return {action:cpuFallbackAction(p,[]),acts:[]};
+  }
+
+  try{
+    logCpuState(p,acts);
+  }catch(e){
+    console.error('logCpuState failed',e);
+    addLog('CPU状態ログでエラーが出ましたが、ゲームは続行します。');
+  }
+
+  let chosen=null;
+  let reason='通常判断';
+  try{
+    const forcedV78=cpuV78LateScoreOverride(p,acts);
+    const forcedV77=forcedV78?null:cpuV77NoBuildingRecoveryOverride(p,acts);
+    const forcedStrictCash=(forcedV78||forcedV77)?null:cpuStrictCashOverride(p,acts);
+    const forcedCrisis=(forcedV78||forcedV77||forcedStrictCash)?null:cpuV68CrisisOverride(p,acts);
+    const forcedWorker=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis)?null:cpuWorkerOverride(p,acts);
+    const forcedV76=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker)?null:cpuV76HumanLearningOverride(p,acts);
+    const forcedEarlyBuild=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker||forcedV76)?null:cpuEarlyBuildOverride(p,acts);
+    const forcedHuman=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker||forcedV76||forcedEarlyBuild)?null:cpuHumanStyleOverride(p,acts);
+    const forcedIncome=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker||forcedV76||forcedEarlyBuild||forcedHuman)?null:cpuIncomeOverride(p,acts);
+    const forcedBuild=(forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker||forcedV76||forcedEarlyBuild||forcedHuman||forcedIncome)?null:cpuBuildOverride(p,acts);
+    chosen=forcedV78||forcedV77||forcedStrictCash||forcedCrisis||forcedWorker||forcedV76||forcedEarlyBuild||forcedHuman||forcedIncome||forcedBuild||cpuV67BestSafeAction(p,acts)||acts[0]||null;
+    if(chosen && !cpuV67ActionAllowed(p,chosen) && !cpuV76FinalAllow(p,chosen)){
+      const safe=cpuV67BestSafeAction(p,acts);
+      const block=cpuV67BlockReason(p,chosen);
+      if(block)addLog(`調整ログ v67：${block}`);
+      if(safe){chosen=safe;reason='危険抑制';}
+    }
+    if(reason==='危険抑制'){}
+    else if(forcedV78)reason='終盤得点優先';
+    else if(forcedV77)reason='建物復帰';
+    else if(forcedStrictCash)reason='現金強制';
+    else if(forcedCrisis)reason=forcedCrisis.v68CrisisReason?'危機対応':'危機対応';
+    else if(forcedWorker)reason='労働者計画';
+    else if(forcedV76)reason='人間ログ学習';
+    else if(forcedEarlyBuild)reason='序盤建設復帰';
+    else if(forcedHuman)reason='人間ロジック';
+    else if(forcedIncome)reason='給料確保';
+    else if(forcedBuild)reason='建物強化';
+  }catch(e){
+    console.error('CPU override failed',e);
+    addLog('CPU優先判断でエラーが出たため、安全行動に切り替えました。');
+  }
+
+  if(!cpuActionStillUsable(p,chosen)){
+    const fallback=cpuFallbackAction(p,acts);
+    if(chosen && chosen.label)addLog(`CPUの第1候補 ${chosen.label} は実行直前に不適合だったため、安全候補へ変更しました。`);
+    chosen=fallback;
+    reason='安全候補';
+  }
+
+  if(chosen && chosen.v76Reason){
+    addLog(`CPU学習補正 v78：${chosen.v76Reason}`);
+  }
+  return {action:chosen,acts,reason};
+}
+
+function cpuFinishSafely(){
+  game.thinking=false;
+  finishAction(cpuPlayer());
+}
+
+function cpuCancelAction(p,a){
+  if(a && a.s){
+    if(a.type==='public')unmarkPublic(a.s);
+    else if(a.type==='building')a.s.used=false;
+  }
+  refundWorker(p);
+}
+
+function cpuPassSafely(p){
+  if(spendWorker(p)){
+    addLog('CPUは実行できる行動がないため、労働者を1人パスしました。');
+  }else{
+    addLog('CPUには未配置労働者がいません。');
+  }
+  cpuFinishSafely();
+}
+
+
+// v60: CPU手番で止まったままになる事故を防ぐ。
+// 「現在手番：CPU」なのに cpuTurn の setTimeout が失われると、
+// 人間側はラウンド終了も操作もできなくなる。CPU手番を一元的に予約し、
+// アイドル状態なら自動で再開、ロックが長すぎる時は安全にターン進行へ戻す。
+function scheduleCpuTurn(delay=300){
+  try{
+    if(game.gameOver || game.processingRoundEnd || isModalOpen())return;
+    const p=currentPlayer();
+    if(!p || !p.isCPU || p.availableWorkers<=0)return;
+    if(game.thinking || game.actionLock)return;
+    if(game.cpuTurnScheduled)return;
+    game.cpuTurnScheduled=true;
+    setTimeout(()=>{
+      game.cpuTurnScheduled=false;
+      if(game.gameOver || game.processingRoundEnd || isModalOpen())return;
+      const cp=currentPlayer();
+      if(cp && cp.isCPU && cp.availableWorkers>0 && !game.thinking && !game.actionLock){
+        cpuTurn();
+      }
+    },delay);
+  }catch(e){console.error('scheduleCpuTurn failed',e);game.cpuTurnScheduled=false;}
+}
+
+function recoverCpuTurnIfStale(force=false){
+  try{
+    if(game.gameOver || game.processingRoundEnd || isModalOpen() || !currentPlayer())return false;
+    const p=currentPlayer();
+    if(!p.isCPU){game.cpuLockSince=0;return false;}
+    if(p.availableWorkers<=0){game.cpuLockSince=0;return false;}
+
+    if(game.thinking || game.actionLock){
+      if(!game.cpuLockSince)game.cpuLockSince=Date.now();
+      if(force || Date.now()-game.cpuLockSince>4500){
+        game.thinking=false;
+        game.actionLock=false;
+        game.cpuTurnScheduled=false;
+        game.cpuLockSince=0;
+        addLog('CPU処理ロックが長く残ったため、安全復帰しました。');
+        // 労働者をすでに消費している可能性があるため、まずターン進行を試す。
+        setTimeout(()=>{try{advanceTurn();}catch(e){console.error('CPU recover advance failed',e);scheduleCpuTurn(300);}},0);
+        return true;
+      }
+      return false;
+    }
+
+    game.cpuLockSince=0;
+    scheduleCpuTurn(300);
+  }catch(e){console.error('recoverCpuTurnIfStale failed',e);}
+  return false;
+}
+
+function cpuTurn(){
+  game.cpuTurnScheduled=false;
+  if(game.gameOver||game.processingRoundEnd)return;
+  const p=currentPlayer();
+  if(!p || !p.isCPU)return;
+  if(game.thinking)return;
+
+  game.thinking=true;
+  game.actionLock=true;
+  normalizeAllPlayers();
+  render();
+
+  try{
+    const picked=cpuChooseActionSafely(p);
+    const a=picked.action;
+
+    if(!a || !a.s){
+      cpuPassSafely(p);
+      return;
+    }
+
+    if(!cpuActionStillUsable(p,a)){
+      addLog('CPUの行動候補が実行できないため、パスします。');
+      cpuPassSafely(p);
+      return;
+    }
+
+    if(picked.reason==='現金強制')addLog(`CPUは現金不足のため${a.label}を強制選択しました。`);
+    else if(picked.reason==='労働者4人計画')addLog(`CPUは労働者4人計画で${a.label}を選びました。`);
+    else if(picked.reason==='人間ロジック')addLog(`CPUは人間ロジックで${a.label}を選びました。`);
+    else if(picked.reason==='人間ログ学習')addLog(`CPUは人間ログ学習で${a.label}を選びました。`);
+    else if(picked.reason==='建物復帰')addLog(`CPUは建物0枚から復帰するため${a.label}を選びました。`);
+    else if(picked.reason==='給料確保')addLog(`CPUは給料確保を優先して${a.label}を選びました。`);
+    else if(picked.reason==='建物強化')addLog(`CPUは建物を伸ばすため${a.label}を選びました。`);
+    else if(picked.reason==='安全候補')addLog(`CPUは安全候補として${a.label}を選びました。`);
+    else addLog(`CPUは${a.label}を選びました。`);
+
+    try{
+      addLog(`CPU判断：${a.label}${cpuActionDetail(p,a)} / 評価${cpuScoreText(a.score)}`);
+    }catch(e){
+      console.error('cpuActionDetail failed',e);
+      addLog(`CPU判断：${a.label}`);
+    }
+
+    try{ trackActionStats(p,a.s); }catch(e){ console.error('trackActionStats failed',e); }
+
+    if(!spendWorker(p)){
+      cpuFinishSafely();
+      return;
+    }
+
+    if(a.type==='public')markPublic(a.s);
+    else if(a.type==='building')a.s.used=true;
+
+    let settled=false;
+    const doneOK=()=>{
+      if(settled)return;
+      settled=true;
+      if(a.type==='building'&&['builder','general_contractor'].includes(a.s.id))a.s.needsFirstUse=false;
+      cpuFinishSafely();
+    };
+    const doneCancel=()=>{
+      if(settled)return;
+      settled=true;
+      cpuCancelAction(p,a);
+      addLog(`CPUの${a.label}は実行できなかったため取り消しました。`);
+      cpuFinishSafely();
+    };
+
+    const watchdog=setTimeout(()=>{
+      if(settled)return;
+      settled=true;
+      console.error('CPU action watchdog fired',a);
+      addLog(`CPUの${a.label}処理が止まったため、安全復帰しました。`);
+      game.thinking=false;
+      game.actionLock=false;
+      render();
+      advanceTurn();
+    },1200);
+
+    const okWrapped=()=>{clearTimeout(watchdog);doneOK();};
+    const cancelWrapped=()=>{clearTimeout(watchdog);doneCancel();};
+
+    try{
+      executeAction(p,a.s,a.type==='building'?a.s:null,okWrapped,cancelWrapped);
+    }catch(e){
+      clearTimeout(watchdog);
+      console.error('executeAction failed',e);
+      addLog(`CPUの${a.label}実行中にエラーが出たため取り消しました。`);
+      doneCancel();
+    }
+  }catch(e){
+    console.error('cpuTurn fatal',e);
+    addLog('CPUターン制御でエラーが出たため、安全復帰しました。');
+    game.thinking=false;
+    game.actionLock=false;
+    render();
+    advanceTurn();
+  }
+}
+function humanEndRound(){
+  if(game.gameOver)return;
+  recoverHumanInputIfStale(true);
+  recoverRoundEndIfStale(true);
+  const h=humanPlayer(),c=cpuPlayer();
+  if(h.availableWorkers>0||c.availableWorkers>0){
+    addLog('労働者が残っている間はラウンド終了できません。全員の労働者を配置してから押してください。');
+    render();
+    return;
+  }
+  if(isModalOpen()){
+    addLog('選択画面が開いているため、先に選択を完了してください。');
+    render();
+    return;
+  }
+  // v62: 全員配置済みなら、古いthinking/actionLock/processingRoundEndをここで解除して進める。
+  game.thinking=false;
+  game.actionLock=false;
+  game.cpuTurnScheduled=false;
+  game.processingRoundEnd=false;
+  game.roundEndReady=false;
+  endRound();
+}
+function endRound(){
+  if(game.processingRoundEnd)return;
+  game.processingRoundEnd=true;
+  normalizeAllPlayers();
+  addLog(`ラウンド${game.round}終了。労働者を戻し、手札上限を確認してから給料支払いを行います。`);
+  game.players.forEach(p=>{p.availableWorkers=p.workers;});
+  const afterHandLimit=()=>{
+    payWagesWithChoice(humanPlayer(),()=>{
+      payWagesAuto(cpuPlayer());
+      nextRound();
+    });
+  };
+  const h=humanPlayer();
+  if(totalHandCount(h)>handLimit(h)){
+    openHandLimit(h,()=>{cpuHandLimit(cpuPlayer());afterHandLimit();});
+  }else{
+    cpuHandLimit(cpuPlayer());
+    afterHandLimit();
+  }
+}
+function finishPayWage(p,total){
+  const wageCount=wageWorkers(p);
+  let need=total;
+  const paid=Math.min(p.money,need);
+  p.money-=paid;
+  game.household+=paid;
+  need-=paid;
+  const st=ensureStats(p);
+  if(need>0){
+    p.unpaidWages+=need;
+    st.unpaidEvents++;
+    st.unpaidAmount+=need;
+    st.roundsWithShortage++;
+    addLog(`${p.name}は未払い賃金${need}を受け取りました。`);
+  }else{
+    st.roundsPayFull++;
+  }
+  addLog(`${p.name}の給料：労働者${p.workers}人${p.traineeWorkers?`＋研修中${p.traineeWorkers}人`:''} × $${currentWage()} = $${total}。支払$${paid}、家計へ$${paid}。`);
+}
+function sellBuildingForWage(p,building){
+  const i=p.buildings.findIndex(x=>x.uid===building.uid);
+  if(i<0)return false;
+  const sold=p.buildings.splice(i,1)[0];
+  sold.used=false;
+  sold.needsFirstUse=false;
+  sold.publicOwner=p.name;
+  game.publicBuildings.push(sold);
+  p.money+=sold.vp;
+  p.soldBuildings=(p.soldBuildings||0)+1;
+  ensureStats(p).soldBuildings++;
+  addLog(`${p.name}は給料不足で${sold.name}を売却し、$${sold.vp}を得ました。売却建物は公共職場になりました。`);
+  return true;
+}
+function payWagesWithChoice(p,onDone){
+  const total=wageWorkers(p)*currentWage();
+  if(p.money>=total){finishPayWage(p,total);onDone();return;}
+  const shortage=total-p.money;
+  const sellables=p.buildings.filter(b=>b.sellable);
+  if(sellables.length===0){finishPayWage(p,total);onDone();return;}
+  openWageSellModal(p,total,shortage,sellables,onDone);
+}
+function openWageSellModal(p,total,shortage,sellables,onDone){
+  const totalSellable=sellables.reduce((sum,b)=>sum+b.vp,0);
+  const canCover=totalSellable>=shortage;
+  openModal(`<h3>給料不足：建物を売却できます</h3><p class="hint">${p.name}の給料は$${total}です。現在の所持金は$${p.money}なので、$${shortage}不足しています。売却可能な建物を選んでください。選んだ建物の売却額を給料に充て、足りない分だけ未払い賃金にできます。</p><div class="modal-grid" id="wageSellGrid"></div><p class="hint">選択中の売却額：$<b id="sellSum">0</b>　売却後の不足見込み：$<b id="remainShort">${shortage}</b></p><p class="hint warn" id="wageSellWarn"></p><div class="actions"><button class="primary" id="confirmWageSell">選んだ建物を売却して給料支払い<br><span style="font-size:11px">足りない分は未払い</span></button><button id="autoWageSell">不足分だけ自動で売却</button></div>`);
+  const selected=new Set();
+  const grid=$('wageSellGrid');
+  const sorted=sellables.slice().sort((a,b)=>a.vp-b.vp);
+  const elems=new Map();
+  sorted.forEach(b=>{
+    const d=document.createElement('div');
+    d.className=`choice cost${b.cost}`;
+    d.innerHTML=`<b>${b.name}</b><br>資産価値 $${b.vp}<br><span class="hint">${b.effectText}</span>`;
+    d.onclick=()=>{
+      if(selected.has(b.uid)){selected.delete(b.uid);d.classList.remove('selected');}
+      else{selected.add(b.uid);d.classList.add('selected');}
+      update();
+    };
+    elems.set(b.uid,d);
+    grid.appendChild(d);
+  });
+  function selectedBuildings(){return sorted.filter(b=>selected.has(b.uid));}
+  function selectedSum(){return selectedBuildings().reduce((sum,b)=>sum+b.vp,0);}
+  function update(){
+    const sum=selectedSum();
+    const remain=Math.max(0,total-(p.money+sum));
+    $('sellSum').textContent=sum;
+    $('remainShort').textContent=remain;
+    $('confirmWageSell').disabled=(sum<=0)||((p.money+sum)<total && totalSellable>=shortage);
+    $('wageSellWarn').textContent=sum<=0
+      ? '建物を選んでください。売却可能な建物で足りる場合は、全額支払えるまで売却が必要です。'
+      : (remain>0 ? (totalSellable>=shortage ? `まだ$${remain}不足しています。給料を払えるまで追加で売却してください。` : `すべて売っても不足するため、残り$${remain}だけ未払いになります。`) : 'この選択で給料を全額支払えます。');
+  }
+  function chooseAuto(){
+    selected.clear();
+    elems.forEach(el=>el.classList.remove('selected'));
+    let best=null;
+    const n=sorted.length;
+    // 売りすぎを少なくし、同点なら売却枚数が少ない組み合わせを選ぶ。
+    for(let mask=1; mask<(1<<n); mask++){
+      let sum=0,cnt=0;
+      for(let i=0;i<n;i++)if(mask&(1<<i)){sum+=sorted[i].vp;cnt++;}
+      if(sum>=shortage && (!best || sum<best.sum || (sum===best.sum && cnt<best.cnt)))best={mask,sum,cnt};
+    }
+    if(!best){
+      sorted.forEach(b=>selected.add(b.uid));
+    }else{
+      for(let i=0;i<n;i++)if(best.mask&(1<<i))selected.add(sorted[i].uid);
+    }
+    selected.forEach(uid=>{const el=elems.get(uid); if(el)el.classList.add('selected');});
+    update();
+  }
+  $('autoWageSell').onclick=chooseAuto;
+  $('confirmWageSell').onclick=()=>{
+    if(selectedSum()<=0){update();return;}
+    selectedBuildings().forEach(b=>sellBuildingForWage(p,b));
+    closeModal();
+    finishPayWage(p,total);
+    onDone();
+  };
+  chooseAuto();
+}
+function payWagesAuto(p){
+  const total=wageWorkers(p)*currentWage();
+  if(p.money<total)sellForWageAuto(p,total);
+  finishPayWage(p,total);
+}
+function sellForWageAuto(p,total){
+  // ルールブック準拠：賃金不足時は、未払いにする前に売却可能な建物を売る。
+  // できるだけ売りすぎが少ない組み合わせを選ぶ。
+  if(p.money>=total)return;
+  const sellables=p.buildings.filter(b=>b.sellable);
+  if(!sellables.length)return;
+  const shortage=total-p.money;
+  let best=null;
+  const n=sellables.length;
+  if(n<=20){
+    for(let mask=1; mask<(1<<n); mask++){
+      let sum=0,cnt=0;
+      for(let i=0;i<n;i++)if(mask&(1<<i)){sum+=sellables[i].vp;cnt++;}
+      if(sum>=shortage && (!best || sum<best.sum || (sum===best.sum && cnt<best.cnt)))best={mask,sum,cnt};
+    }
+  }
+  if(best){
+    for(let i=0;i<n;i++)if(best.mask&(1<<i))sellBuildingForWage(p,sellables[i]);
+    return;
+  }
+  // すべて売っても足りない場合は全売却後、不足分だけ未払い。
+  sellables.slice().sort((a,b)=>a.vp-b.vp).forEach(b=>sellBuildingForWage(p,b));
+}
+
+
+function cpuHandLimit(p){const over=totalHandCount(p)-handLimit(p);if(over<=0)return;let n=over;const g=Math.min(p.goods,n);p.goods-=g;n-=g;let c=0;if(n>0){const cards=lowCards(p,n);c=cards.length;discardHand(p,cards.map(x=>x.uid));}addLog(`${p.name}は手札上限により消費財${g}枚、建物カード${c}枚を捨てました。`);} function openHandLimit(p,onOK){const need=totalHandCount(p)-handLimit(p);openModal(`<h3>手札上限処理</h3><p class="hint">合計${totalHandCount(p)}枚、上限${handLimit(p)}枚です。${need}枚捨ててください。</p><div>捨てる消費財：<button class="small" id="gm">−</button> <b id="gn">0</b> 枚 <button class="small" id="gp">＋</button></div><div class="modal-grid" id="payGrid"></div><div class="actions"><button class="primary" id="ok" disabled>捨てる</button></div>`);let g=0;const sel=new Set();const grid=$('payGrid');p.hand.forEach(c=>{const d=document.createElement('div');d.className=`choice cost${c.cost}`;d.innerHTML=`<b>${c.name}</b><br>コスト${c.cost} / $${c.vp}`;d.onclick=()=>{if(sel.has(c.uid)){sel.delete(c.uid);d.classList.remove('selected');}else if(sel.size+g<need){sel.add(c.uid);d.classList.add('selected');}up();};grid.appendChild(d);});function up(){$('gn').textContent=g;$('ok').disabled=(sel.size+g)!==need;}$('gm').onclick=()=>{if(g>0){g--;up();}};$('gp').onclick=()=>{if(g<p.goods&&sel.size+g<need){g++;up();}};$('ok').onclick=()=>{p.goods-=g;discardHand(p,[...sel]);addLog(`${p.name}は手札上限により建物カード${sel.size}枚、消費財${g}枚を捨てました。`);closeModal();onOK();};}
+function nextRound(){game.roundEndReady=false;game.processingRoundEnd=false;if(game.round>=game.maxRound){game.gameOver=true;addLog('9ラウンドが終了しました。');addFinalSummaryLog();normalizeAllPlayers();render();finalModal();return;}game.round++;game.publicUsed={};if(game.nextFirstPlayerIndex!==null){game.firstPlayerIndex=game.nextFirstPlayerIndex;addLog(`採石所の効果で、次の先手は${game.players[game.firstPlayerIndex].name}です。`);}game.nextFirstPlayerIndex=null;game.players.forEach(p=>{if(p.traineeWorkers>0){const add=Math.min(p.traineeWorkers,Math.max(0,workerLimit(p)-p.workers));p.workers+=add;p.traineeWorkers-=add;addLog(`${p.name}の研修中労働者${add}人が労働者になりました。`);}p.availableWorkers=p.workers;p.buildings.forEach(b=>b.used=false);normalizePlayer(p);});game.currentPlayerIndex=game.firstPlayerIndex;addLog(`ラウンド${game.round}開始。先手の${game.players[game.firstPlayerIndex].name}からです。`);render();if(currentPlayer().isCPU)scheduleCpuTurn(600);}
+function score(p){const buildingVp=p.buildings.reduce((s,b)=>s+b.vp,0),moneyVp=p.money;let bonus=0;const hasLaw=p.buildings.some(b=>b.id==='law');if(p.buildings.some(b=>b.id==='realtor'))bonus+=p.buildings.length*3;if(p.buildings.some(b=>b.id==='coop'))bonus+=p.goods*3;if(p.buildings.some(b=>b.id==='union'))bonus+=p.workers*6;if(p.buildings.some(b=>b.id==='hq'))bonus+=countKey(p)*6;if(p.buildings.some(b=>b.id==='railway'))bonus+=countFactoryIcon(p)*8;const penalty=Math.max(0,p.unpaidWages-(hasLaw?5:0))*3;return{buildingVp,moneyVp,bonus,penalty,total:buildingVp+moneyVp+bonus-penalty};}
+function summaryTableHtml(){
+  const h=playerSummaryObject(humanPlayer()),c=playerSummaryObject(cpuPlayer());
+  const cpuStats=ensureStats(cpuPlayer());
+  return `<div class="summary"><h3>プレイサマリー <small>CPU調整用</small></h3><table><tr><td></td><td>あなた</td><td>CPU</td></tr><tr><td>最大労働者</td><td>${h.maxWorkers}</td><td>${c.maxWorkers}</td></tr><tr><td>現在労働者</td><td>${h.workers}</td><td>${c.workers}</td></tr><tr><td>建物枚数</td><td>${h.buildings}</td><td>${c.buildings}</td></tr><tr><td>建物売却</td><td>${h.sold}</td><td>${c.sold}</td></tr><tr><td>未払い回数 / 金額</td><td>${h.unpaidEvents}回 / $${h.unpaidAmount}</td><td>${c.unpaidEvents}回 / $${c.unpaidAmount}</td></tr><tr><td>CPU行動内訳</td><td colspan="2">収入${c.incomeActions} / 建設${c.buildActions} / 労働者${c.workerActions} / 採石所${c.quarryActions}</td></tr><tr><td>CPUモード回数</td><td colspan="2">危険${cpuStats.modeDanger} / 安全${cpuStats.modeSafe} / 攻撃${cpuStats.modeAttack}</td></tr><tr><td>終盤低VP建築</td><td>${h.lateLowVpBuilds}</td><td>${c.lateLowVpBuilds}</td></tr></table></div>`;
+}
+function showScore(final=false){const h=score(humanPlayer()),c=score(cpuPlayer());$('scoreArea').innerHTML=`<table><tr><td></td><td>あなた</td><td>CPU</td></tr><tr><td>建物点</td><td>${h.buildingVp}</td><td>${c.buildingVp}</td></tr><tr><td>所持金点</td><td>${h.moneyVp}</td><td>${c.moneyVp}</td></tr><tr><td>終了時ボーナス</td><td>${h.bonus}</td><td>${c.bonus}</td></tr><tr><td>未払いペナルティ</td><td>-${h.penalty}</td><td>-${c.penalty}</td></tr><tr><td class="final">${final?'最終得点':'現在得点予測'}</td><td class="final">${h.total}</td><td class="final">${c.total}</td></tr></table>${summaryTableHtml()}`;}
+function addFinalSummaryLog(){
+  const h=playerSummaryObject(humanPlayer()),c=playerSummaryObject(cpuPlayer());
+  addLog(`最終サマリー：あなた${h.score}点 / CPU${c.score}点。CPU最大労働者${c.maxWorkers}人、建物売却${c.sold}回、未払い${c.unpaidEvents}回、建設行動${c.buildActions}回、収入行動${c.incomeActions}回。`);
+}
+function finalModal(){showScore(true);const h=score(humanPlayer()).total,c=score(cpuPlayer()).total;openModal(`<h3>ゲーム終了</h3><p class="final">${h>c?'あなたの勝ち！':h<c?'CPUの勝ち！':'引き分け！'}</p><p>あなた：${h}点<br>CPU：${c}点</p>${summaryTableHtml()}<div class="actions"><button class="primary" onclick="closeModal()">閉じる</button></div>`);}
+
+// v59: 人間の手番なのに thinking/actionLock が残る事故を自動復旧する。
+// CPU処理・即時処理・watchdog の絡みでロックだけ残ると、未使用の市場などが押せなくなる。
+// モーダルが開いている時は「選択中」なので解除しない。
+
+// v62: 全員配置済みなのにラウンド終了ボタンが効かない事故を復旧する。
+// 給料処理中フラグ processingRoundEnd が、例外や途中復帰で残ると onclick が即returnしていた。
+function recoverRoundEndIfStale(force=false){
+  try{
+    const h=humanPlayer(), c=cpuPlayer();
+    if(!h || !c || game.gameOver)return false;
+    const allPlaced=h.availableWorkers<=0 && c.availableWorkers<=0;
+    if(!allPlaced || isModalOpen())return false;
+    if(game.processingRoundEnd){
+      if(!game.roundEndLockSince)game.roundEndLockSince=Date.now();
+      if(force || Date.now()-game.roundEndLockSince>900){
+        game.processingRoundEnd=false;
+        game.thinking=false;
+        game.actionLock=false;
+        game.cpuTurnScheduled=false;
+        game.roundEndLockSince=0;
+        addLog('ラウンド終了処理のロックが残っていたため解除しました。');
+        return true;
+      }
+    }else{
+      game.roundEndLockSince=0;
+    }
+  }catch(e){console.error('recoverRoundEndIfStale failed',e);}
+  return false;
+}
+
+function recoverHumanInputIfStale(force=false){
+  try{
+    const h=humanPlayer(), c=cpuPlayer();
+    if(!h || !c || game.gameOver || !currentPlayer())return false;
+    const allPlaced=h.availableWorkers<=0 && c.availableWorkers<=0;
+    const locked=!!(game.thinking||game.actionLock);
+
+    // v61: 全員配置済みなら、CPU思考中/処理中ロックが残っていても
+    // ラウンド終了へ進めるように解除する。
+    if(allPlaced && locked && !isModalOpen()){
+      game.thinking=false;
+      game.actionLock=false;
+      game.cpuTurnScheduled=false;
+      game.humanInputLockSince=0;
+      addLog('全員配置済みのため、残っていた処理ロックを解除しました。');
+      return true;
+    }
+
+    const isHumanTurn=currentPlayer().id===h.id;
+    if(!isHumanTurn || isModalOpen() || !locked){game.humanInputLockSince=0;return false;}
+    if(!game.humanInputLockSince)game.humanInputLockSince=Date.now();
+    if(force || Date.now()-game.humanInputLockSince>1200){
+      game.thinking=false;
+      game.actionLock=false;
+      game.humanInputLockSince=0;
+      addLog('入力ロックが残っていたため解除しました。');
+      return true;
+    }
+  }catch(e){console.error(e);}
+  return false;
+}
+setInterval(()=>{let changed=false;if(recoverHumanInputIfStale(false))changed=true;if(recoverRoundEndIfStale(false))changed=true;if(recoverCpuTurnIfStale(false))changed=true;if(changed)render();},700);
+
+function render(){recoverHumanInputIfStale(false);recoverRoundEndIfStale(false);recoverCpuTurnIfStale(false);normalizeAllPlayers();game.players.forEach(updateStatsSnapshot);renderStatus();renderPublic();renderHumanBuildings();renderHumanHand();renderCpu();renderLog();showScore(false);}
+ function workerIcons(p){let html='<div class="worker-strip">';for(let i=0;i<p.workers;i++)html+=`<span class="worker ${i<p.availableWorkers?'':'used-worker'}"></span>`;for(let i=0;i<(p.traineeWorkers||0);i++)html+='<span class="worker trainee-worker"></span>';return html+`<span class="worker-label">未配置 ${p.availableWorkers}/${p.workers}${p.traineeWorkers?`・研修 ${p.traineeWorkers}`:''}</span></div>`;}
+function renderStatus(){const h=humanPlayer(),c=cpuPlayer();const allPlaced=h.availableWorkers<=0&&c.availableWorkers<=0;const turnText=game.gameOver?'終了':allPlaced?'全員配置済み':currentPlayer().name;const humanDue=wageWorkers(h)*currentWage();const shortage=Math.max(0,humanDue-h.money);document.body.classList.toggle('human-turn',!game.gameOver&&!allPlaced&&!currentPlayer().isCPU);document.body.classList.toggle('cpu-turn',!game.gameOver&&!allPlaced&&currentPlayer().isCPU);const stats=[{l:'ラウンド',v:`${game.round} / ${game.maxRound}`,cls:'major'},{l:'現在手番',v:turnText,cls:'major turn'},{l:'あなたの現金',v:`$${h.money}`,sub:`次回給料 $${humanDue}${shortage?`・不足 $${shortage}`:'・支払可能'}`,cls:`major ${shortage?'warnstat':''}`},{l:'あなたの労働者',v:workerIcons(h),cls:'major'},{l:'家計',v:`$${game.household}`,sub:`山札 ${game.deck.length}枚`},{l:'CPU',v:`$${c.money}`,sub:`給料 $${wageWorkers(c)*currentWage()}・労働者 ${c.availableWorkers}/${c.workers}`},{l:'先手',v:game.players[game.firstPlayerIndex].name,sub:`次：${game.nextFirstPlayerIndex===null?'未定':game.players[game.nextFirstPlayerIndex].name}`},{l:'未払い',v:`あなた ${h.unpaidWages}`,sub:`CPU ${c.unpaidWages}`},{l:'給料単価',v:`$${currentWage()} / 人`},{l:'手札',v:`${totalHandCount(h)} / ${handLimit(h)}`,sub:`建物 ${h.hand.length}・消費財 ${h.goods}`}];$('status').innerHTML=stats.map(x=>`<div class="stat ${x.cls||''}"><div class="label">${x.l}</div><div class="value">${x.v}</div>${x.sub?`<div class="sub">${x.sub}</div>`:''}</div>`).join('');$('phaseHint').className='hint current-turn turn-banner';$('phaseHint').textContent=game.gameOver?'ゲーム終了です。':game.thinking?'CPUが考えています...':isModalOpen()?'選択中です...':game.actionLock?'処理中です...':allPlaced?'全員配置済みです。ラウンド終了ボタンを押してください。':`現在手番：${currentPlayer().name}`;const endBtn=$('endRoundBtn');if(endBtn){
+  // v62: 全員配置済みなら、古い processingRoundEnd だけでボタンを殺さない。
+  // 本当に処理中なら画面遷移・モーダル表示中なので、isModalOpen 側で止める。
+  endBtn.disabled=game.gameOver||isModalOpen()||!allPlaced;
+  endBtn.title=allPlaced?'給料支払いとラウンド終了処理を行います。':'労働者が残っている間は押せません。';
+}}
+function renderPublic(){const p=currentPlayer();const ss=publicSources();$('publicCount').textContent=`${ss.length}か所`;$('publicPlaces').innerHTML=ss.map(s=>{const used=!s.multiUse&&usedPublic(s);const canTry=!game.gameOver&&!game.thinking&&!game.actionLock&&!p.isCPU&&p.availableWorkers>0&&!used;const executable=canTry&&canExecute(p,s);const title=(canTry&&!executable)?` title="${escapeHtml(cannotReason(p,s))}"`:'';const disabled=!canTry;const available=executable?'available':'';return `<div class="workplace ${used?'used':''} ${s.multiUse?'multi':''} ${available}"><div class="top"><span class="name">${s.name}</span><span class="card-badges"><span class="round-badge">R${s.round||1}</span><span class="badge">${s.multiUse?'複数可':used?'使用済':'未使用'}</span></span></div><div class="effect">${s.effectText||''}</div>${s.publicOwner?`<div class="owner">売却元：${s.publicOwner}</div>`:''}<div class="actions"><button class="primary small" onclick="usePublic('${pkey(s)}')" ${disabled?'disabled':''}${title}>${executable?'配置する':'使う'}</button></div></div>`;}).join('');}
+function iconMeta(c){const icon=c.icon==='farm'?'🌾 農業':c.icon==='factory'?'⚙ 工場':'🏢 建物';return `<div class="resource-row"><span class="resource-chip">${icon}</span>${c.tags.includes('key')?'<span class="resource-chip">🔑 カギ</span>':''}<span class="resource-chip">${c.sellable?'💱 売却可':'🔒 売却不可'}</span></div>`;} function cardTop(c){return `<div class="top"><span class="name">${c.name}</span><span class="card-badges"><span class="cost-badge">◆${c.cost}</span><span class="vp-badge">★${c.vp}</span></span></div>`;} function cardHtml(c,buttons=''){return `<div class="card cost${c.cost} ${c.used?'used':''}">${cardTop(c)}${iconMeta(c)}<div class="effect">${c.effectText}</div><div class="actions">${buttons}</div></div>`;}
+function renderHumanBuildings(){
+  const p=humanPlayer();
+  $('buildingCount').textContent=`${p.buildings.length}枚`;
+  if(!p.buildings.length){
+    $('buildings').innerHTML='<p class="hint">まだ建物はありません。</p>';
+    return;
+  }
+  $('buildings').innerHTML=p.buildings.map(b=>{
+    const canTry=!game.gameOver && !game.thinking && !game.actionLock && currentPlayer() && currentPlayer().id===p.id && p.availableWorkers>0 && !b.used && b.action!=='none';
+    const usable=canTry && canExecute(p,b);
+    let reason='';
+    if(b.used) reason='<div class="hint">この建物はこのラウンド使用済みです。</div>';
+    else if(b.action==='none') reason='<div class="hint">この建物は常時効果です。</div>';
+    else if(canTry && !canExecute(p,b)) reason=`<div class="hint warn">${cannotReason(p,b)}</div>`;
+    else if(currentPlayer() && currentPlayer().id!==p.id) reason='<div class="hint">今はあなたの手番ではありません。</div>';
+    const buttonLabel=b.used?'使用済':(b.action==='none'?'常時効果':'使う');
+    const btn=`<button class="primary small" style="min-width:88px" data-use-building="${b.uid}" ${canTry?'':'disabled'}>${buttonLabel}</button>`;
+    const clickable=canTry?' clickable':'';
+    const title=canTry?(usable?' title="カード全体または使うボタンで使えます"':` title="${escapeHtml(cannotReason(p,b))}"`):'';
+    const data=canTry?` data-use-building="${b.uid}"`:'';
+    return `<div class="card cost${b.cost} ${b.used?'used':''}${clickable} ${usable?'available':''}"${title}${data}>${cardTop(b)}${iconMeta(b)}<div class="effect">${b.effectText}</div><div class="actions">${reason}${btn}</div></div>`;
+  }).join('');
+  $('buildings').querySelectorAll('[data-use-building]').forEach(el=>{
+    el.onclick=(ev)=>{ev.preventDefault();ev.stopPropagation();useBuilding(el.getAttribute('data-use-building'));};
+  });
+} function renderHumanHand(){const p=humanPlayer();$('handCount').textContent=`建物${p.hand.length}枚＋消費財${p.goods}枚＝${totalHandCount(p)} / ${handLimit(p)}`;$('hand').innerHTML=(p.goods?`<div class="card"><div class="top"><span class="name">消費財カード</span><span class="badge">${p.goods}枚</span></div><div class="effect">建築コストや消費系職場の支払いに使えます。手札上限に含みます。</div></div>`:'')+(p.hand.length?p.hand.map(c=>cardHtml(c,'')).join(''):'<p class="hint">建物カードがありません。</p>');}
+function renderCpu(){const p=cpuPlayer();$('cpuBuildingCount').textContent=`${p.buildings.length}枚`;$('cpuBuildings').innerHTML=p.buildings.length?p.buildings.map(b=>cardHtml(b,'')).join(''):'<p class="hint">CPUの建物はまだありません。</p>';$('cpuHandCount').textContent=`建物${p.hand.length}枚＋消費財${p.goods}枚＝${totalHandCount(p)} / ${handLimit(p)}`;$('cpuHand').innerHTML=(p.goods?`<div class="card"><div class="top"><span class="name">消費財カード</span><span class="badge">${p.goods}枚</span></div><div class="effect">CPUの支払い用カードです。</div></div>`:'')+(p.hand.length?p.hand.map(c=>cardHtml(c,'')).join(''):'<p class="hint">CPUの建物カードはありません。</p>');}
+function renderLog(){$('log').innerHTML=game.log.map(l=>`<p>${escapeHtml(l)}</p>`).join('');} function openModal(html){$('modal').innerHTML=html;$('modalBack').style.display='flex';} function closeModal(){$('modalBack').style.display='none';$('modal').innerHTML='';}
+
+
+// v63: CPU対CPUの30回自動テスト。
+// 目的：人間操作なしで、CPUロジック・ラウンド終了・給料処理・手札上限処理を連続実行し、
+// 「どの行動で止まるか」をログで見えるようにする。
+function initAutoTestGame(gameNo){
+  uidCounter=1;
+  Object.assign(game,{
+    round:1,household:0,deck:buildDeck(),discard:[],publicBuildings:[],publicUsed:{},
+    nextFirstPlayerIndex:null,log:[],gameOver:false,thinking:false,actionLock:false,
+    roundEndReady:false,processingRoundEnd:false,cpuTurnScheduled:false,
+    cpuLockSince:0,humanInputLockSince:0,roundEndLockSince:0,autoTestMode:true
+  });
+  const h={id:'human',name:'CPU-A',isCPU:false,money:5,workers:2,availableWorkers:2,traineeWorkers:0,goods:0,unpaidWages:0,soldBuildings:0,hand:[],buildings:[]};
+  const c={id:'cpu',name:'CPU-B',isCPU:true,money:5,workers:2,availableWorkers:2,traineeWorkers:0,goods:0,unpaidWages:0,soldBuildings:0,hand:[],buildings:[]};
+  game.players=[h,c];
+  game.firstPlayerIndex=Math.random()<.5?0:1;
+  game.currentPlayerIndex=game.firstPlayerIndex;
+  game.players[game.firstPlayerIndex].money=5;
+  game.players[otherIndex(game.firstPlayerIndex)].money=6;
+  drawCards(h,3,false);
+  drawCards(c,3,false);
+  addLog(`TEST ${gameNo}: CPU対CPU開始。先手は${game.players[game.firstPlayerIndex].name}です。`);
+}
+function withCpuBrain(p,fn){
+  const old=p.isCPU;
+  p.isCPU=true;
+  try{return fn();}
+  finally{p.isCPU=old;}
+}
+function autoAdvanceTurnOrRound(){
+  normalizeAllPlayers();
+  const a=game.players[0],b=game.players[1];
+  if(a.availableWorkers<=0 && b.availableWorkers<=0){
+    autoEndRound();
+    return;
+  }
+  const cur=game.currentPlayerIndex, oth=otherIndex(cur);
+  if(game.players[oth].availableWorkers>0)game.currentPlayerIndex=oth;
+  else if(game.players[cur].availableWorkers>0)game.currentPlayerIndex=cur;
+  else autoEndRound();
+}
+function autoEndRound(){
+  game.thinking=false;
+  game.actionLock=false;
+  game.cpuTurnScheduled=false;
+  game.processingRoundEnd=false;
+  normalizeAllPlayers();
+  addLog(`AUTO: ラウンド${game.round}終了。給料支払いを自動処理します。`);
+  withCpuBrain(game.players[0],()=>payWagesAuto(game.players[0]));
+  withCpuBrain(game.players[1],()=>payWagesAuto(game.players[1]));
+  withCpuBrain(game.players[0],()=>cpuHandLimit(game.players[0]));
+  withCpuBrain(game.players[1],()=>cpuHandLimit(game.players[1]));
+  autoNextRound();
+}
+function autoNextRound(){
+  game.roundEndReady=false;
+  game.processingRoundEnd=false;
+  if(game.round>=game.maxRound){
+    game.gameOver=true;
+    addLog('AUTO: 9ラウンド終了。ゲーム終了。');
+    addFinalSummaryLog();
+    return;
+  }
+  game.round++;
+  game.publicUsed={};
+  if(game.nextFirstPlayerIndex!==null){
+    game.firstPlayerIndex=game.nextFirstPlayerIndex;
+    addLog(`AUTO: 採石所の効果で、次の先手は${game.players[game.firstPlayerIndex].name}です。`);
+  }
+  game.nextFirstPlayerIndex=null;
+  game.players.forEach(p=>{
+    p.availableWorkers=p.workers;
+    p.buildings.forEach(b=>b.used=false);
+    normalizePlayer(p);
+  });
+  game.currentPlayerIndex=game.firstPlayerIndex;
+  addLog(`AUTO: ラウンド${game.round}開始。先手は${game.players[game.firstPlayerIndex].name}です。`);
+}
+function autoPlayOneWorker(){
+  normalizeAllPlayers();
+  if(game.gameOver)return true;
+  const p=currentPlayer();
+  if(!p)throw new Error('currentPlayer がありません');
+  if(p.availableWorkers<=0){autoAdvanceTurnOrRound();return true;}
+
+  const picked=withCpuBrain(p,()=>cpuChooseActionSafely(p));
+  const a=picked && picked.action;
+  if(!a || !a.s || !withCpuBrain(p,()=>cpuActionStillUsable(p,a))){
+    const before=p.availableWorkers;
+    spendWorker(p);
+    addLog(`AUTO: ${p.name}は実行できる行動がないためパスしました。労働者 ${before}→${p.availableWorkers}`);
+    autoAdvanceTurnOrRound();
+    return true;
+  }
+
+  const beforeAdjust=cpuLogAdjustmentBefore(p,a,picked.acts||[],picked.reason||'通常');
+  addLog(`AUTO: ${p.name} 行動=${a.label} / 理由=${picked.reason||'通常'} / 評価=${cpuScoreText(a.score)}`);
+  try{trackActionStats(p,a.s);}catch(e){addLog(`AUTO WARN: trackActionStats失敗 ${e.message||e}`);}
+  if(!spendWorker(p)){
+    addLog(`AUTO WARN: ${p.name}の労働者消費に失敗しました。`);
+    autoAdvanceTurnOrRound();
+    return true;
+  }
+  if(a.type==='public')markPublic(a.s);
+  else if(a.type==='building')a.s.used=true;
+
+  let settled='';
+  const ok=()=>{settled='ok';};
+  const cancel=()=>{settled='cancel';};
+  try{
+    withCpuBrain(p,()=>executeAction(p,a.s,a.type==='building'?a.s:null,ok,cancel));
+  }catch(e){
+    settled='error';
+    addLog(`AUTO ERROR: ${p.name} ${a.label} executeAction例外: ${e.message||e}`);
+  }
+
+  if(settled===''){
+    throw new Error(`${p.name} ${a.label} が完了コールバックなしで停止しました`);
+  }
+  if(settled==='cancel' || settled==='error'){
+    if(a.type==='public')unmarkPublic(a.s);
+    else if(a.type==='building')a.s.used=false;
+    refundWorker(p);
+    addLog(`AUTO WARN: ${p.name} ${a.label} を取り消しました。`);
+    // 同じ行動で無限に詰まらないよう、1人パス扱いにする。
+    if(p.availableWorkers>0)spendWorker(p);
+  }else if(a.type==='building' && ['builder','general_contractor'].includes(a.s.id)){
+    a.s.needsFirstUse=false;
+  }
+
+  cpuLogAdjustmentAfter(p,a,beforeAdjust);
+  game.thinking=false;
+  game.actionLock=false;
+  game.processingRoundEnd=false;
+  autoAdvanceTurnOrRound();
+  return true;
+}
+function runOneAutoTestGame(gameNo){
+  initAutoTestGame(gameNo);
+  const started=Date.now();
+  let steps=0;
+  let status='OK';
+  let error='';
+  try{
+    while(!game.gameOver && steps<1400){
+      steps++;
+      autoPlayOneWorker();
+    }
+    if(!game.gameOver){
+      status='STOP';
+      error=`最大ステップ超過。round=${game.round}, current=${currentPlayer()?currentPlayer().name:'なし'}, workers=${game.players.map(p=>p.name+':'+p.availableWorkers+'/'+p.workers).join(', ')}`;
+      addLog(`AUTO STOP: ${error}`);
+    }
+  }catch(e){
+    status='ERROR';
+    error=e && e.stack ? e.stack : String(e);
+    addLog(`AUTO ERROR: ${e.message||e}`);
+  }
+  const s0=score(game.players[0]);
+  const s1=score(game.players[1]);
+  const stA=ensureStats(game.players[0]);
+  const stB=ensureStats(game.players[1]);
+  const adjust={
+    dangerBuild:(stA.dangerBuildActions||0)+(stB.dangerBuildActions||0),
+    dangerWorker:(stA.dangerWorkerActions||0)+(stB.dangerWorkerActions||0),
+    skippedIncome:(stA.dangerNonIncomeWithIncomeAvailable||0)+(stB.dangerNonIncomeWithIncomeAvailable||0),
+    riskWorse:(stA.wageRiskWorseActions||0)+(stB.wageRiskWorseActions||0),
+    riskBetter:(stA.wageRiskBetterActions||0)+(stB.wageRiskBetterActions||0)
+  };
+  return {
+    gameNo,status,error,steps,ms:Date.now()-started,
+    scoreA:s0.total,scoreB:s1.total,adjust,
+    summary:`${status} / ${steps}手 / CPU-A ${s0.total}点 / CPU-B ${s1.total}点 / 売却 ${game.players[0].soldBuildings||0}-${game.players[1].soldBuildings||0} / 未払い ${game.players[0].unpaidWages}-${game.players[1].unpaidWages} / 危険建設 ${adjust.dangerBuild} / 危険増員 ${adjust.dangerWorker} / 現金候補スキップ ${adjust.skippedIncome} / 安全度悪化 ${adjust.riskWorse}`,
+    log:game.log.slice().reverse()
+  };
+}
+function runCpuVsCpu30(){
+  if(!confirm('CPU対CPUで30回、CPU安定化用の調整ログを出します。現在のゲームはリセットされます。よろしいですか？'))return;
+  closeModal();
+  const results=[];
+  const oldAlert=window.alert;
+  try{
+    for(let i=1;i<=30;i++)results.push(runOneAutoTestGame(i));
+  }finally{
+    window.alert=oldAlert;
+    game.autoTestMode=false;
+  }
+  const ok=results.filter(r=>r.status==='OK').length;
+  const ng=results.length-ok;
+  const totalAdjust=results.reduce((t,r)=>{
+    const a=r.adjust||{};
+    t.dangerBuild+=(a.dangerBuild||0);
+    t.dangerWorker+=(a.dangerWorker||0);
+    t.skippedIncome+=(a.skippedIncome||0);
+    t.riskWorse+=(a.riskWorse||0);
+    t.riskBetter+=(a.riskBetter||0);
+    return t;
+  },{dangerBuild:0,dangerWorker:0,skippedIncome:0,riskWorse:0,riskBetter:0});
+  const nl='\n';
+  const header=`==== 30回集計 ====${nl}OK ${ok}/${results.length} / ERROR ${ng}${nl}危険建設 ${totalAdjust.dangerBuild}${nl}危険増員 ${totalAdjust.dangerWorker}${nl}現金不足＋現金候補ありで非現金 ${totalAdjust.skippedIncome}${nl}給料安全度 悪化 ${totalAdjust.riskWorse} / 改善 ${totalAdjust.riskBetter}${nl}`;
+  const summary=header+nl+results.map(r=>`${String(r.gameNo).padStart(2,'0')}: ${r.summary}${r.error?' / '+r.error.split(nl)[0]:''}`).join(nl);
+  const full=header+nl+nl+results.map(r=>`================ TEST ${r.gameNo} : ${r.summary} ================${nl}`+r.log.join(nl)+(r.error?`${nl}ERROR DETAIL:${nl}${r.error}`:'')).join(nl+nl);
+  openModal(`<h3>CPU対CPU 30回 調整ログ結果 v68</h3><p class="hint"><b>${ok} / ${results.length} 回 OK</b>、停止/エラー ${ng} 回です。CPU安定化用に、危険時の建設・増員・現金候補スキップ・給料安全度の悪化を集計します。</p><h3>サマリー</h3><textarea id="autoSummary" style="width:100%;height:190px;font-family:monospace;font-size:12px"></textarea><h3>全ログ</h3><textarea id="autoFullLog" style="width:100%;height:420px;font-family:monospace;font-size:12px"></textarea><div class="actions"><button class="primary" id="copyAutoLogBtn">全ログをコピー</button><button onclick="closeModal()">閉じる</button></div>`);
+  $('autoSummary').value=summary;
+  $('autoFullLog').value=full;
+  $('copyAutoLogBtn').onclick=async()=>{
+    const txt=$('autoFullLog').value;
+    try{await navigator.clipboard.writeText(txt);addLog('CPU対CPUテストログをコピーしました。');}
+    catch(e){$('autoFullLog').focus();$('autoFullLog').select();addLog('コピーできない場合は、全ログ欄を選択してコピーしてください。');}
+  };
+  // テスト後は通常プレイできる初期状態へ戻す。結果ログはモーダル内に残す。
+  initGame();
+}
+
+function showHelp(){openModal(`<h3>遊び方</h3><ul><li>ゲーム開始時に先手をランダムで決めます。先手$5、後手$6です。</li><li>人間とCPUが交互に労働者を1人ずつ置きます。</li><li>公共職場は取り合いです。鉱山だけ何度でも使えます。採石所は1人だけ入り、カード1枚取得＋次ラウンドの先手予約です。</li><li>消費財カードは建築コストや露店・市場・スーパーなどの支払いに使えます。</li><li>手札上限は建物カード＋消費財カードの合計で基本5枚。倉庫1つにつき+4枚です。</li><li>手札は最終得点になりません。</li><li>研修中労働者もそのラウンドの給料対象です。給料不足時は売却可能な建物を自動売却し、それでも足りなければ未払い賃金になります。</li></ul><div class="actions"><button class="primary" onclick="closeModal()">閉じる</button></div>`);}
+$('endRoundBtn').onclick=humanEndRound;$('scoreBtn').onclick=()=>showScore(false);$('helpBtn').onclick=showHelp;$('newBtn').onclick=()=>{if(confirm('新規ゲームを開始しますか？現在のゲームは失われます。'))initGame();};window.usePublic=usePublic;window.useBuilding=useBuilding;window.closeModal=closeModal;initGame();
+</script></body></html>
