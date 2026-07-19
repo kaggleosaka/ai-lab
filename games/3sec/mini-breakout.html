@@ -28,6 +28,7 @@
     body {
       width: 100%;
       height: 100%;
+      min-height: 100svh;
       margin: 0;
       overflow: hidden;
       background:
@@ -44,8 +45,8 @@
 
     .phone {
       position: relative;
-      width: min(100vw, 464px);
-      height: min(100vh, 825px);
+      width: min(100vw, calc(100svh * 464 / 825), 464px);
+      height: min(100svh, calc(100vw * 825 / 464), 825px);
       aspect-ratio: 464 / 825;
       max-width: 464px;
       max-height: 825px;
@@ -54,6 +55,45 @@
       box-shadow: 0 26px 70px rgba(0,0,0,.55);
       overflow: hidden;
       user-select: none;
+    }
+
+    @supports (height: 100dvh) {
+      html,
+      body {
+        min-height: 100dvh;
+      }
+
+      .phone {
+        width: min(100vw, calc(100dvh * 464 / 825), 464px);
+        height: min(100dvh, calc(100vw * 825 / 464), 825px);
+      }
+    }
+
+    .menu-back {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 999px;
+      background: rgba(12, 18, 30, .72);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 900;
+      text-decoration: none;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      touch-action: manipulation;
+    }
+
+    .menu-back:active {
+      transform: translateY(1px);
     }
 
     canvas {
@@ -93,11 +133,132 @@
     .sound:active {
       transform: translateY(1px);
     }
+
+    .control-pad {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 4;
+      height: 122px;
+      touch-action: none;
+      cursor: grab;
+      background:
+        linear-gradient(180deg, rgba(8, 11, 18, 0), rgba(8, 11, 18, .82) 36%, rgba(8, 11, 18, .94)),
+        radial-gradient(circle at 50% 72%, rgba(66, 232, 255, .22), transparent 48%);
+    }
+
+    .control-pad::before {
+      content: "";
+      position: absolute;
+      left: 48px;
+      right: 48px;
+      bottom: 39px;
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(247, 251, 255, .12);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), 0 0 24px rgba(66,232,255,.18);
+    }
+
+    .control-thumb {
+      position: absolute;
+      left: 50%;
+      bottom: 31px;
+      width: 72px;
+      height: 28px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, #8bf6ff, #42e8ff 54%, #56f39a);
+      box-shadow: 0 0 22px rgba(66,232,255,.55), inset 0 2px 0 rgba(255,255,255,.48);
+      pointer-events: none;
+    }
+
+    .speed-button {
+      position: absolute;
+      right: 24px;
+      bottom: 70px;
+      z-index: 1;
+      min-width: 92px;
+      height: 38px;
+      padding: 0 16px;
+      border: 1px solid rgba(255,255,255,.24);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 209, 102, .96), rgba(255, 129, 74, .96));
+      color: #071019;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 0 22px rgba(255,209,102,.38), 0 5px 0 rgba(83, 36, 14, .48);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      touch-action: manipulation;
+    }
+
+    .speed-button.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .speed-button:active {
+      transform: translateY(4px);
+      box-shadow: 0 0 18px rgba(255,209,102,.34), 0 1px 0 rgba(83, 36, 14, .48);
+    }
+
+    .level-select {
+      position: absolute;
+      left: 24px;
+      bottom: 70px;
+      z-index: 1;
+      display: none;
+      grid-template-columns: repeat(3, 52px);
+      gap: 6px;
+    }
+
+    .level-select.show {
+      display: grid;
+    }
+
+    .level-button {
+      height: 38px;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px;
+      background: rgba(12, 18, 30, .78);
+      color: #f7fbff;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: inset 0 -2px 0 rgba(255,255,255,.08);
+      touch-action: manipulation;
+    }
+
+    .level-button.active {
+      background: linear-gradient(180deg, rgba(66, 232, 255, .96), rgba(86, 243, 154, .92));
+      color: #071019;
+      box-shadow: 0 0 20px rgba(66,232,255,.36), inset 0 2px 0 rgba(255,255,255,.5);
+    }
+
+    .level-button:active {
+      transform: translateY(2px);
+    }
   </style>
 </head>
 <body>
   <main class="phone" aria-label="Mini Breakout Challenge 464 by 825">
+    <a class="menu-back" href="../index.html#casual" aria-label="Back to menu">Menu</a>
     <canvas id="game" width="464" height="825"></canvas>
+    <div id="controlPad" class="control-pad" role="group" aria-label="Paddle controls">
+      <div id="levelSelect" class="level-select" aria-label="Start level">
+        <button class="level-button active" type="button" data-start-level="1">LV1</button>
+        <button class="level-button" type="button" data-start-level="2">LV2</button>
+        <button class="level-button" type="button" data-start-level="3">LV3</button>
+      </div>
+      <button id="speedButton" class="speed-button" type="button" aria-label="Speed up">SPEED</button>
+      <div id="controlThumb" class="control-thumb"></div>
+    </div>
     <button id="soundButton" class="sound" type="button" aria-label="Sound on" title="Sound on">
       <svg id="soundIcon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 9v6h4l5 4V5L8 9H4z"></path>
@@ -115,11 +276,19 @@
       const H = 825;
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
+      const controlPad = document.getElementById("controlPad");
+      const controlThumb = document.getElementById("controlThumb");
+      const levelSelect = document.getElementById("levelSelect");
+      const levelButtons = document.querySelectorAll(".level-button");
+      const speedButton = document.getElementById("speedButton");
       const soundButton = document.getElementById("soundButton");
       const soundIcon = document.getElementById("soundIcon");
 
       const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
       const rand = (min, max) => min + Math.random() * (max - min);
+      const CONTROL_TOP = 703;
+      const PADDLE_Y = 657;
+      const MISS_Y = CONTROL_TOP + 44;
 
       const savedMute = localStorage.getItem("miniBreakoutMuted");
       let muted = savedMute === "1";
@@ -127,6 +296,7 @@
       let audioCtx = null;
       let musicTimer = null;
       let musicStep = 0;
+      let selectedStartLevel = 1;
 
       const game = {
         state: "ready",
@@ -139,9 +309,13 @@
         flashTimer: 0,
         particles: [],
         powerUps: [],
+        lasers: [],
+        laserTimer: 0,
+        laserCooldown: 0,
         pointerX: W / 2,
-        paddle: { x: W / 2 - 48, y: 735, w: 96, h: 16, targetX: W / 2 - 48, baseW: 96, growTimer: 0 },
-        ball: { x: W / 2, y: 716, r: 7, vx: 0, vy: 0, speed: 5.2 },
+        paddle: { x: W / 2 - 48, y: PADDLE_Y, w: 96, h: 16, targetX: W / 2 - 48, baseW: 96, growTimer: 0 },
+        ball: { x: W / 2, y: PADDLE_Y - 19, r: 7, vx: 0, vy: 0, speed: 5.2 },
+        balls: [],
         blocks: []
       };
 
@@ -149,7 +323,9 @@
       const powerColors = {
         wide: "#56f39a",
         slow: "#42e8ff",
-        life: "#ff5d9e"
+        life: "#ff5d9e",
+        multi: "#ffd166",
+        laser: "#ff7ad9"
       };
 
       function setSoundIcon() {
@@ -198,27 +374,43 @@
         game.ball.y = p.y - game.ball.r - 3;
         game.ball.vx = stickToPaddle ? 0 : rand(-2.4, 2.4);
         game.ball.vy = stickToPaddle ? 0 : -game.ball.speed;
+        game.balls.length = 0;
+        game.balls.push(game.ball);
+      }
+
+      function applyLevelSettings(centerPaddle = false) {
+        game.paddle.w = Math.max(70, game.paddle.baseW - (game.level - 1) * 4);
+        game.paddle.growTimer = 0;
+        if (centerPaddle) {
+          game.paddle.x = W / 2 - game.paddle.w / 2;
+        } else {
+          game.paddle.x = clamp(game.paddle.x, 8, W - game.paddle.w - 8);
+        }
+        game.paddle.targetX = game.paddle.x;
+        game.ball.speed = Math.min(8.2, 5.2 + (game.level - 1) * 0.34);
       }
 
       function resetGame() {
         game.state = "ready";
         game.score = 0;
         game.lives = 3;
-        game.level = 1;
+        game.level = selectedStartLevel;
         game.combo = 0;
         game.shake = 0;
         game.flash = "";
         game.flashTimer = 0;
         game.particles.length = 0;
         game.powerUps.length = 0;
-        game.paddle.w = game.paddle.baseW;
-        game.paddle.growTimer = 0;
-        game.paddle.x = W / 2 - game.paddle.w / 2;
-        game.paddle.targetX = game.paddle.x;
-        game.ball.speed = 5.2;
+        game.lasers.length = 0;
+        game.laserTimer = 0;
+        game.laserCooldown = 0;
         game.pointerX = W / 2;
+        applyLevelSettings(true);
         initBlocks();
         resetBall(true);
+        updateControlThumb();
+        updateLevelSelect();
+        updateSpeedButton();
       }
 
       function nextLevel() {
@@ -228,13 +420,15 @@
         game.flash = `Level ${game.level}`;
         game.flashTimer = 100;
         game.powerUps.length = 0;
-        game.paddle.w = Math.max(70, game.paddle.baseW - (game.level - 1) * 4);
-        game.paddle.growTimer = 0;
-        game.paddle.x = clamp(game.paddle.x, 8, W - game.paddle.w - 8);
-        game.paddle.targetX = game.paddle.x;
-        game.ball.speed = Math.min(8.2, 5.2 + (game.level - 1) * 0.34);
+        game.lasers.length = 0;
+        game.laserTimer = 0;
+        game.laserCooldown = 0;
+        applyLevelSettings(false);
         initBlocks();
         resetBall(true);
+        updateControlThumb();
+        updateLevelSelect();
+        updateSpeedButton();
       }
 
       function startGame() {
@@ -246,6 +440,7 @@
         }
         game.state = "playing";
         game.combo = 0;
+        updateLevelSelect();
         resetBall(false);
         playSound("start");
         startMusic();
@@ -316,6 +511,14 @@
           tone(880, 0.06, "triangle", 0.08, 0);
           tone(1320, 0.1, "triangle", 0.07, 0.06);
         }
+        if (name === "multi") {
+          tone(620, 0.06, "triangle", 0.07, 0);
+          tone(860, 0.08, "triangle", 0.065, 0.045);
+          tone(1120, 0.1, "triangle", 0.06, 0.09);
+        }
+        if (name === "laser") {
+          tone(1560, 0.035, "square", 0.045, 0, 980);
+        }
         if (name === "bomb") {
           tone(90, 0.16, "sawtooth", 0.13, 0, 48);
           noise(0.12, 0.07);
@@ -374,8 +577,63 @@
         game.flashTimer = time;
       }
 
+      function aliveBlockCount() {
+        return game.blocks.reduce((count, block) => count + (block.alive ? 1 : 0), 0);
+      }
+
+      function updateSpeedButton() {
+        const show = game.state === "playing" && aliveBlockCount() === 1;
+        speedButton.classList.toggle("show", show);
+      }
+
+      function canChooseStartLevel() {
+        return game.state === "ready" && game.score === 0 && game.lives === 3;
+      }
+
+      function updateLevelSelect() {
+        levelSelect.classList.toggle("show", canChooseStartLevel());
+        levelButtons.forEach(button => {
+          const level = Number(button.dataset.startLevel);
+          button.classList.toggle("active", level === selectedStartLevel);
+        });
+      }
+
+      function chooseStartLevel(level) {
+        selectedStartLevel = clamp(level, 1, 3);
+        if (canChooseStartLevel()) {
+          game.level = selectedStartLevel;
+          applyLevelSettings(true);
+          initBlocks();
+          resetBall(true);
+          updateControlThumb();
+        }
+        updateLevelSelect();
+      }
+
+      function speedUpBalls() {
+        if (game.state !== "playing" || aliveBlockCount() !== 1) return;
+        const maxSpeed = 12.5;
+        let changed = false;
+
+        for (const b of game.balls) {
+          const current = Math.max(Math.hypot(b.vx, b.vy), b.speed, 0.1);
+          const next = Math.min(maxSpeed, Math.max(current * 1.22, b.speed + 0.9));
+          const scale = next / current;
+          b.vx *= scale;
+          b.vy *= scale;
+          b.speed = Math.max(b.speed, next);
+          changed = changed || next > current + 0.01;
+        }
+
+        game.ball.speed = Math.max(game.ball.speed, ...game.balls.map(b => b.speed));
+        if (changed) {
+          showFlash("Speed Up", 42);
+          playSound("tap");
+        }
+      }
+
       function spawnPowerUp(x, y, forcedType = null) {
-        const types = ["wide", "slow", "life"];
+        const types = ["wide", "slow", "multi", "laser", "wide", "slow", "life"];
         const type = forcedType || types[Math.floor(rand(0, types.length))];
         game.powerUps.push({
           x,
@@ -388,6 +646,27 @@
         });
       }
 
+      function splitBalls() {
+        const base = game.balls[0] || game.ball;
+        const speed = Math.max(base.speed, Math.hypot(base.vx, base.vy), 5.2);
+        const angles = [-2.45, -0.69, -1.24, -1.9];
+        const targetCount = Math.min(5, Math.max(3, game.balls.length + 2));
+        let angleIndex = 0;
+
+        while (game.balls.length < targetCount) {
+          const angle = angles[angleIndex % angles.length] + rand(-0.09, 0.09);
+          game.balls.push({
+            x: base.x + rand(-5, 5),
+            y: base.y + rand(-4, 4),
+            r: base.r,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            speed
+          });
+          angleIndex++;
+        }
+      }
+
       function applyPowerUp(type) {
         if (type === "wide") {
           const p = game.paddle;
@@ -397,19 +676,30 @@
           showFlash("Wide Paddle");
         }
         if (type === "slow") {
-          const b = game.ball;
           const scale = 0.78;
-          b.vx *= scale;
-          b.vy *= scale;
-          b.speed = Math.max(4.6, b.speed * 0.92);
+          for (const b of game.balls) {
+            b.vx *= scale;
+            b.vy *= scale;
+            b.speed = Math.max(4.6, b.speed * 0.92);
+          }
+          game.ball.speed = Math.max(4.6, game.ball.speed * 0.92);
           showFlash("Slow Ball");
         }
         if (type === "life") {
           game.lives = Math.min(5, game.lives + 1);
           showFlash("Extra Life");
         }
+        if (type === "multi") {
+          splitBalls();
+          showFlash("Multi Ball");
+        }
+        if (type === "laser") {
+          game.laserTimer = Math.max(game.laserTimer, 560);
+          game.laserCooldown = 0;
+          showFlash("Laser Paddle");
+        }
         spawnParticles(game.paddle.x + game.paddle.w / 2, game.paddle.y, powerColors[type], 18);
-        playSound("power");
+        playSound(type === "multi" ? "multi" : "power");
       }
 
       function destroyBlock(block, award = true) {
@@ -437,6 +727,85 @@
         }
       }
 
+      function damageBlock(block, sparkColor = "#ffffff") {
+        block.hits--;
+        game.shake = block.type === "bomb" ? 14 : 6;
+        if (block.hits <= 0) {
+          if (block.type === "bomb") {
+            triggerBomb(block);
+          } else {
+            destroyBlock(block);
+            playSound("block");
+          }
+          if (game.combo > 2) showFlash(`${game.combo} Combo`, 44);
+        } else {
+          game.score += 45;
+          block.pulse = Math.PI;
+          spawnParticles(block.x + block.w / 2, block.y + block.h / 2, sparkColor, 8);
+          playSound("wall");
+        }
+      }
+
+      function clearLevel() {
+        game.score += 1000 + game.level * 250;
+        game.state = "clear";
+        showFlash("Stage Clear", 90);
+        stopMusic();
+        playSound("clear");
+      }
+
+      function checkLevelClear() {
+        if (game.state === "playing" && !game.blocks.some(block => block.alive)) {
+          clearLevel();
+        }
+      }
+
+      function rectsOverlap(a, b) {
+        return a.x < b.x + b.w &&
+          a.x + a.w > b.x &&
+          a.y < b.y + b.h &&
+          a.y + a.h > b.y;
+      }
+
+      function fireLasers() {
+        if (game.laserTimer <= 0) return;
+        game.laserTimer--;
+        if (game.laserCooldown > 0) {
+          game.laserCooldown--;
+          return;
+        }
+
+        const p = game.paddle;
+        const spots = [p.x + 18, p.x + p.w - 18];
+        for (const x of spots) {
+          game.lasers.push({ x, y: p.y - 8, w: 4, h: 22, vy: -10.5, life: 82 });
+        }
+        game.laserCooldown = 15;
+        playSound("laser");
+      }
+
+      function updateLasers() {
+        for (let i = game.lasers.length - 1; i >= 0; i--) {
+          const laser = game.lasers[i];
+          laser.y += laser.vy;
+          laser.life--;
+          const laserRect = { x: laser.x - laser.w / 2, y: laser.y - laser.h, w: laser.w, h: laser.h };
+
+          let used = false;
+          for (const block of game.blocks) {
+            if (!block.alive || !rectsOverlap(laserRect, block)) continue;
+            damageBlock(block, "#ff7ad9");
+            spawnParticles(laser.x, laser.y, "#ff7ad9", 5);
+            used = true;
+            break;
+          }
+
+          if (used || laser.y + laser.h < 55 || laser.life <= 0) {
+            game.lasers.splice(i, 1);
+          }
+        }
+      }
+
       function pointerToGameX(clientX) {
         const rect = canvas.getBoundingClientRect();
         return (clientX - rect.left) * (W / rect.width);
@@ -446,25 +815,68 @@
         const x = pointerToGameX(clientX);
         game.pointerX = clamp(x, 0, W);
         game.paddle.targetX = clamp(game.pointerX - game.paddle.w / 2, 8, W - game.paddle.w - 8);
+        updateControlThumb();
         if (game.state === "ready") {
           game.paddle.x = game.paddle.targetX;
           resetBall(true);
         }
       }
 
+      function updateControlThumb() {
+        const thumbX = clamp(game.pointerX, 36, W - 36);
+        const percent = (thumbX / W) * 100;
+        controlThumb.style.left = `${percent}%`;
+      }
+
       function handlePointerDown(event) {
+        if (event.target === soundButton) return;
+        event.preventDefault();
         resumeAudio();
         movePaddle(event.clientX);
-        if (event.target === soundButton) return;
+        if (event.currentTarget === controlPad && controlPad.setPointerCapture) {
+          controlPad.setPointerCapture(event.pointerId);
+        }
         if (game.state !== "playing") startGame();
       }
 
       function handlePointerMove(event) {
+        event.preventDefault();
         movePaddle(event.clientX);
+      }
+
+      function handlePointerUp(event) {
+        if (event.currentTarget === controlPad && controlPad.releasePointerCapture) {
+          try {
+            controlPad.releasePointerCapture(event.pointerId);
+          } catch (_) {
+            // The pointer may already be released by the browser.
+          }
+        }
       }
 
       canvas.addEventListener("pointerdown", handlePointerDown);
       canvas.addEventListener("pointermove", handlePointerMove);
+      controlPad.addEventListener("pointerdown", handlePointerDown);
+      controlPad.addEventListener("pointermove", handlePointerMove);
+      controlPad.addEventListener("pointerup", handlePointerUp);
+      controlPad.addEventListener("pointercancel", handlePointerUp);
+
+      levelButtons.forEach(button => {
+        button.addEventListener("pointerdown", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          resumeAudio();
+          chooseStartLevel(Number(button.dataset.startLevel));
+          playSound("tap");
+        });
+      });
+
+      speedButton.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        resumeAudio();
+        speedUpBalls();
+      });
 
       soundButton.addEventListener("pointerdown", event => {
         event.stopPropagation();
@@ -490,7 +902,6 @@
 
       function updatePlaying() {
         const p = game.paddle;
-        const b = game.ball;
 
         p.x += (p.targetX - p.x) * 0.32;
         if (p.growTimer > 0) {
@@ -501,90 +912,87 @@
           }
         }
 
-        b.x += b.vx;
-        b.y += b.vy;
+        fireLasers();
+        updateLasers();
+        checkLevelClear();
+        if (game.state !== "playing") return;
 
-        if (b.x - b.r < 0) {
-          b.x = b.r;
-          b.vx = Math.abs(b.vx);
-          playSound("wall");
-        }
-        if (b.x + b.r > W) {
-          b.x = W - b.r;
-          b.vx = -Math.abs(b.vx);
-          playSound("wall");
-        }
-        if (b.y - b.r < 56) {
-          b.y = 56 + b.r;
-          b.vy = Math.abs(b.vy);
-          playSound("wall");
-        }
+        for (let i = game.balls.length - 1; i >= 0; i--) {
+          const b = game.balls[i];
 
-        if (b.vy > 0 && circleRectHit(b, p)) {
-          const hit = ((b.x - (p.x + p.w / 2)) / (p.w / 2));
-          b.y = p.y - b.r - 1;
-          b.vx = hit * 5.2;
-          b.vy = -Math.sqrt(Math.max(10, b.speed * b.speed - b.vx * b.vx * 0.35));
-          game.combo = 0;
-          spawnParticles(b.x, p.y, "#42e8ff", 6);
-          playSound("paddle");
-        }
+          b.x += b.vx;
+          b.y += b.vy;
 
-        for (const block of game.blocks) {
-          if (!block.alive || !circleRectHit(b, block)) continue;
-          block.hits--;
-          game.shake = block.type === "bomb" ? 14 : 6;
-          if (block.hits <= 0) {
-            if (block.type === "bomb") {
-              triggerBomb(block);
-            } else {
-              destroyBlock(block);
-              playSound("block");
-            }
-            if (game.combo > 2) showFlash(`${game.combo} Combo`, 44);
-          } else {
-            game.score += 45;
-            block.pulse = Math.PI;
-            spawnParticles(block.x + block.w / 2, block.y + block.h / 2, "#ffffff", 8);
+          if (b.x - b.r < 0) {
+            b.x = b.r;
+            b.vx = Math.abs(b.vx);
+            playSound("wall");
+          }
+          if (b.x + b.r > W) {
+            b.x = W - b.r;
+            b.vx = -Math.abs(b.vx);
+            playSound("wall");
+          }
+          if (b.y - b.r < 56) {
+            b.y = 56 + b.r;
+            b.vy = Math.abs(b.vy);
             playSound("wall");
           }
 
-          const overlapLeft = Math.abs((b.x + b.r) - block.x);
-          const overlapRight = Math.abs((block.x + block.w) - (b.x - b.r));
-          const overlapTop = Math.abs((b.y + b.r) - block.y);
-          const overlapBottom = Math.abs((block.y + block.h) - (b.y - b.r));
-          const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-          if (minOverlap === overlapLeft || minOverlap === overlapRight) {
-            b.vx *= -1;
-          } else {
-            b.vy *= -1;
+          if (b.vy > 0 && circleRectHit(b, p)) {
+            const hit = ((b.x - (p.x + p.w / 2)) / (p.w / 2));
+            b.y = p.y - b.r - 1;
+            b.vx = hit * 5.2;
+            b.vy = -Math.sqrt(Math.max(10, b.speed * b.speed - b.vx * b.vx * 0.35));
+            game.combo = 0;
+            spawnParticles(b.x, p.y, "#42e8ff", 6);
+            playSound("paddle");
           }
-          break;
+
+          for (const block of game.blocks) {
+            if (!block.alive || !circleRectHit(b, block)) continue;
+            damageBlock(block);
+
+            const overlapLeft = Math.abs((b.x + b.r) - block.x);
+            const overlapRight = Math.abs((block.x + block.w) - (b.x - b.r));
+            const overlapTop = Math.abs((b.y + b.r) - block.y);
+            const overlapBottom = Math.abs((block.y + block.h) - (b.y - b.r));
+            const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+            if (minOverlap === overlapLeft || minOverlap === overlapRight) {
+              b.vx *= -1;
+            } else {
+              b.vy *= -1;
+            }
+            break;
+          }
+
+          if (b.y - b.r > MISS_Y) {
+            if (game.balls.length > 1) {
+              game.balls.splice(i, 1);
+              game.ball = game.balls[0];
+              spawnParticles(b.x, MISS_Y, "#ffd166", 8);
+            } else {
+              game.lives--;
+              game.combo = 0;
+              game.shake = 12;
+              playSound("miss");
+              if (game.lives <= 0) {
+                game.state = "gameover";
+                stopMusic();
+                playSound("gameover");
+              } else {
+                game.state = "ready";
+                game.powerUps.length = 0;
+                game.lasers.length = 0;
+                game.laserTimer = 0;
+                game.laserCooldown = 0;
+                resetBall(true);
+              }
+            }
+          }
         }
 
-        if (!game.blocks.some(block => block.alive)) {
-          game.score += 1000 + game.level * 250;
-          game.state = "clear";
-          showFlash("Stage Clear", 90);
-          stopMusic();
-          playSound("clear");
-        }
-
-        if (b.y - b.r > H) {
-          game.lives--;
-          game.combo = 0;
-          game.shake = 12;
-          playSound("miss");
-          if (game.lives <= 0) {
-            game.state = "gameover";
-            stopMusic();
-            playSound("gameover");
-          } else {
-            game.state = "ready";
-            game.powerUps.length = 0;
-            resetBall(true);
-          }
-        }
+        checkLevelClear();
       }
 
       function updatePowerUps() {
@@ -629,6 +1037,8 @@
         updateParticles();
         if (game.flashTimer > 0) game.flashTimer--;
         game.shake *= 0.84;
+        updateLevelSelect();
+        updateSpeedButton();
       }
 
       function roundedRect(x, y, w, h, r) {
@@ -689,6 +1099,12 @@
           ctx.font = "800 15px system-ui, sans-serif";
           ctx.fillText(`${game.combo}x`, W - 18, 50);
         }
+        if (game.laserTimer > 0) {
+          ctx.fillStyle = "rgba(255,122,217,.25)";
+          ctx.fillRect(0, 53, W, 2);
+          ctx.fillStyle = "#ff7ad9";
+          ctx.fillRect(0, 53, W * clamp(game.laserTimer / 560, 0, 1), 2);
+        }
         ctx.restore();
       }
 
@@ -737,23 +1153,49 @@
         ctx.fillStyle = "rgba(255,255,255,.35)";
         roundedRect(p.x + 9, p.y + 3, p.w - 18, 4, 2);
         ctx.fill();
+        if (game.laserTimer > 0) {
+          ctx.fillStyle = "#ff7ad9";
+          ctx.shadowColor = "#ff7ad9";
+          ctx.shadowBlur = 16;
+          roundedRect(p.x + 12, p.y - 5, 12, 8, 3);
+          ctx.fill();
+          roundedRect(p.x + p.w - 24, p.y - 5, 12, 8, 3);
+          ctx.fill();
+        }
         ctx.restore();
       }
 
       function drawBall() {
-        const b = game.ball;
-        ctx.save();
-        ctx.shadowColor = "#ffffff";
-        ctx.shadowBlur = 18;
-        const grd = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r + 3);
-        grd.addColorStop(0, "#ffffff");
-        grd.addColorStop(0.58, "#ffeaa1");
-        grd.addColorStop(1, "#ffd166");
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        for (const b of game.balls) {
+          ctx.save();
+          ctx.shadowColor = "#ffffff";
+          ctx.shadowBlur = 18;
+          const grd = ctx.createRadialGradient(b.x - 2, b.y - 2, 1, b.x, b.y, b.r + 3);
+          grd.addColorStop(0, "#ffffff");
+          grd.addColorStop(0.58, "#ffeaa1");
+          grd.addColorStop(1, "#ffd166");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawLasers() {
+        for (const laser of game.lasers) {
+          ctx.save();
+          ctx.shadowColor = "#ff7ad9";
+          ctx.shadowBlur = 18;
+          const grd = ctx.createLinearGradient(laser.x, laser.y, laser.x, laser.y - laser.h);
+          grd.addColorStop(0, "rgba(255,122,217,.1)");
+          grd.addColorStop(0.45, "#ff7ad9");
+          grd.addColorStop(1, "#ffffff");
+          ctx.fillStyle = grd;
+          roundedRect(laser.x - laser.w / 2, laser.y - laser.h, laser.w, laser.h, 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
 
       function drawPowerUps() {
@@ -772,7 +1214,12 @@
           ctx.textBaseline = "middle";
           ctx.font = "800 13px system-ui, sans-serif";
           ctx.fillStyle = "#071019";
-          ctx.fillText(item.type === "wide" ? "W" : item.type === "slow" ? "S" : "1", 0, 1);
+          const label =
+            item.type === "wide" ? "W" :
+            item.type === "slow" ? "S" :
+            item.type === "life" ? "1" :
+            item.type === "multi" ? "M" : "L";
+          ctx.fillText(label, 0, 1);
           ctx.restore();
         }
       }
@@ -823,7 +1270,7 @@
           ctx.fillText("Tap to Start", W / 2, 438);
           ctx.font = "500 14px system-ui, sans-serif";
           ctx.fillStyle = "rgba(247,251,255,.72)";
-          ctx.fillText("* bomb  + item  number needs hits", W / 2, 469);
+          ctx.fillText("* bomb  M multi  L laser  number needs hits", W / 2, 469);
         }
 
         if (game.state === "clear") {
@@ -859,6 +1306,7 @@
         drawBackground();
         drawBlocks();
         drawPowerUps();
+        drawLasers();
         drawParticles();
         drawPaddle();
         drawBall();
