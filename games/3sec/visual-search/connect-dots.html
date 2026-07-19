@@ -5,25 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>CONNECT DOTS</title>
   <style>
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      -webkit-touch-callout: none;
-      -webkit-user-drag: none;
-    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
-      height: 100svh;
-      height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none;
-      overscroll-behavior-y: none;
       background: #dfe7f1;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      touch-action: none !important;
+      touch-action: none;
       user-select: none;
     }
     body {
@@ -41,7 +33,6 @@
       border-radius: 28px;
       box-shadow: 0 12px 32px rgba(40, 60, 90, 0.25);
       overflow: hidden;
-      touch-action: none !important;
     }
     .menu-back {
       position: fixed;
@@ -112,12 +103,12 @@
       border: 1px solid rgba(148,163,184,0.25);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 8px 24px rgba(70,90,120,0.09);
       overflow: hidden;
-      touch-action: none !important;
+      touch-action: none;
     }
     #board,
     #lineLayer,
     .dot {
-      touch-action: none !important;
+      touch-action: none;
     }
     #lineLayer {
       position: absolute;
@@ -221,7 +212,7 @@
   </style>
 </head>
 <body>
-  <a class="menu-back" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/" aria-label="Back to menu">Menu</a>
+  <a class="menu-back" href="../index.html#puzzle" aria-label="Back to menu">Menu</a>
   <main id="game">
     <section class="top">
       <div class="title">CONNECT DOTS</div>
@@ -281,10 +272,17 @@
     const restartBtn = document.getElementById('restartBtn');
     const relaxBtn = document.getElementById('relaxBtn');
 
+    document.addEventListener('touchmove', e => {
+      if (!e.target.closest('.menu-back')) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', e => {
+      e.preventDefault();
+    });
+
     let grid = [];
     let selected = [];
     let dragging = false;
-    let boardTouchActive = false;
     let currentColor = null;
     let score = 0;
     let moves = 20;
@@ -292,35 +290,6 @@
     let cleared = 0;
     let relaxMode = false;
     let locked = false;
-
-    function isMenuTouch(e) {
-      return e.target && typeof e.target.closest === 'function' && e.target.closest('.menu-back');
-    }
-
-    function stopNativeSwipe(e) {
-      if (isMenuTouch(e)) return;
-      if (e.cancelable !== false) e.preventDefault();
-    }
-
-    function stopBoardSwipe(e) {
-      boardTouchActive = true;
-      stopNativeSwipe(e);
-    }
-
-    function stopActiveBoardSwipe(e) {
-      if (boardTouchActive) stopNativeSwipe(e);
-    }
-
-    function endBoardTouch() {
-      boardTouchActive = false;
-    }
-
-    window.addEventListener('touchmove', stopActiveBoardSwipe, { passive: false, capture: true });
-    document.addEventListener('touchmove', stopActiveBoardSwipe, { passive: false, capture: true });
-    document.body.addEventListener('touchmove', stopActiveBoardSwipe, { passive: false, capture: true });
-    window.addEventListener('touchend', endBoardTouch, { passive: false, capture: true });
-    window.addEventListener('touchcancel', endBoardTouch, { passive: false, capture: true });
-    document.addEventListener('gesturestart', stopNativeSwipe, { passive: false });
 
     function randColor() {
       return COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -569,10 +538,12 @@
       endDrag();
     });
     boardWrap.addEventListener('pointercancel', endDrag);
-    boardWrap.addEventListener('touchstart', stopBoardSwipe, { passive: false, capture: true });
-    boardWrap.addEventListener('touchmove', stopBoardSwipe, { passive: false, capture: true });
-    boardWrap.addEventListener('touchend', endBoardTouch, { passive: false, capture: true });
-    boardWrap.addEventListener('touchcancel', endBoardTouch, { passive: false, capture: true });
+    boardWrap.addEventListener('touchstart', e => {
+      e.preventDefault();
+    }, { passive: false });
+    boardWrap.addEventListener('touchmove', e => {
+      e.preventDefault();
+    }, { passive: false });
 
     startBtn.addEventListener('click', initGame);
     restartBtn.addEventListener('click', initGame);
