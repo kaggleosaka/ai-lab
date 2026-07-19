@@ -91,6 +91,12 @@
     border-color: rgba(90,180,255,0.34);
   }
 
+  .card.puzzle {
+    background:
+      linear-gradient(135deg, rgba(80,220,150,0.18), rgba(255,255,255,0.08));
+    border-color: rgba(80,220,150,0.34);
+  }
+
   .title {
     font-size: 24px;
     font-weight: bold;
@@ -185,6 +191,12 @@
         <span class="tag">Hetzer Road / Gate Heroes / GoGo Race / Zero Fighter / Cat Tap</span>
       </button>
 
+      <button class="card puzzle" type="button" onclick="showPanel('puzzle')">
+        <div class="title">PUZZLE GAME</div>
+        <div class="desc">Classic puzzles and thoughtful browser games.</div>
+        <span class="tag">Mine Clear</span>
+      </button>
+
       <button class="card search" type="button" onclick="showPanel('visual')">
         <div class="title">VISUAL SEARCH</div>
         <div class="desc">3-second visual search games. Find the target quickly.</div>
@@ -244,6 +256,21 @@
       <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
     </section>
 
+    <section id="puzzlePanel" class="hidden" aria-label="Puzzle game menu">
+      <div class="panelTitle">PUZZLE GAME</div>
+      <div class="grid">
+        <a
+          class="card puzzle"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/mine_clear/mine-clear.html"
+        >
+          <div class="title">MINE CLEAR</div>
+          <div class="desc">Classic Minesweeper. Use the numbers to find the mines and open every safe tile.</div>
+          <span class="tag">Classic Puzzle</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
     <section id="visualPanel" class="hidden" aria-label="Visual search menu">
       <div class="panelTitle">VISUAL SEARCH</div>
       <div class="grid">
@@ -266,14 +293,17 @@
 function showPanel(name) {
   const home = document.getElementById("homeMenu");
   const casual = document.getElementById("casualPanel");
+  const puzzle = document.getElementById("puzzlePanel");
   const visual = document.getElementById("visualPanel");
   const crumb = document.getElementById("crumb");
 
   home.classList.toggle("hidden", name !== "home");
   casual.classList.toggle("hidden", name !== "casual");
+  puzzle.classList.toggle("hidden", name !== "puzzle");
   visual.classList.toggle("hidden", name !== "visual");
 
   if (name === "casual") crumb.textContent = "Category / Casual Game";
+  else if (name === "puzzle") crumb.textContent = "Category / Puzzle Game";
   else if (name === "visual") crumb.textContent = "Category / Visual Search";
   else crumb.textContent = "Select a category";
 }
