@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>MINE CLEAR</title>
+<style>
+  :root {
+    --bg: #111827;
+    --panel: #1f2937;
+    --panel-2: #374151;
+    --cell: 34px;
+    --border-light: #f3f4f6;
+    --border-mid: #9ca3af;
+    --border-dark: #4b5563;
+    --open: #d1d5db;
+    --text: #f9fafb;
+    --accent: #fbbf24;
+    --danger: #ef4444;
+    --good: #22c55e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top, #263244 0%, var(--bg) 55%);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    overscroll-behavior: none;
+  }
+
+  button { font: inherit; }
+
+  .app {
+    width: min(100%, 1040px);
+  }
+
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(26px, 7vw, 42px);
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
+  .version {
+    color: #cbd5e1;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .title-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .menu-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid #64748b;
+    border-radius: 9px;
+    background: #111827;
+    color: #f9fafb;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .06em;
+    touch-action: manipulation;
+  }
+
+  .menu-button:active { transform: scale(.97); }
+
+  .panel {
+    background: linear-gradient(180deg, rgba(55,65,81,.96), rgba(31,41,55,.96));
+    border: 2px solid #6b7280;
+    border-radius: 14px;
+    box-shadow: 0 14px 35px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.08);
+    padding: 12px;
+  }
+
+  .difficulty {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .difficulty button,
+  .mode-buttons button,
+  .modal-actions button {
+    min-height: 44px;
+    border: 1px solid #64748b;
+    border-radius: 10px;
+    background: #111827;
+    color: #e5e7eb;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  }
+
+  .difficulty button.active,
+  .mode-buttons button.active {
+    background: var(--accent);
+    color: #111827;
+    border-color: #fde68a;
+  }
+
+  .status {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    background: #0b1220;
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+  }
+
+  .counter {
+    font-variant-numeric: tabular-nums;
+    font-weight: 900;
+    font-size: clamp(18px, 4.5vw, 24px);
+  }
+
+  .counter:last-child { text-align: right; }
+
+  .restart {
+    width: 54px;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid #94a3b8;
+    background: #e5e7eb;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .board-shell {
+    width: 100%;
+    overflow: auto;
+    border-radius: 10px;
+    background: #111827;
+    padding: 10px;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+  }
+
+  .board {
+    display: grid;
+    width: max-content;
+    margin: 0 auto;
+    background: #9ca3af;
+    border: 3px solid #111827;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .cell {
+    width: var(--cell);
+    height: var(--cell);
+    padding: 0;
+    margin: 0;
+    border: 0;
+    display: grid;
+    place-items: center;
+    font-size: calc(var(--cell) * .58);
+    font-weight: 950;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .cell.closed {
+    background: #b9bec7;
+    border-top: 4px solid var(--border-light);
+    border-left: 4px solid var(--border-light);
+    border-right: 4px solid var(--border-dark);
+    border-bottom: 4px solid var(--border-dark);
+  }
+
+  .cell.closed:active {
+    border: 2px solid var(--border-mid);
+    background: #cbd5e1;
+  }
+
+  .cell.open {
+    background: var(--open);
+    border: 1px solid #9ca3af;
+    cursor: default;
+  }
+
+  .cell.exploded { background: var(--danger); }
+  .cell.wrong-flag { background: #fecaca; color: #991b1b; }
+
+  .n1 { color: #1d4ed8; }
+  .n2 { color: #15803d; }
+  .n3 { color: #dc2626; }
+  .n4 { color: #7e22ce; }
+  .n5 { color: #92400e; }
+  .n6 { color: #0891b2; }
+  .n7 { color: #111827; }
+  .n8 { color: #6b7280; }
+
+  .mode-area {
+    margin-top: 10px;
+  }
+
+  .mode-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .mode-label,
+  .help {
+    text-align: center;
+    color: #cbd5e1;
+    font-size: 13px;
+  }
+
+  .mode-label { margin: 8px 0 0; }
+  .help { margin: 6px 0 0; }
+
+  .best {
+    margin-top: 8px;
+    text-align: center;
+    font-weight: 800;
+    color: #fde68a;
+  }
+
+  .message {
+    margin-top: 10px;
+    min-height: 22px;
+    text-align: center;
+    font-weight: 900;
+  }
+
+  .message.good { color: #86efac; }
+  .message.bad { color: #fca5a5; }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2,6,23,.78);
+    padding: 20px;
+    z-index: 10;
+  }
+
+  .modal-backdrop.show { display: flex; }
+
+  .modal {
+    width: min(92vw, 360px);
+    border-radius: 16px;
+    background: #1f2937;
+    border: 2px solid #64748b;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 18px 45px rgba(0,0,0,.45);
+  }
+
+  .modal h2 {
+    margin: 0 0 8px;
+    font-size: 34px;
+  }
+
+  .modal p { margin: 6px 0; }
+  .modal .record { color: #fde68a; font-weight: 900; min-height: 24px; }
+
+  .modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .shake { animation: shake .28s linear; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+  }
+
+  /* PCのレイアウトは上記のまま。以下はスマートフォン専用調整。 */
+  @media (max-width: 600px), (pointer: coarse) {
+    body {
+      padding: 4px;
+      min-height: 100dvh;
+      align-items: flex-start;
+    }
+
+    .app { width: 100%; }
+
+    .title-row {
+      margin: 2px 3px 5px;
+      align-items: center;
+    }
+
+    h1 { font-size: 25px; }
+    .version { font-size: 10px; }
+    .title-actions { gap: 5px; }
+    .menu-button { min-height: 34px; padding: 6px 10px; font-size: 11px; }
+
+    .panel {
+      padding: 5px;
+      border-radius: 10px;
+    }
+
+    .difficulty {
+      gap: 5px;
+      margin-bottom: 5px;
+    }
+
+    .difficulty button {
+      min-height: 38px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .status {
+      padding: 5px 7px;
+      margin-bottom: 5px;
+      min-height: 44px;
+    }
+
+    .counter { font-size: 17px; }
+
+    .restart {
+      width: 48px;
+      height: 38px;
+      font-size: 22px;
+    }
+
+    .board-shell {
+      padding: 3px;
+      border-radius: 7px;
+      max-height: calc(100dvh - 245px);
+      overscroll-behavior: contain;
+    }
+
+    .board {
+      border-width: 3px;
+      touch-action: pan-x pan-y;
+    }
+
+    .cell.closed {
+      border-top-width: 3px;
+      border-left-width: 3px;
+      border-right-width: 3px;
+      border-bottom-width: 3px;
+    }
+
+    .mode-area {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      margin-top: 5px;
+      padding: 5px 2px calc(3px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(31,41,55,.92), #1f2937 30%);
+    }
+
+    .mode-buttons { gap: 6px; }
+
+    .mode-buttons button {
+      min-height: 48px;
+      font-size: 16px;
+      touch-action: manipulation;
+    }
+
+    .mode-label { margin: 4px 0 0; font-size: 12px; }
+    .help { display: none; }
+    .best { margin-top: 3px; font-size: 13px; }
+    .message { margin-top: 3px; min-height: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="title-row">
+    <h1>MINE CLEAR</h1>
+    <div class="title-actions">
+      <div class="version">v0.3</div>
+      <a class="menu-button" href="https://kaggleosaka.github.io/ai-lab/games/3sec/" aria-label="3SEC GAMESメニューへ戻る">MENU</a>
+    </div>
+  </div>
+
+  <main class="panel">
+    <div class="difficulty" aria-label="難易度選択">
+      <button type="button" data-level="easy" class="active">EASY</button>
+      <button type="button" data-level="normal">NORMAL</button>
+      <button type="button" data-level="hard">HARD</button>
+    </div>
+
+    <section class="status" aria-label="ゲーム状況">
+      <div class="counter" id="mineCounter">💣 10</div>
+      <button type="button" class="restart" id="restartBtn" aria-label="新しいゲーム">😊</button>
+      <div class="counter" id="timer">⏱ 00:00</div>
+    </section>
+
+    <div class="board-shell" id="boardShell">
+      <div class="board" id="board" role="grid" aria-label="マインスイーパー盤面"></div>
+    </div>
+
+    <section class="mode-area">
+      <div class="mode-buttons">
+        <button type="button" id="openMode" class="active">⛏ OPEN</button>
+        <button type="button" id="flagMode">🚩 FLAG</button>
+      </div>
+      <p class="mode-label" id="modeLabel">現在：マスを開く</p>
+      <p class="help">PC：左クリックで開く／右クリックで旗　スマホ：長押しでも旗</p>
+      <div class="best" id="bestTime">BEST --:--</div>
+      <div class="message" id="message"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">CLEAR!</h2>
+    <p id="modalTime"></p>
+    <p id="modalBest"></p>
+    <p class="record" id="modalRecord"></p>
+    <div class="modal-actions">
+      <button type="button" id="playAgainBtn">PLAY AGAIN</button>
+      <button type="button" id="closeModalBtn">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const LEVELS = {
+    easy:   { rows: 9,  cols: 9,  mines: 10, desktopCell: 36, mobileCell: 36 },
+    normal: { rows: 16, cols: 16, mines: 40, desktopCell: 30, mobileCell: 21 },
+    hard:   { rows: 16, cols: 30, mines: 99, desktopCell: 28, mobileCell: 26 }
+  };
+
+  const mobileQuery = window.matchMedia('(max-width: 600px), (pointer: coarse)');
+
+  const BEST_KEYS = {
+    easy: 'mineClearBestEasy',
+    normal: 'mineClearBestNormal',
+    hard: 'mineClearBestHard'
+  };
+
+  const boardEl = document.getElementById('board');
+  const boardShell = document.getElementById('boardShell');
+  const mineCounterEl = document.getElementById('mineCounter');
+  const timerEl = document.getElementById('timer');
+  const restartBtn = document.getElementById('restartBtn');
+  const openModeBtn = document.getElementById('openMode');
+  const flagModeBtn = document.getElementById('flagMode');
+  const modeLabelEl = document.getElementById('modeLabel');
+  const bestTimeEl = document.getElementById('bestTime');
+  const messageEl = document.getElementById('message');
+  const appEl = document.getElementById('app');
+
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalTime = document.getElementById('modalTime');
+  const modalBest = document.getElementById('modalBest');
+  const modalRecord = document.getElementById('modalRecord');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const closeModalBtn = document.getElementById('closeModalBtn');
+
+  let level = 'easy';
+  let rows = LEVELS.easy.rows;
+  let cols = LEVELS.easy.cols;
+  let mineCount = LEVELS.easy.mines;
+  let board = [];
+  let firstClick = true;
+  let gameState = 'ready';
+  let currentMode = 'open';
+  let flagCount = 0;
+  let openedCount = 0;
+  let elapsedSeconds = 0;
+  let timerId = null;
+
+  let pointerDown = null;
+  let longPressTimer = null;
+  let longPressTriggered = false;
+  let pointerMoved = false;
+
+  function makeCell() {
+    return {
+      mine: false,
+      open: false,
+      flag: false,
+      adjacent: 0,
+      exploded: false,
+      wrongFlag: false
+    };
+  }
+
+  function initGame() {
+    stopTimer();
+    const config = LEVELS[level];
+    rows = config.rows;
+    cols = config.cols;
+    mineCount = config.mines;
+    board = Array.from({ length: rows }, () => Array.from({ length: cols }, makeCell));
+    firstClick = true;
+    gameState = 'ready';
+    currentMode = 'open';
+    flagCount = 0;
+    openedCount = 0;
+    elapsedSeconds = 0;
+    pointerDown = null;
+    clearLongPress();
+    restartBtn.textContent = '😊';
+    messageEl.textContent = '';
+    messageEl.className = 'message';
+    setMode('open');
+    updateStatus();
+    updateBest();
+    renderBoard();
+    closeModal();
+    boardShell.scrollLeft = 0;
+    boardShell.scrollTop = 0;
+  }
+
+  function renderBoard() {
+    boardEl.innerHTML = '';
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--cell))`;
+    const config = LEVELS[level];
+    const cellSize = mobileQuery.matches ? config.mobileCell : config.desktopCell;
+    boardEl.style.setProperty('--cell', `${cellSize}px`);
+
+    const fragment = document.createDocumentFragment();
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cellEl = document.createElement('button');
+        cellEl.type = 'button';
+        cellEl.className = 'cell closed';
+        cellEl.dataset.row = r;
+        cellEl.dataset.col = c;
+        cellEl.setAttribute('role', 'gridcell');
+        cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 未開封`);
+        fragment.appendChild(cellEl);
+      }
+    }
+    boardEl.appendChild(fragment);
+  }
+
+  function redrawCell(r, c) {
+    const index = r * cols + c;
+    const cellEl = boardEl.children[index];
+    const cell = board[r][c];
+    if (!cellEl) return;
+
+    cellEl.className = 'cell';
+    cellEl.textContent = '';
+
+    if (cell.open) {
+      cellEl.classList.add('open');
+      if (cell.exploded) cellEl.classList.add('exploded');
+      if (cell.mine) {
+        cellEl.textContent = '💣';
+        cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 地雷`);
+      } else if (cell.adjacent > 0) {
+        cellEl.textContent = cell.adjacent;
+        cellEl.classList.add(`n${cell.adjacent}`);
+        cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 周囲の地雷${cell.adjacent}`);
+      } else {
+        cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 空白`);
+      }
+      return;
+    }
+
+    cellEl.classList.add('closed');
+    if (cell.wrongFlag) {
+      cellEl.classList.add('wrong-flag');
+      cellEl.textContent = '❌';
+      cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 間違った旗`);
+    } else if (cell.flag) {
+      cellEl.textContent = '🚩';
+      cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 旗`);
+    } else {
+      cellEl.setAttribute('aria-label', `行${r + 1} 列${c + 1} 未開封`);
+    }
+  }
+
+  function redrawAll() {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) redrawCell(r, c);
+    }
+  }
+
+  function getNeighbors(r, c) {
+    const list = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) list.push([nr, nc]);
+      }
+    }
+    return list;
+  }
+
+  function placeMines(firstRow, firstCol) {
+    const forbidden = new Set();
+    forbidden.add(`${firstRow},${firstCol}`);
+    getNeighbors(firstRow, firstCol).forEach(([r, c]) => forbidden.add(`${r},${c}`));
+
+    const candidates = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!forbidden.has(`${r},${c}`)) candidates.push([r, c]);
+      }
+    }
+
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    for (let i = 0; i < mineCount; i++) {
+      const [r, c] = candidates[i];
+      board[r][c].mine = true;
+    }
+
+    calculateAdjacentMines();
+  }
+
+  function calculateAdjacentMines() {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (board[r][c].mine) continue;
+        board[r][c].adjacent = getNeighbors(r, c)
+          .reduce((sum, [nr, nc]) => sum + (board[nr][nc].mine ? 1 : 0), 0);
+      }
+    }
+  }
+
+  function beginIfNeeded(r, c) {
+    if (!firstClick) return;
+    placeMines(r, c);
+    firstClick = false;
+    gameState = 'playing';
+    startTimer();
+  }
+
+  function openCell(r, c) {
+    if (gameState === 'cleared' || gameState === 'gameover') return;
+    const cell = board[r][c];
+
+    if (cell.open) {
+      if (!cell.mine && cell.adjacent > 0) chordCell(r, c);
+      return;
+    }
+    if (cell.flag) return;
+
+    beginIfNeeded(r, c);
+
+    if (cell.mine) {
+      cell.open = true;
+      cell.exploded = true;
+      redrawCell(r, c);
+      gameOver(r, c);
+      return;
+    }
+
+    expandZeroCells(r, c);
+    updateStatus();
+    checkClear();
+  }
+
+  function expandZeroCells(startR, startC) {
+    const queue = [[startR, startC]];
+    const visited = new Set();
+
+    while (queue.length) {
+      const [r, c] = queue.shift();
+      const key = `${r},${c}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      const cell = board[r][c];
+      if (cell.open || cell.flag || cell.mine) continue;
+
+      cell.open = true;
+      openedCount++;
+      redrawCell(r, c);
+
+      if (cell.adjacent === 0) {
+        for (const [nr, nc] of getNeighbors(r, c)) {
+          const next = board[nr][nc];
+          if (!next.open && !next.flag && !next.mine) queue.push([nr, nc]);
+        }
+      }
+    }
+  }
+
+  function toggleFlag(r, c) {
+    if (gameState === 'cleared' || gameState === 'gameover') return;
+    const cell = board[r][c];
+    if (cell.open) return;
+
+    cell.flag = !cell.flag;
+    flagCount += cell.flag ? 1 : -1;
+    redrawCell(r, c);
+    updateStatus();
+    if (navigator.vibrate) navigator.vibrate(18);
+  }
+
+  function chordCell(r, c) {
+    if (gameState !== 'playing') return;
+    const cell = board[r][c];
+    if (!cell.open || cell.adjacent <= 0) return;
+
+    const neighbors = getNeighbors(r, c);
+    const flags = neighbors.reduce((sum, [nr, nc]) => sum + (board[nr][nc].flag ? 1 : 0), 0);
+    if (flags !== cell.adjacent) return;
+
+    for (const [nr, nc] of neighbors) {
+      const next = board[nr][nc];
+      if (!next.open && !next.flag) {
+        if (next.mine) {
+          next.open = true;
+          next.exploded = true;
+          redrawCell(nr, nc);
+          gameOver(nr, nc);
+          return;
+        }
+        expandZeroCells(nr, nc);
+      }
+    }
+    updateStatus();
+    checkClear();
+  }
+
+  function checkClear() {
+    if (openedCount === rows * cols - mineCount) gameClear();
+  }
+
+  function gameClear() {
+    if (gameState === 'cleared') return;
+    gameState = 'cleared';
+    stopTimer();
+    restartBtn.textContent = '😎';
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (board[r][c].mine && !board[r][c].flag) {
+          board[r][c].flag = true;
+          flagCount++;
+          redrawCell(r, c);
+        }
+      }
+    }
+
+    const isRecord = saveBestTime();
+    updateStatus();
+    updateBest();
+    messageEl.textContent = 'CLEAR!';
+    messageEl.className = 'message good';
+    showModal(true, isRecord);
+  }
+
+  function gameOver() {
+    if (gameState === 'gameover') return;
+    gameState = 'gameover';
+    stopTimer();
+    restartBtn.textContent = '😵';
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = board[r][c];
+        if (cell.mine) cell.open = true;
+        if (cell.flag && !cell.mine) {
+          cell.open = false;
+          cell.wrongFlag = true;
+        }
+      }
+    }
+
+    redrawAll();
+    messageEl.textContent = 'BOOM!';
+    messageEl.className = 'message bad';
+    appEl.classList.remove('shake');
+    void appEl.offsetWidth;
+    appEl.classList.add('shake');
+    if (navigator.vibrate) navigator.vibrate([50, 30, 80]);
+    showModal(false, false);
+  }
+
+  function updateStatus() {
+    mineCounterEl.textContent = `💣 ${mineCount - flagCount}`;
+    timerEl.textContent = `⏱ ${formatTime(elapsedSeconds)}`;
+  }
+
+  function formatTime(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = seconds % 60;
+    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  function startTimer() {
+    if (timerId) return;
+    timerId = setInterval(() => {
+      elapsedSeconds++;
+      updateStatus();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+  }
+
+  function saveBestTime() {
+    const key = BEST_KEYS[level];
+    const current = Number(localStorage.getItem(key));
+    if (!current || elapsedSeconds < current) {
+      localStorage.setItem(key, String(elapsedSeconds));
+      return true;
+    }
+    return false;
+  }
+
+  function getBestTime() {
+    const value = Number(localStorage.getItem(BEST_KEYS[level]));
+    return value > 0 ? value : null;
+  }
+
+  function updateBest() {
+    const best = getBestTime();
+    bestTimeEl.textContent = `BEST ${best ? formatTime(best) : '--:--'}`;
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    const open = mode === 'open';
+    openModeBtn.classList.toggle('active', open);
+    flagModeBtn.classList.toggle('active', !open);
+    modeLabelEl.textContent = open ? '現在：マスを開く' : '現在：旗を立てる';
+  }
+
+  function changeDifficulty(nextLevel) {
+    if (!LEVELS[nextLevel]) return;
+    level = nextLevel;
+    document.querySelectorAll('[data-level]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.level === level);
+    });
+    initGame();
+  }
+
+  function showModal(cleared, isRecord) {
+    const best = getBestTime();
+    modalTitle.textContent = cleared ? 'CLEAR!' : 'BOOM!';
+    modalTime.textContent = `TIME ${formatTime(elapsedSeconds)}`;
+    modalBest.textContent = `BEST ${best ? formatTime(best) : '--:--'}`;
+    modalRecord.textContent = cleared && isRecord ? 'NEW RECORD!' : '';
+    playAgainBtn.textContent = cleared ? 'PLAY AGAIN' : 'NEW GAME';
+    modalBackdrop.classList.add('show');
+    modalBackdrop.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal() {
+    modalBackdrop.classList.remove('show');
+    modalBackdrop.setAttribute('aria-hidden', 'true');
+  }
+
+  function cellFromTarget(target) {
+    const cellEl = target.closest('.cell');
+    if (!cellEl || !boardEl.contains(cellEl)) return null;
+    return {
+      el: cellEl,
+      r: Number(cellEl.dataset.row),
+      c: Number(cellEl.dataset.col)
+    };
+  }
+
+  function clearLongPress() {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  }
+
+  boardEl.addEventListener('contextmenu', e => {
+    const info = cellFromTarget(e.target);
+    if (!info) return;
+    e.preventDefault();
+    toggleFlag(info.r, info.c);
+  });
+
+  boardEl.addEventListener('pointerdown', e => {
+    const info = cellFromTarget(e.target);
+    if (!info || e.button === 2) return;
+    pointerDown = { ...info, x: e.clientX, y: e.clientY };
+    pointerMoved = false;
+    longPressTriggered = false;
+    restartBtn.textContent = gameState === 'playing' || gameState === 'ready' ? '😮' : restartBtn.textContent;
+
+    clearLongPress();
+    longPressTimer = setTimeout(() => {
+      if (!pointerMoved && pointerDown) {
+        toggleFlag(pointerDown.r, pointerDown.c);
+        longPressTriggered = true;
+      }
+    }, 450);
+  });
+
+  boardEl.addEventListener('pointermove', e => {
+    if (!pointerDown) return;
+    const dx = Math.abs(e.clientX - pointerDown.x);
+    const dy = Math.abs(e.clientY - pointerDown.y);
+    if (dx > 10 || dy > 10) {
+      pointerMoved = true;
+      clearLongPress();
+    }
+  });
+
+  boardEl.addEventListener('pointerup', e => {
+    clearLongPress();
+    const info = cellFromTarget(e.target);
+    const sameCell = info && pointerDown && info.r === pointerDown.r && info.c === pointerDown.c;
+    restartBtn.textContent = gameState === 'cleared' ? '😎' : gameState === 'gameover' ? '😵' : '😊';
+
+    if (sameCell && !pointerMoved && !longPressTriggered && e.button !== 2) {
+      if (currentMode === 'flag') toggleFlag(info.r, info.c);
+      else openCell(info.r, info.c);
+    }
+    pointerDown = null;
+  });
+
+  boardEl.addEventListener('pointercancel', () => {
+    clearLongPress();
+    pointerDown = null;
+    restartBtn.textContent = gameState === 'cleared' ? '😎' : gameState === 'gameover' ? '😵' : '😊';
+  });
+
+  document.querySelectorAll('[data-level]').forEach(btn => {
+    btn.addEventListener('click', () => changeDifficulty(btn.dataset.level));
+  });
+
+  restartBtn.addEventListener('click', initGame);
+  openModeBtn.addEventListener('click', () => setMode('open'));
+  flagModeBtn.addEventListener('click', () => setMode('flag'));
+  playAgainBtn.addEventListener('click', initGame);
+  closeModalBtn.addEventListener('click', closeModal);
+  modalBackdrop.addEventListener('click', e => {
+    if (e.target === modalBackdrop) closeModal();
+  });
+
+  mobileQuery.addEventListener?.('change', () => {
+    renderBoard();
+    redrawAll();
+    boardShell.scrollLeft = 0;
+  });
+
+  document.addEventListener('keydown', e => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key.toLowerCase() === 'r') initGame();
+    if (e.key === '1') changeDifficulty('easy');
+    if (e.key === '2') changeDifficulty('normal');
+    if (e.key === '3') changeDifficulty('hard');
+    if (e.key === 'Escape') closeModal();
+  });
+
+  initGame();
+})();
+</script>
+</body>
+</html>
