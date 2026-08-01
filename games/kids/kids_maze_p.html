@@ -248,6 +248,8 @@
   <div id="clearScreen" class="screen hidden">
     <div class="card">
       <h1>やったね！</h1>
+      <div id="clearAnimal" style="font-size:96px;line-height:1;margin:8px 0" aria-hidden="true">🐰</div>
+      <div id="clearMessage" class="subtitle">うさぎさんに とどいた！</div>
       <div id="clearStars" class="subtitle">★★★</div>
       <button id="againBtn">つぎへ</button>
     </div>
@@ -290,6 +292,8 @@
   const controls = document.getElementById('controls');
   const starsEl = document.getElementById('stars');
   const clearStars = document.getElementById('clearStars');
+  const clearAnimal = document.getElementById('clearAnimal');
+  const clearMessage = document.getElementById('clearMessage');
   const levelLabel = document.getElementById('levelLabel');
   const debugEl = document.getElementById('debug');
   const debugMode = new URLSearchParams(location.search).get('debug') === '1';
@@ -315,7 +319,7 @@
 
   const STAGES = [
     {
-      name: '1', start:{x:92,y:670}, goal:{x:930,y:105,r:45},
+      name: '1', animal:'🐰', animalName:'うさぎさん', start:{x:92,y:670}, goal:{x:930,y:105,r:52},
       walls:[
         {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
         {x:140,y:600,w:420,h:28},{x:530,y:420,w:28,h:208},{x:250,y:420,w:308,h:28},
@@ -325,7 +329,7 @@
       stars:[{x:350,y:685,r:18},{x:330,y:335,r:18},{x:720,y:385,r:18}]
     },
     {
-      name: '2', start:{x:85,y:100}, goal:{x:930,y:670,r:45},
+      name: '2', animal:'🐱', animalName:'ねこさん', start:{x:85,y:100}, goal:{x:930,y:670,r:52},
       walls:[
         {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
         {x:150,y:80,w:28,h:470},{x:150,y:522,w:260,h:28},{x:382,y:260,w:28,h:290},
@@ -335,7 +339,7 @@
       stars:[{x:285,y:450,r:18},{x:545,y:360,r:18},{x:760,y:650,r:18}]
     },
     {
-      name: '3', start:{x:90,y:680}, goal:{x:930,y:90,r:45},
+      name: '3', animal:'🐻', animalName:'くまさん', start:{x:90,y:680}, goal:{x:930,y:90,r:52},
       walls:[
         {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
         {x:120,y:610,w:300,h:28},{x:392,y:420,w:28,h:218},{x:210,y:420,w:210,h:28},
@@ -522,6 +526,9 @@
     state = GameState.CLEAR;
     hud.classList.add('hidden');
     controls.classList.add('hidden');
+    const st = STAGES[currentStage];
+    clearAnimal.textContent = st.animal;
+    clearMessage.textContent = `${st.animalName}に とどいた！`;
     clearStars.textContent = stars.map(s=>s.got?'★':'☆').join('');
     againBtn.textContent = currentStage < STAGES.length - 1 ? 'つぎへ' : 'さいしょから';
     clearScreen.querySelector('h1').textContent = currentStage < STAGES.length - 1 ? 'やったね！' : 'ぜんぶ できた！';
@@ -565,10 +572,22 @@
     ctx.fillStyle='rgba(255,255,255,.55)';
     for(let y=70;y<CFG.H;y+=90) for(let x=60+(y/90%2)*40;x<CFG.W;x+=110){ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();}
 
-    // ゴール
-    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r+7,0,Math.PI*2); ctx.fillStyle='#7fcf8e'; ctx.fill();
-    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r,0,Math.PI*2); ctx.fillStyle='#244b37'; ctx.fill();
-    ctx.beginPath(); ctx.arc(goal.x-12,goal.y-12,goal.r*.45,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fill();
+    // 動物が待っているゴール
+    const stage = STAGES[currentStage];
+    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r+9,0,Math.PI*2); ctx.fillStyle='#7fcf8e'; ctx.fill();
+    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r,0,Math.PI*2); ctx.fillStyle='#fff7cf'; ctx.fill();
+    ctx.strokeStyle='#3b8a55'; ctx.lineWidth=5; ctx.stroke();
+    ctx.font='64px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(stage.animal, goal.x, goal.y+2);
+
+    // 「ここだよ」の吹き出し
+    const bubbleX = clamp(goal.x - 104, 28, CFG.W - 216);
+    const bubbleY = goal.y < 150 ? goal.y + 68 : goal.y - 112;
+    drawRoundedRect(bubbleX,bubbleY,208,52,20,'rgba(255,255,255,.94)','#71b982');
+    ctx.fillStyle='#2f6742'; ctx.font='bold 25px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('ここだよ！', bubbleX+104, bubbleY+27);
 
     // 壁
     walls.forEach(w=>drawRoundedRect(w.x,w.y,w.w,w.h,14,'#c98545','#8f5527'));
