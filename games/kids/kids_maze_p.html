@@ -92,6 +92,18 @@
     z-index: 5;
     pointer-events: none;
   }
+  #levelLabel {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,.9);
+    border-radius: 18px;
+    padding: 7px 18px;
+    font-size: clamp(21px, 3.5vw, 32px);
+    font-weight: 900;
+    box-shadow: 0 4px 14px rgba(41,65,78,.16);
+  }
   #stars {
     position: absolute;
     top: calc(env(safe-area-inset-top) + 10px);
@@ -210,6 +222,7 @@
 
   <div id="hud" class="hidden">
     <div id="stars">☆ ☆ ☆</div>
+    <div id="levelLabel">1</div>
     <button id="resetBtn" class="hud-btn" aria-label="やりなおす">↻</button>
     <button id="muteBtn" class="hud-btn" aria-label="おとをけす">🔊</button>
   </div>
@@ -236,7 +249,7 @@
     <div class="card">
       <h1>やったね！</h1>
       <div id="clearStars" class="subtitle">★★★</div>
-      <button id="againBtn">もういっかい</button>
+      <button id="againBtn">つぎへ</button>
     </div>
   </div>
 
@@ -277,6 +290,7 @@
   const controls = document.getElementById('controls');
   const starsEl = document.getElementById('stars');
   const clearStars = document.getElementById('clearStars');
+  const levelLabel = document.getElementById('levelLabel');
   const debugEl = document.getElementById('debug');
   const debugMode = new URLSearchParams(location.search).get('debug') === '1';
   if (debugMode) debugEl.style.display = 'block';
@@ -294,33 +308,58 @@
   const touchDirs = new Set();
 
   const ball = { x: 92, y: 670, vx: 0, vy: 0, r: CFG.BALL_RADIUS };
-  const goal = { x: 930, y: 105, r: CFG.GOAL_RADIUS };
+  let currentStage = 0;
+  let goal = null;
+  let walls = [];
+  let stars = [];
 
-  // 迷路の壁。外周も壁として扱う。
-  const walls = [
-    {x:0,y:0,w:CFG.W,h:24}, {x:0,y:CFG.H-24,w:CFG.W,h:24},
-    {x:0,y:0,w:24,h:CFG.H}, {x:CFG.W-24,y:0,w:24,h:CFG.H},
-    {x:140,y:600,w:420,h:28},
-    {x:530,y:420,w:28,h:208},
-    {x:250,y:420,w:308,h:28},
-    {x:220,y:220,w:28,h:228},
-    {x:220,y:220,w:420,h:28},
-    {x:612,y:220,w:28,h:250},
-    {x:612,y:442,w:220,h:28},
-    {x:804,y:280,w:28,h:190},
-    {x:804,y:280,w:150,h:28},
-    {x:420,y:92,w:28,h:130}
+  const STAGES = [
+    {
+      name: '1', start:{x:92,y:670}, goal:{x:930,y:105,r:45},
+      walls:[
+        {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
+        {x:140,y:600,w:420,h:28},{x:530,y:420,w:28,h:208},{x:250,y:420,w:308,h:28},
+        {x:220,y:220,w:28,h:228},{x:220,y:220,w:420,h:28},{x:612,y:220,w:28,h:250},
+        {x:612,y:442,w:220,h:28},{x:804,y:280,w:28,h:190},{x:804,y:280,w:150,h:28},{x:420,y:92,w:28,h:130}
+      ],
+      stars:[{x:350,y:685,r:18},{x:330,y:335,r:18},{x:720,y:385,r:18}]
+    },
+    {
+      name: '2', start:{x:85,y:100}, goal:{x:930,y:670,r:45},
+      walls:[
+        {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
+        {x:150,y:80,w:28,h:470},{x:150,y:522,w:260,h:28},{x:382,y:260,w:28,h:290},
+        {x:382,y:260,w:300,h:28},{x:654,y:260,w:28,h:300},{x:654,y:532,w:210,h:28},
+        {x:836,y:120,w:28,h:440},{x:520,y:640,w:28,h:104},{x:260,y:120,w:330,h:28}
+      ],
+      stars:[{x:285,y:450,r:18},{x:545,y:360,r:18},{x:760,y:650,r:18}]
+    },
+    {
+      name: '3', start:{x:90,y:680}, goal:{x:930,y:90,r:45},
+      walls:[
+        {x:0,y:0,w:1024,h:24},{x:0,y:744,w:1024,h:24},{x:0,y:0,w:24,h:768},{x:1000,y:0,w:24,h:768},
+        {x:120,y:610,w:300,h:28},{x:392,y:420,w:28,h:218},{x:210,y:420,w:210,h:28},
+        {x:210,y:230,w:28,h:218},{x:210,y:230,w:350,h:28},{x:532,y:230,w:28,h:330},
+        {x:532,y:532,w:250,h:28},{x:754,y:350,w:28,h:210},{x:650,y:350,w:132,h:28},
+        {x:650,y:120,w:28,h:258},{x:650,y:120,w:300,h:28},{x:330,y:90,w:28,h:140}
+      ],
+      stars:[{x:300,y:680,r:18},{x:330,y:340,r:18},{x:850,y:250,r:18}]
+    }
   ];
 
-  const stars = [
-    {x:350,y:685,r:18,got:false},
-    {x:330,y:335,r:18,got:false},
-    {x:720,y:385,r:18,got:false}
-  ];
+  function loadStage(index) {
+    currentStage = index;
+    const st = STAGES[currentStage];
+    goal = {...st.goal};
+    walls = st.walls.map(w => ({...w}));
+    stars = st.stars.map(v => ({...v, got:false}));
+    ball.x = st.start.x; ball.y = st.start.y; ball.vx = 0; ball.vy = 0;
+    levelLabel.textContent = `めいろ ${st.name}`;
+    updateStarHud();
+  }
 
   function resetGame() {
-    ball.x = 92; ball.y = 670; ball.vx = 0; ball.vy = 0;
-    stars.forEach(s => s.got = false);
+    loadStage(currentStage);
     baseBeta = beta;
     baseGamma = gamma;
     updateStarHud();
@@ -484,6 +523,8 @@
     hud.classList.add('hidden');
     controls.classList.add('hidden');
     clearStars.textContent = stars.map(s=>s.got?'★':'☆').join('');
+    againBtn.textContent = currentStage < STAGES.length - 1 ? 'つぎへ' : 'さいしょから';
+    clearScreen.querySelector('h1').textContent = currentStage < STAGES.length - 1 ? 'やったね！' : 'ぜんぶ できた！';
     clearScreen.classList.remove('hidden');
     clearSound();
     confetti();
@@ -554,9 +595,12 @@
   }
 
   playBtn.addEventListener('click', async () => {
-    ensureAudio(); await enableSensors(); titleScreen.classList.add('hidden'); resetGame(); beep(520,.08,'sine',.5);
+    ensureAudio(); await enableSensors(); titleScreen.classList.add('hidden'); currentStage = 0; resetGame(); beep(520,.08,'sine',.5);
   });
-  againBtn.addEventListener('click', resetGame);
+  againBtn.addEventListener('click', () => {
+    currentStage = currentStage < STAGES.length - 1 ? currentStage + 1 : 0;
+    resetGame();
+  });
   resetBtn.addEventListener('click', resetGame);
   muteBtn.addEventListener('click', () => { muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; });
 
@@ -576,6 +620,9 @@
 
   document.addEventListener('contextmenu', e=>e.preventDefault());
   document.addEventListener('gesturestart', e=>e.preventDefault());
+
+  // 最初の描画前に迷路1を準備する。未初期化のgoal参照による停止を防ぐ。
+  loadStage(0);
   requestAnimationFrame(loop);
 })();
 </script>
