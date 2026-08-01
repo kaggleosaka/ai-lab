@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#dff6ff" />
+<title>ころころ ビーだまめいろ</title>
+<style>
+  :root {
+    --bg: #dff6ff;
+    --panel: rgba(255,255,255,.92);
+    --wood: #c98545;
+    --wood-dark: #8f5527;
+    --text: #29414e;
+    --green: #4caf6a;
+    --yellow: #ffd84d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    background: var(--bg);
+    font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+    color: var(--text);
+  }
+  body { display: grid; place-items: center; }
+  #app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: linear-gradient(#dff6ff, #f8fdff);
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: linear-gradient(rgba(223,246,255,.92), rgba(248,253,255,.94));
+    z-index: 10;
+  }
+  .card {
+    width: min(92vw, 620px);
+    border-radius: 30px;
+    background: var(--panel);
+    box-shadow: 0 18px 50px rgba(35,77,95,.18);
+    padding: 28px;
+    text-align: center;
+    border: 4px solid rgba(255,255,255,.9);
+  }
+  h1 { margin: 0 0 14px; font-size: clamp(34px, 7vw, 64px); line-height: 1.05; }
+  .subtitle { font-size: clamp(18px, 3.4vw, 30px); margin: 8px 0 18px; }
+  .marble-icon {
+    width: 110px;
+    height: 110px;
+    margin: 12px auto 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 25%, #fff 0 8%, #90dcff 9% 23%, #198bd1 42%, #075c99 76%, #053f69 100%);
+    box-shadow: inset -12px -16px 24px rgba(0,0,0,.25), 0 10px 20px rgba(0,78,130,.24);
+  }
+  button {
+    border: 0;
+    border-radius: 22px;
+    font-weight: 800;
+    color: white;
+    background: linear-gradient(#62c87a, #3da55a);
+    box-shadow: 0 8px 0 #2f7d44, 0 12px 20px rgba(31,91,53,.24);
+    min-width: 240px;
+    min-height: 76px;
+    padding: 12px 24px;
+    font-size: clamp(26px, 5vw, 42px);
+    cursor: pointer;
+  }
+  button:active { transform: translateY(5px); box-shadow: 0 3px 0 #2f7d44; }
+  .small { font-size: 17px; margin-top: 18px; line-height: 1.6; }
+  #hud {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  #stars {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: calc(env(safe-area-inset-left) + 14px);
+    background: rgba(255,255,255,.86);
+    border-radius: 18px;
+    padding: 7px 12px;
+    font-size: clamp(24px, 4vw, 40px);
+    letter-spacing: 3px;
+    box-shadow: 0 4px 14px rgba(41,65,78,.16);
+  }
+  .hud-btn {
+    pointer-events: auto;
+    position: absolute;
+    min-width: 58px;
+    min-height: 58px;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 28px;
+    background: rgba(255,255,255,.94);
+    color: #2b5368;
+    box-shadow: 0 5px 0 rgba(74,111,128,.25), 0 8px 16px rgba(41,65,78,.18);
+  }
+  #resetBtn { top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 82px); }
+  #muteBtn { top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 14px); }
+  #controls {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+  }
+  .pad {
+    position: absolute;
+    right: calc(env(safe-area-inset-right) + 16px);
+    bottom: calc(env(safe-area-inset-bottom) + 16px);
+    width: 170px;
+    height: 170px;
+    opacity: .78;
+  }
+  .dir {
+    pointer-events: auto;
+    position: absolute;
+    min-width: 54px;
+    min-height: 54px;
+    width: 54px;
+    height: 54px;
+    padding: 0;
+    border-radius: 18px;
+    font-size: 28px;
+    color: #2b5368;
+    background: rgba(255,255,255,.92);
+    box-shadow: 0 4px 0 rgba(74,111,128,.25);
+  }
+  .up { left: 58px; top: 0; }
+  .down { left: 58px; bottom: 0; }
+  .left { left: 0; top: 58px; }
+  .right { right: 0; top: 58px; }
+  #rotateNotice {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: #dff6ff;
+    place-items: center;
+    text-align: center;
+    font-size: 34px;
+    font-weight: 800;
+    padding: 30px;
+  }
+  #debug {
+    display: none;
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    z-index: 50;
+    white-space: pre;
+    font: 12px/1.35 monospace;
+    background: rgba(0,0,0,.65);
+    color: #fff;
+    padding: 8px;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+  .hidden { display: none !important; }
+  .spark { position: fixed; width: 12px; height: 12px; border-radius: 50%; background: #ffd84d; pointer-events: none; z-index: 40; }
+  @media (orientation: portrait) and (max-width: 900px) {
+    #rotateNotice { display: grid; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game" width="1024" height="768" aria-label="ビー玉迷路"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="stars">☆ ☆ ☆</div>
+    <button id="resetBtn" class="hud-btn" aria-label="やりなおす">↻</button>
+    <button id="muteBtn" class="hud-btn" aria-label="おとをけす">🔊</button>
+  </div>
+
+  <div id="controls" class="hidden">
+    <div class="pad">
+      <button class="dir up" data-dir="up">▲</button>
+      <button class="dir down" data-dir="down">▼</button>
+      <button class="dir left" data-dir="left">◀</button>
+      <button class="dir right" data-dir="right">▶</button>
+    </div>
+  </div>
+
+  <div id="titleScreen" class="screen">
+    <div class="card">
+      <h1>ころころ<br>ビーだまめいろ</h1>
+      <div class="marble-icon"></div>
+      <button id="playBtn">あそぶ</button>
+      <div class="small">iPad・スマホは かたむけてあそべます。<br>パソコンは やじるしキーでうごかせます。</div>
+    </div>
+  </div>
+
+  <div id="clearScreen" class="screen hidden">
+    <div class="card">
+      <h1>やったね！</h1>
+      <div id="clearStars" class="subtitle">★★★</div>
+      <button id="againBtn">もういっかい</button>
+    </div>
+  </div>
+
+  <div id="rotateNotice">iPadを よこにしてね<br>↻</div>
+  <div id="debug"></div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ===== 調整しやすい設定値 =====
+  const CFG = {
+    W: 1024,
+    H: 768,
+    BALL_RADIUS: 24,
+    ACCELERATION: 0.018,
+    KEY_ACCELERATION: 0.19,
+    FRICTION: 0.985,
+    MAX_SPEED: 8,
+    BOUNCE: 0.22,
+    DEAD_ZONE: 1.8,
+    GOAL_RADIUS: 45,
+    SOUND_VOLUME: 0.22,
+    TAP_THRESHOLD: 16,
+    TAP_COOLDOWN: 320
+  };
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const titleScreen = document.getElementById('titleScreen');
+  const clearScreen = document.getElementById('clearScreen');
+  const playBtn = document.getElementById('playBtn');
+  const againBtn = document.getElementById('againBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const muteBtn = document.getElementById('muteBtn');
+  const hud = document.getElementById('hud');
+  const controls = document.getElementById('controls');
+  const starsEl = document.getElementById('stars');
+  const clearStars = document.getElementById('clearStars');
+  const debugEl = document.getElementById('debug');
+  const debugMode = new URLSearchParams(location.search).get('debug') === '1';
+  if (debugMode) debugEl.style.display = 'block';
+
+  const GameState = { TITLE: 'title', PLAYING: 'playing', CLEAR: 'clear' };
+  let state = GameState.TITLE;
+  let muted = false;
+  let audioCtx = null;
+  let lastTime = performance.now();
+  let orientationAvailable = false;
+  let baseBeta = null, baseGamma = null;
+  let beta = 0, gamma = 0, tiltX = 0, tiltY = 0;
+  let lastTap = 0;
+  const keys = new Set();
+  const touchDirs = new Set();
+
+  const ball = { x: 92, y: 670, vx: 0, vy: 0, r: CFG.BALL_RADIUS };
+  const goal = { x: 930, y: 105, r: CFG.GOAL_RADIUS };
+
+  // 迷路の壁。外周も壁として扱う。
+  const walls = [
+    {x:0,y:0,w:CFG.W,h:24}, {x:0,y:CFG.H-24,w:CFG.W,h:24},
+    {x:0,y:0,w:24,h:CFG.H}, {x:CFG.W-24,y:0,w:24,h:CFG.H},
+    {x:140,y:600,w:420,h:28},
+    {x:530,y:420,w:28,h:208},
+    {x:250,y:420,w:308,h:28},
+    {x:220,y:220,w:28,h:228},
+    {x:220,y:220,w:420,h:28},
+    {x:612,y:220,w:28,h:250},
+    {x:612,y:442,w:220,h:28},
+    {x:804,y:280,w:28,h:190},
+    {x:804,y:280,w:150,h:28},
+    {x:420,y:92,w:28,h:130}
+  ];
+
+  const stars = [
+    {x:350,y:685,r:18,got:false},
+    {x:330,y:335,r:18,got:false},
+    {x:720,y:385,r:18,got:false}
+  ];
+
+  function resetGame() {
+    ball.x = 92; ball.y = 670; ball.vx = 0; ball.vy = 0;
+    stars.forEach(s => s.got = false);
+    baseBeta = beta;
+    baseGamma = gamma;
+    updateStarHud();
+    state = GameState.PLAYING;
+    clearScreen.classList.add('hidden');
+    hud.classList.remove('hidden');
+    controls.classList.remove('hidden');
+  }
+
+  function updateStarHud() {
+    starsEl.textContent = stars.map(s => s.got ? '★' : '☆').join(' ');
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function beep(freq=440, duration=.1, type='sine', volume=1) {
+    if (muted) return;
+    ensureAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.value = CFG.SOUND_VOLUME * volume;
+    o.connect(g); g.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(CFG.SOUND_VOLUME * volume, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    o.start(now); o.stop(now + duration);
+  }
+
+  function starSound() { beep(740,.08,'sine',.8); setTimeout(()=>beep(980,.12,'sine',.7),70); }
+  function clearSound() { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.2,'triangle',.8),i*120)); }
+
+  async function enableSensors() {
+    let granted = true;
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        granted = (await DeviceOrientationEvent.requestPermission()) === 'granted';
+      }
+      if (granted) {
+        window.addEventListener('deviceorientation', onOrientation, { passive: true });
+        orientationAvailable = true;
+      }
+    } catch (e) { orientationAvailable = false; }
+
+    try {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        const motionGranted = (await DeviceMotionEvent.requestPermission()) === 'granted';
+        if (motionGranted) window.addEventListener('devicemotion', onMotion, { passive: true });
+      } else if ('DeviceMotionEvent' in window) {
+        window.addEventListener('devicemotion', onMotion, { passive: true });
+      }
+    } catch (e) {}
+  }
+
+  function onOrientation(e) {
+    beta = Number.isFinite(e.beta) ? e.beta : 0;
+    gamma = Number.isFinite(e.gamma) ? e.gamma : 0;
+    if (baseBeta === null) baseBeta = beta;
+    if (baseGamma === null) baseGamma = gamma;
+
+    let dx = gamma - baseGamma;
+    let dy = beta - baseBeta;
+    if (Math.abs(dx) < CFG.DEAD_ZONE) dx = 0;
+    if (Math.abs(dy) < CFG.DEAD_ZONE) dy = 0;
+
+    const angle = screen.orientation?.angle ?? window.orientation ?? 0;
+    if (angle === 90) { tiltX = -dy; tiltY = dx; }
+    else if (angle === -90 || angle === 270) { tiltX = dy; tiltY = -dx; }
+    else { tiltX = dx; tiltY = dy; }
+  }
+
+  function onMotion(e) {
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a) return;
+    const strength = Math.abs(a.x||0) + Math.abs(a.y||0) + Math.abs(a.z||0);
+    const now = performance.now();
+    if (state === GameState.PLAYING && strength > CFG.TAP_THRESHOLD && now - lastTap > CFG.TAP_COOLDOWN) {
+      lastTap = now;
+      const len = Math.hypot(tiltX, tiltY);
+      if (len > 1) { ball.vx += tiltX/len*2.2; ball.vy += tiltY/len*2.2; }
+      else ball.vy -= 2.1;
+      beep(260,.05,'square',.25);
+    }
+  }
+
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+  function circleRectResolve(b, r) {
+    const nx = clamp(b.x, r.x, r.x+r.w);
+    const ny = clamp(b.y, r.y, r.y+r.h);
+    let dx = b.x - nx, dy = b.y - ny;
+    let d2 = dx*dx + dy*dy;
+    if (d2 >= b.r*b.r) return false;
+
+    if (d2 === 0) {
+      const dl = Math.abs(b.x-r.x), dr = Math.abs((r.x+r.w)-b.x);
+      const dt = Math.abs(b.y-r.y), db = Math.abs((r.y+r.h)-b.y);
+      const m = Math.min(dl,dr,dt,db);
+      if (m === dl) { dx=-1; dy=0; }
+      else if (m === dr) { dx=1; dy=0; }
+      else if (m === dt) { dx=0; dy=-1; }
+      else { dx=0; dy=1; }
+      d2 = 1;
+    }
+    const d = Math.sqrt(d2);
+    const ux = dx/d, uy = dy/d;
+    const overlap = b.r-d;
+    b.x += ux*overlap; b.y += uy*overlap;
+    const vn = b.vx*ux + b.vy*uy;
+    if (vn < 0) {
+      b.vx -= (1+CFG.BOUNCE)*vn*ux;
+      b.vy -= (1+CFG.BOUNCE)*vn*uy;
+    }
+    return true;
+  }
+
+  function update(dt) {
+    if (state !== GameState.PLAYING) return;
+    let ax = 0, ay = 0;
+    if (orientationAvailable) { ax += tiltX*CFG.ACCELERATION; ay += tiltY*CFG.ACCELERATION; }
+    if (keys.has('ArrowLeft') || touchDirs.has('left')) ax -= CFG.KEY_ACCELERATION;
+    if (keys.has('ArrowRight') || touchDirs.has('right')) ax += CFG.KEY_ACCELERATION;
+    if (keys.has('ArrowUp') || touchDirs.has('up')) ay -= CFG.KEY_ACCELERATION;
+    if (keys.has('ArrowDown') || touchDirs.has('down')) ay += CFG.KEY_ACCELERATION;
+
+    ball.vx += ax*dt; ball.vy += ay*dt;
+    ball.vx *= Math.pow(CFG.FRICTION, dt);
+    ball.vy *= Math.pow(CFG.FRICTION, dt);
+    const speed = Math.hypot(ball.vx,ball.vy);
+    if (speed > CFG.MAX_SPEED) { ball.vx = ball.vx/speed*CFG.MAX_SPEED; ball.vy = ball.vy/speed*CFG.MAX_SPEED; }
+
+    // 高速時のすり抜けを防ぐため、細かく移動する。
+    const steps = Math.max(1, Math.ceil(speed/3));
+    for (let i=0;i<steps;i++) {
+      ball.x += ball.vx/steps*dt;
+      ball.y += ball.vy/steps*dt;
+      walls.forEach(w => circleRectResolve(ball,w));
+    }
+
+    stars.forEach(s => {
+      if (!s.got && Math.hypot(ball.x-s.x, ball.y-s.y) < ball.r+s.r+5) {
+        s.got = true; updateStarHud(); starSound();
+      }
+    });
+
+    const gd = Math.hypot(ball.x-goal.x, ball.y-goal.y);
+    if (gd < goal.r+55) {
+      const pull = (1-gd/(goal.r+55))*0.12;
+      ball.vx += (goal.x-ball.x)*pull;
+      ball.vy += (goal.y-ball.y)*pull;
+    }
+    if (gd < goal.r*0.62) finishGame();
+  }
+
+  function finishGame() {
+    if (state !== GameState.PLAYING) return;
+    state = GameState.CLEAR;
+    hud.classList.add('hidden');
+    controls.classList.add('hidden');
+    clearStars.textContent = stars.map(s=>s.got?'★':'☆').join('');
+    clearScreen.classList.remove('hidden');
+    clearSound();
+    confetti();
+  }
+
+  function confetti() {
+    for (let i=0;i<28;i++) {
+      const p=document.createElement('div'); p.className='spark';
+      p.style.left=(45+Math.random()*10)+'vw'; p.style.top=(40+Math.random()*8)+'vh';
+      document.body.appendChild(p);
+      const x=(Math.random()-.5)*500, y=100+Math.random()*420, rot=Math.random()*720;
+      p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${x}px,${y}px) rotate(${rot}deg) scale(.4)`,opacity:0}],{duration:1100+Math.random()*700,easing:'cubic-bezier(.2,.7,.3,1)'}).onfinish=()=>p.remove();
+    }
+  }
+
+  function drawRoundedRect(x,y,w,h,r,fill,stroke) {
+    ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fillStyle=fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle=stroke; ctx.lineWidth=4; ctx.stroke(); }
+  }
+
+  function drawStar(x,y,r,filled=true) {
+    ctx.save(); ctx.translate(x,y); ctx.beginPath();
+    for(let i=0;i<10;i++){
+      const a=-Math.PI/2+i*Math.PI/5, rr=i%2===0?r:r*.45;
+      const px=Math.cos(a)*rr, py=Math.sin(a)*rr;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    }
+    ctx.closePath(); ctx.fillStyle=filled?'#ffd84d':'rgba(255,216,77,.25)'; ctx.fill();
+    ctx.strokeStyle='#d89f00'; ctx.lineWidth=4; ctx.stroke(); ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,CFG.W,CFG.H);
+    const g=ctx.createLinearGradient(0,0,0,CFG.H); g.addColorStop(0,'#e8fbff'); g.addColorStop(1,'#fff6d9');
+    ctx.fillStyle=g; ctx.fillRect(0,0,CFG.W,CFG.H);
+
+    // 背景の水玉
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    for(let y=70;y<CFG.H;y+=90) for(let x=60+(y/90%2)*40;x<CFG.W;x+=110){ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.fill();}
+
+    // ゴール
+    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r+7,0,Math.PI*2); ctx.fillStyle='#7fcf8e'; ctx.fill();
+    ctx.beginPath(); ctx.arc(goal.x,goal.y,goal.r,0,Math.PI*2); ctx.fillStyle='#244b37'; ctx.fill();
+    ctx.beginPath(); ctx.arc(goal.x-12,goal.y-12,goal.r*.45,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fill();
+
+    // 壁
+    walls.forEach(w=>drawRoundedRect(w.x,w.y,w.w,w.h,14,'#c98545','#8f5527'));
+
+    // 星
+    stars.forEach(s=>{ if(!s.got) drawStar(s.x,s.y,s.r,true); });
+
+    // ビー玉の影
+    ctx.beginPath(); ctx.ellipse(ball.x+8,ball.y+14,ball.r*.85,ball.r*.46,0,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,.16)'; ctx.fill();
+    // ビー玉
+    const rg=ctx.createRadialGradient(ball.x-ball.r*.35,ball.y-ball.r*.45,3,ball.x,ball.y,ball.r*1.1);
+    rg.addColorStop(0,'#fff'); rg.addColorStop(.15,'#8fe0ff'); rg.addColorStop(.48,'#1496d4'); rg.addColorStop(.82,'#0669a8'); rg.addColorStop(1,'#03436e');
+    ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); ctx.fillStyle=rg; ctx.fill();
+    ctx.strokeStyle='#063b60'; ctx.lineWidth=4; ctx.stroke();
+
+    if (debugMode) {
+      debugEl.textContent = `state: ${state}\nori: ${orientationAvailable}\nbeta: ${beta.toFixed(1)} gamma: ${gamma.toFixed(1)}\ntiltX: ${tiltX.toFixed(1)} tiltY: ${tiltY.toFixed(1)}\nx: ${ball.x.toFixed(1)} y: ${ball.y.toFixed(1)}\nvx: ${ball.vx.toFixed(2)} vy: ${ball.vy.toFixed(2)}`;
+    }
+  }
+
+  function loop(now) {
+    const dt = Math.min(2, (now-lastTime)/16.6667 || 1);
+    lastTime = now; update(dt); draw(); requestAnimationFrame(loop);
+  }
+
+  playBtn.addEventListener('click', async () => {
+    ensureAudio(); await enableSensors(); titleScreen.classList.add('hidden'); resetGame(); beep(520,.08,'sine',.5);
+  });
+  againBtn.addEventListener('click', resetGame);
+  resetBtn.addEventListener('click', resetGame);
+  muteBtn.addEventListener('click', () => { muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; });
+
+  window.addEventListener('keydown', e => {
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) { e.preventDefault(); keys.add(e.key); }
+    if (e.key.toLowerCase()==='r') resetGame();
+    if (e.key.toLowerCase()==='m') { muted=!muted; muteBtn.textContent=muted?'🔇':'🔊'; }
+  });
+  window.addEventListener('keyup', e => keys.delete(e.key));
+
+  document.querySelectorAll('.dir').forEach(btn => {
+    const dir=btn.dataset.dir;
+    const on=e=>{e.preventDefault();touchDirs.add(dir);};
+    const off=e=>{e.preventDefault();touchDirs.delete(dir);};
+    btn.addEventListener('pointerdown',on); btn.addEventListener('pointerup',off); btn.addEventListener('pointercancel',off); btn.addEventListener('pointerleave',off);
+  });
+
+  document.addEventListener('contextmenu', e=>e.preventDefault());
+  document.addEventListener('gesturestart', e=>e.preventDefault());
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
