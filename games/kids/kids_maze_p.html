@@ -179,8 +179,28 @@
   }
   .hidden { display: none !important; }
   .spark { position: fixed; width: 12px; height: 12px; border-radius: 50%; background: #ffd84d; pointer-events: none; z-index: 40; }
+  /* スマホ縦向きでも遊べるようにする */
   @media (orientation: portrait) and (max-width: 900px) {
-    #rotateNotice { display: grid; }
+    .pad {
+      width: 146px;
+      height: 146px;
+      right: calc(env(safe-area-inset-right) + 10px);
+      bottom: calc(env(safe-area-inset-bottom) + 10px);
+    }
+    .dir {
+      min-width: 48px;
+      min-height: 48px;
+      width: 48px;
+      height: 48px;
+      font-size: 24px;
+    }
+    .up { left: 49px; top: 0; }
+    .down { left: 49px; bottom: 0; }
+    .left { left: 0; top: 49px; }
+    .right { right: 0; top: 49px; }
+    .card { padding: 22px 18px; }
+    .marble-icon { width: 90px; height: 90px; margin-bottom: 16px; }
+    .small { font-size: 15px; }
   }
 </style>
 </head>
@@ -208,7 +228,7 @@
       <h1>ころころ<br>ビーだまめいろ</h1>
       <div class="marble-icon"></div>
       <button id="playBtn">あそぶ</button>
-      <div class="small">iPad・スマホは かたむけてあそべます。<br>パソコンは やじるしキーでうごかせます。</div>
+      <div class="small">iPhone・iPad・スマホは かたむけてあそべます。<br>パソコンは やじるしキーでうごかせます。</div>
     </div>
   </div>
 
@@ -220,7 +240,7 @@
     </div>
   </div>
 
-  <div id="rotateNotice">iPadを よこにしてね<br>↻</div>
+  <div id="rotateNotice" class="hidden"></div>
   <div id="debug"></div>
 </div>
 
