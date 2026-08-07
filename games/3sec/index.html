@@ -98,6 +98,13 @@
   }
 
 
+  .card.kids {
+    background:
+      linear-gradient(135deg, rgba(255,150,210,0.20), rgba(255,255,255,0.08));
+    border-color: rgba(255,150,210,0.38);
+  }
+
+
   .card[data-icon] {
     position: relative;
     padding-left: 86px;
@@ -224,7 +231,7 @@
       <button class="card primary" type="button" onclick="showPanel('casual')">
         <div class="title">CASUAL GAME</div>
         <div class="desc">Action games made for quick mobile play.</div>
-        <span class="tag">Hetzer Road / Gate Heroes / GoGo Race / Zero Fighter / Cat Tap / Color Drop / Mini Breakout / Monster Survivor</span>
+        <span class="tag">Hetzer Road / Gate Heroes / GoGo Race / Zero Fighter / Cat Tap / Color Drop / Mini Breakout / Monster Survivor / Napoleon</span>
       </button>
 
       <button class="card puzzle" type="button" onclick="showPanel('puzzle')">
@@ -237,6 +244,13 @@
         <div class="title">VISUAL SEARCH</div>
         <div class="desc">3-second visual search games. Find the target quickly.</div>
         <span class="tag">Find Z / Find O / Find 3 / Memory / Signal Hunt / Count / Crowd Search / Odd One Out</span>
+      </button>
+
+
+      <button class="card kids" type="button" onclick="showPanel('kids')">
+        <div class="title">KIDS GAME</div>
+        <div class="desc">Simple browser games made for young children.</div>
+        <span class="tag">Kids Maze</span>
       </button>
     </section>
 
@@ -305,6 +319,12 @@
           <div class="title">MONSTER SURVIVOR</div>
           <div class="desc">Move, survive, and defeat waves of monsters.</div>
           <span class="tag">Survival Action</span>
+        </a>
+
+        <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/napoleon/napoleon_p.html" data-icon="🃏">
+          <div class="title">NAPOLEON</div>
+          <div class="desc">Japanese five-player trick-taking card game. Bid for Napoleon, call a deputy, and capture picture cards.</div>
+          <span class="tag">Card Game / CPU Battle</span>
         </a>
       </div>
       <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
@@ -403,6 +423,18 @@
       <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
     </section>
 
+    <section id="kidsPanel" class="hidden" aria-label="Kids game menu">
+      <div class="panelTitle">KIDS GAME</div>
+      <div class="grid">
+        <a class="card kids" href="https://kaggleosaka.github.io/ai-lab/games/kids/kids_maze_p.html" data-icon="🧒">
+          <div class="title">KIDS MAZE</div>
+          <div class="desc">A simple maze game designed for young children to play on a smartphone or tablet.</div>
+          <span class="tag">Kids / Maze</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
     <div class="footer">kaggleosaka / ai-lab / games / 3sec</div>
   </main>
 
@@ -412,16 +444,19 @@ function showPanel(name) {
   const casual = document.getElementById("casualPanel");
   const puzzle = document.getElementById("puzzlePanel");
   const visual = document.getElementById("visualPanel");
+  const kids = document.getElementById("kidsPanel");
   const crumb = document.getElementById("crumb");
 
   home.classList.toggle("hidden", name !== "home");
   casual.classList.toggle("hidden", name !== "casual");
   puzzle.classList.toggle("hidden", name !== "puzzle");
   visual.classList.toggle("hidden", name !== "visual");
+  kids.classList.toggle("hidden", name !== "kids");
 
   if (name === "casual") crumb.textContent = "Category / Casual Game";
   else if (name === "puzzle") crumb.textContent = "Category / Puzzle Game";
   else if (name === "visual") crumb.textContent = "Category / Visual Search";
+  else if (name === "kids") crumb.textContent = "Category / Kids Game";
   else crumb.textContent = "Select a category";
 }
 </script>
