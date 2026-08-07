@@ -135,6 +135,18 @@
     color: #2b5368;
     box-shadow: 0 5px 0 rgba(74,111,128,.25), 0 8px 16px rgba(41,65,78,.18);
   }
+  #menuBtn {
+    top: calc(env(safe-area-inset-top) + 10px);
+    right: calc(env(safe-area-inset-right) + 150px);
+    width: auto;
+    min-width: 82px;
+    padding: 0 14px;
+    border-radius: 18px;
+    font-size: 16px;
+    text-decoration: none;
+    display: grid;
+    place-items: center;
+  }
   #resetBtn { top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 82px); }
   #muteBtn { top: calc(env(safe-area-inset-top) + 10px); right: calc(env(safe-area-inset-right) + 14px); }
   #controls {
@@ -229,6 +241,7 @@
   <div id="hud" class="hidden">
     <div id="stars">☆ ☆ ☆</div>
     <div id="levelLabel">1</div>
+    <a id="menuBtn" class="hud-btn" href="https://kaggleosaka.github.io/ai-lab/games/3sec/index.html" aria-label="メニューにもどる">MENU</a>
     <button id="resetBtn" class="hud-btn" aria-label="やりなおす">↻</button>
     <button id="muteBtn" class="hud-btn" aria-label="おとをけす">🔊</button>
   </div>
@@ -247,6 +260,9 @@
       <h1>ころころ<br>ビーだまめいろ</h1>
       <div class="marble-icon"></div>
       <button id="playBtn">はじめから</button>
+      <div style="margin-top:14px">
+        <a href="https://kaggleosaka.github.io/ai-lab/games/3sec/index.html" style="display:inline-block;text-decoration:none;color:#2b5368;font-weight:900;background:#fff;border-radius:18px;padding:12px 22px;box-shadow:0 5px 0 rgba(74,111,128,.25)">MENU</a>
+      </div>
       <div class="level-grid" aria-label="めいろをえらぶ">
         <button class="level-pick" data-level="0">1<small>🐰</small></button>
         <button class="level-pick" data-level="1">2<small>🐱</small></button>
