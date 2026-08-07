@@ -1,0 +1,1409 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Napoleon Prototype</title>
+<style>
+:root{
+  --bg:#0c5a3c;
+  --panel:#0a4631;
+  --text:#fff;
+  --muted:#cfe9dc;
+  --card:#fff;
+  --ink:#111;
+  --red:#c62828;
+  --accent:#ffd54f;
+  --danger:#ff6b6b;
+  --ok:#8ef0a7;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:linear-gradient(#0b6a47,#08412e);
+  color:var(--text);
+  min-height:100vh;
+}
+header{
+  padding:10px 14px;
+  background:#062f22;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  position:sticky;top:0;z-index:20;
+}
+h1{font-size:18px;margin:0}
+button,select,input{
+  font:inherit;
+}
+button{
+  border:0;border-radius:10px;padding:10px 14px;
+  background:#eee;color:#111;font-weight:700;
+  cursor:pointer;
+}
+button.primary{background:var(--accent)}
+button.ghost{background:#ffffff22;color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+main{padding:12px;max-width:1100px;margin:auto}
+.status{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+  margin-bottom:10px;
+}
+.badge{
+  background:#ffffff15;border:1px solid #ffffff22;
+  border-radius:10px;padding:8px;font-size:12px;
+}
+.table{
+  min-height:280px;
+  border:2px solid #ffffff22;
+  border-radius:20px;
+  padding:12px;
+  background:#073f2caa;
+}
+.players{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  margin-bottom:14px;
+}
+.player{
+  text-align:center;
+  background:#ffffff10;
+  border-radius:12px;
+  padding:8px 4px;
+}
+.player.active{outline:3px solid var(--accent)}
+.player small{display:block;color:var(--muted)}
+.trick{
+  min-height:150px;
+  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+}
+.card{
+  width:58px;height:82px;border-radius:8px;background:var(--card);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:1px solid #ccc;box-shadow:0 2px 5px #0004;
+  font-weight:800;user-select:none;
+}
+.card.red{color:var(--red)}
+.card.small{width:48px;height:68px;font-size:13px}
+.card.playable{cursor:pointer;transform:translateY(-3px);outline:2px solid var(--accent)}
+.card.blocked{opacity:.38}
+.hand-wrap{
+  margin-top:12px;background:#062f22aa;border-radius:14px;padding:10px;
+}
+.hand{
+  display:flex;gap:4px;overflow-x:auto;padding:8px 2px 4px;
+}
+.controls{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;
+}
+.panel{
+  margin-top:12px;background:#062f22;border-radius:14px;padding:12px;
+}
+.panel h2{font-size:16px;margin:0 0 8px}
+.log{
+  max-height:220px;overflow:auto;background:#021b13;border-radius:8px;
+  padding:8px;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  white-space:pre-wrap;
+}
+.test-summary{font-weight:800;margin-bottom:8px}
+.test-pass{color:var(--ok)}
+.test-fail{color:var(--danger)}
+.test-row{font:13px/1.45 ui-monospace,Consolas,monospace}
+.modal{
+  position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;
+  z-index:50;padding:16px;
+}
+.modal.show{display:flex}
+.modal-card{
+  width:min(720px,100%);max-height:85vh;overflow:auto;background:#fff;color:#111;
+  border-radius:14px;padding:16px;
+}
+.bid-grid,.suit-grid{display:flex;gap:8px;flex-wrap:wrap}
+.notice{color:#ffe082;font-weight:700;margin-top:8px}
+
+.test-toast{
+  position:fixed;top:64px;left:50%;transform:translateX(-50%);
+  z-index:100;background:#fff;color:#111;border-radius:12px;padding:12px 18px;
+  box-shadow:0 5px 20px #0007;font-weight:800;display:none;
+}
+.test-toast.show{display:block}
+.test-toast.ok{border:3px solid #2e7d32}
+.test-toast.ng{border:3px solid #c62828}
+@media(max-width:700px){
+  .status{grid-template-columns:repeat(2,1fr)}
+  .players{grid-template-columns:repeat(5,minmax(62px,1fr));overflow-x:auto}
+  .table{min-height:240px}
+  .card{width:52px;height:74px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>ナポレオン Prototype 1.0 <span style="font-size:12px;color:#ffd54f">BUILD P5-CPU-20260808</span></h1>
+  <div>
+    <button class="ghost" id="btnTests">自動テスト</button>
+    <button class="primary" id="btnNew">新しいゲーム</button>
+  </div>
+</header>
+
+<main>
+  <section class="status">
+    <div class="badge">Phase: <b id="stPhase">-</b></div>
+    <div class="badge">切り札: <b id="stTrump">-</b></div>
+    <div class="badge">契約: <b id="stContract">-</b></div>
+    <div class="badge">ナポレオン: <b id="stNapoleon">-</b></div>
+    <div class="badge">副官: <b id="stAdjutant">?</b></div>
+    <div class="badge">軍の絵札: <b id="stTeamPics">0</b></div>
+    <div class="badge">トリック: <b id="stTrick">-</b></div>
+  </section>
+
+  <section class="table">
+    <div class="players" id="players"></div>
+    <div class="trick" id="trickArea"></div>
+    <div class="notice" id="notice"></div>
+    <div class="controls" id="controls"></div>
+  </section>
+
+  <section class="hand-wrap">
+    <b>あなたの手札</b>
+    <div class="hand" id="humanHand"></div>
+  </section>
+
+  <section class="panel">
+    <h2>ゲームログ</h2>
+    <div class="log" id="gameLog"></div>
+  </section>
+
+  <section class="panel">
+    <h2>テスト結果</h2>
+    <div id="testResults">「自動テスト」を押すと現在の全テストをその場で実行します。BUILD P5-CPU-20260808</div>
+  </section>
+</main>
+
+<div class="test-toast" id="testToast"></div>
+
+<div class="modal" id="bidModal">
+  <div class="modal-card">
+    <h2>競り</h2>
+    <p id="bidCurrent"></p>
+    <div style="margin:10px 0 6px;font-weight:700">あなたの手札</div>
+    <div class="hand" id="bidHand" style="background:#0b5a3c;border-radius:10px;padding:10px"></div>
+    <div style="margin:12px 0 6px;font-weight:700">宣言</div>
+    <div class="bid-grid" id="bidOptions"></div>
+    <div class="controls">
+      <button id="bidPass">PASS</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="adjutantModal">
+  <div class="modal-card">
+    <h2>副官カードを指定</h2>
+    <p>Prototypeでは候補を主要カードから選べます。</p>
+    <div class="suit-grid" id="adjutantOptions"></div>
+  </div>
+</div>
+
+<div class="modal" id="discardModal">
+  <div class="modal-card">
+    <h2>3枚捨てる</h2>
+    <p>選択数: <b id="discardCount">0</b>/3</p>
+    <div class="hand" id="discardHand"></div>
+    <div class="controls">
+      <button class="primary" id="confirmDiscard" disabled>この3枚を捨てる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const SUITS = ['C','D','H','S']; // low -> high in bidding
+const SUIT_SYMBOL = {C:'♣',D:'♦',H:'♥',S:'♠'};
+const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const RANK_VALUE = Object.fromEntries(RANKS.map((r,i)=>[r,i+2]));
+const PICTURE_RANKS = new Set(['10','J','Q','K','A']);
+let testRunCounter = 0;
+
+const state = {
+  phase:'IDLE',
+  deck:[],
+  players:[],
+  blind:[],
+  discardPile:[],
+  currentBid:null,
+  passed:new Set(),
+  bidder:0,
+  napoleonId:null,
+  trumpSuit:null,
+  contractCount:null,
+  adjutantCard:null,
+  adjutantId:null,
+  adjutantRevealed:false,
+  trickNumber:0,
+  currentTrick:[],
+  leaderId:null,
+  currentPlayer:null,
+  pictureCounts:[0,0,0,0,0],
+  logs:[],
+  selectedDiscard:new Set()
+};
+
+function cardId(c){ return c.joker ? 'JK' : c.suit+c.rank; }
+function sameCard(a,b){ return a && b && cardId(a)===cardId(b); }
+function isRed(c){ return !c.joker && (c.suit==='H'||c.suit==='D'); }
+function isPicture(c){ return !c.joker && PICTURE_RANKS.has(c.rank); }
+function makeDeck(){
+  const d=[];
+  for(const s of SUITS) for(const r of RANKS) d.push({suit:s,rank:r,joker:false});
+  d.push({joker:true,rank:'JOKER',suit:null});
+  return d;
+}
+function shuffle(a){
+  const x=[...a];
+  for(let i=x.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [x[i],x[j]]=[x[j],x[i]];
+  }
+  return x;
+}
+function formatCard(c){
+  return c.joker ? 'JOKER' : `${SUIT_SYMBOL[c.suit]}${c.rank}`;
+}
+function log(msg){
+  state.logs.push(msg);
+  document.getElementById('gameLog').textContent=state.logs.join('\n');
+  document.getElementById('gameLog').scrollTop=999999;
+}
+function resetState(){
+  state.phase='DEAL';
+  state.deck=shuffle(makeDeck());
+  state.players=Array.from({length:5},(_,i)=>({id:i,name:i===0?'あなた':`CPU${i}`,hand:[]}));
+  state.blind=[]; state.discardPile=[];
+  state.currentBid=null; state.passed=new Set(); state.bidder=0;
+  state.napoleonId=null; state.trumpSuit=null; state.contractCount=null;
+  state.adjutantCard=null; state.adjutantId=null; state.adjutantRevealed=false;
+  state.trickNumber=0; state.currentTrick=[]; state.leaderId=null; state.currentPlayer=null;
+  state.pictureCounts=[0,0,0,0,0]; state.logs=[]; state.selectedDiscard=new Set();
+}
+function deal(){
+  for(let r=0;r<10;r++) for(let p=0;p<5;p++) state.players[p].hand.push(state.deck.pop());
+  state.blind=state.deck.splice(0,3);
+  state.phase='BIDDING';
+  state.bidder=0;
+  log('GAME START');
+  log('53枚生成 / 10枚×5人 + blind 3枚');
+  render();
+  advanceBidding();
+}
+function compareBid(a,b){
+  if(!a) return 1;
+  if(b.count!==a.count) return b.count-a.count;
+  return SUITS.indexOf(b.suit)-SUITS.indexOf(a.suit);
+}
+function isHigherBid(candidate,current){
+  if(!current) return candidate.count>=11 && candidate.count<=20;
+  if(candidate.count<11||candidate.count>20) return false;
+  if(candidate.count>current.count) return true;
+  if(candidate.count<current.count) return false;
+  return SUITS.indexOf(candidate.suit)>SUITS.indexOf(current.suit);
+}
+function allInitialPass(){
+  return state.passed.size===5 && !state.currentBid;
+}
+function activeBidders(){
+  return [0,1,2,3,4].filter(i=>!state.passed.has(i));
+}
+function advanceBidding(){
+  if(allInitialPass()){
+    log('全員PASS → 再配札');
+    startNewGame();
+    return;
+  }
+  const actives=activeBidders();
+  if(state.currentBid && actives.length===1){
+    const winner=actives[0];
+    state.napoleonId=winner;
+    state.trumpSuit=state.currentBid.suit;
+    state.contractCount=state.currentBid.count;
+    state.phase='ADJUTANT_SELECT';
+    log(`NAPOLEON=${state.players[winner].name} ${SUIT_SYMBOL[state.trumpSuit]}${state.contractCount}`);
+    render();
+    if(winner===0) openAdjutantModal();
+    else cpuSelectAdjutant(winner);
+    return;
+  }
+  while(state.passed.has(state.bidder)) state.bidder=(state.bidder+1)%5;
+  render();
+  if(state.bidder===0) openBidModal();
+  else setTimeout(()=>cpuBid(state.bidder),250);
+}
+function evaluateBidHand(hand){
+  const suitCounts=Object.fromEntries(SUITS.map(s=>[s,hand.filter(c=>!c.joker && c.suit===s).length]));
+  const suitPower={};
+  for(const s of SUITS){
+    let p=0;
+    for(const c of hand){
+      if(c.joker){ p+=0.6; continue; }
+      if(c.suit!==s) continue;
+      if(c.rank==='A') p+=2.2;
+      else if(c.rank==='K') p+=1.3;
+      else if(c.rank==='Q') p+=0.8;
+      else if(c.rank==='J') p+=1.2;
+      else if(c.rank==='10') p+=0.5;
+    }
+    p += Math.max(0,suitCounts[s]-3)*0.7;
+    suitPower[s]=p;
+  }
+
+  const hasMighty=hand.some(c=>!c.joker && c.suit==='S' && c.rank==='A');
+  const hasJoker=hand.some(c=>c.joker);
+  const pictureCount=hand.filter(isPicture).length;
+
+  let bestSuit=SUITS[0];
+  for(const s of SUITS){
+    if(suitPower[s]>suitPower[bestSuit]) bestSuit=s;
+  }
+
+  const score=suitPower[bestSuit] + pictureCount*0.35 + (hasMighty?2.2:0) + (hasJoker?0.7:0);
+  let maxCount=10;
+  if(score>=4.2) maxCount=11;
+  if(score>=5.8) maxCount=12;
+  if(score>=7.3) maxCount=13;
+  if(score>=9.0) maxCount=14;
+  if(score>=11.0) maxCount=15;
+
+  return {score,bestSuit,maxCount};
+}
+
+function nextLegalBidAbove(current,preferredSuit,maxCount){
+  if(maxCount<11) return null;
+  for(let count=11;count<=maxCount;count++){
+    const suitOrder=[preferredSuit,...SUITS.filter(s=>s!==preferredSuit)]
+      .sort((a,b)=>SUITS.indexOf(a)-SUITS.indexOf(b));
+    for(const suit of suitOrder){
+      const bid={count,suit};
+      if(isHigherBid(bid,current)) return bid;
+    }
+  }
+  return null;
+}
+
+function cpuBid(pid){
+  const hand=state.players[pid].hand;
+  const ev=evaluateBidHand(hand);
+  const choice=nextLegalBidAbove(state.currentBid,ev.bestSuit,ev.maxCount);
+
+  if(choice){
+    state.currentBid=choice;
+    log(`${state.players[pid].name} BID ${SUIT_SYMBOL[choice.suit]}${choice.count} (評価${ev.score.toFixed(1)})`);
+  }else{
+    state.passed.add(pid);
+    log(`${state.players[pid].name} PASS (上限${ev.maxCount})`);
+  }
+  state.bidder=(pid+1)%5;
+  advanceBidding();
+}
+function openBidModal(){
+  const modal=document.getElementById('bidModal');
+  document.getElementById('bidCurrent').innerHTML=
+    state.currentBid
+      ? `現在: <span style="color:${(state.currentBid.suit==='H'||state.currentBid.suit==='D')?'#c62828':'#111'};font-weight:800">${SUIT_SYMBOL[state.currentBid.suit]}${state.currentBid.count}</span>`
+      : '現在: まだ宣言なし';
+
+  const bidHand=document.getElementById('bidHand');
+  bidHand.innerHTML='';
+  state.players[0].hand.forEach(c=>{
+    const el=makeCardEl(c,false);
+    el.classList.add('small');
+    bidHand.appendChild(el);
+  });
+
+  const box=document.getElementById('bidOptions'); box.innerHTML='';
+  const options=[];
+  for(let c=11;c<=20;c++) for(const s of SUITS){
+    const b={count:c,suit:s};
+    if(isHigherBid(b,state.currentBid)) options.push(b);
+  }
+  options.slice(0,16).forEach(b=>{
+    const bt=document.createElement('button');
+    bt.innerHTML=`<span style="color:${(b.suit==='H'||b.suit==='D')?'#c62828':'#111'}">${SUIT_SYMBOL[b.suit]}${b.count}</span>`;
+    bt.onclick=()=>{
+      state.currentBid=b;
+      log(`あなた BID ${SUIT_SYMBOL[b.suit]}${b.count}`);
+      modal.classList.remove('show');
+      state.bidder=1;
+      advanceBidding();
+    };
+    box.appendChild(bt);
+  });
+  modal.classList.add('show');
+}
+document.getElementById('bidPass').onclick=()=>{
+  state.passed.add(0);
+  log('あなた PASS');
+  document.getElementById('bidModal').classList.remove('show');
+  state.bidder=1;
+  advanceBidding();
+};
+
+function candidateAdjutantCards(){
+  const cards=[];
+  for(const r of ['A','J','K','Q']) for(const s of ['S','H','D','C']) cards.push({suit:s,rank:r,joker:false});
+  cards.push({joker:true,rank:'JOKER',suit:null});
+  return cards;
+}
+function setAdjutantCard(card){
+  state.adjutantCard=card;
+  const n=state.napoleonId;
+  const holder=state.players.find(p=>p.hand.some(c=>sameCard(c,card)));
+  const inBlind=state.blind.some(c=>sameCard(c,card));
+  if((holder&&holder.id===n)||inBlind||!holder) state.adjutantId=null;
+  else state.adjutantId=holder.id;
+  log(`副官指定: ${formatCard(card)}${state.adjutantId===null?' (ひとり立ち候補)':''}`);
+  state.phase='DISCARD';
+  state.players[n].hand.push(...state.blind);
+  state.blind=[];
+  if(n===0) openDiscardModal();
+  else cpuDiscard(n);
+}
+function openAdjutantModal(){
+  const box=document.getElementById('adjutantOptions');box.innerHTML='';
+  for(const c of candidateAdjutantCards()){
+    const b=document.createElement('button');
+    b.textContent=formatCard(c);
+    b.onclick=()=>{
+      document.getElementById('adjutantModal').classList.remove('show');
+      setAdjutantCard(c);
+    };
+    box.appendChild(b);
+  }
+  document.getElementById('adjutantModal').classList.add('show');
+}
+function scoreAdjutantCandidate(card,pid){
+  const hand=state.players[pid].hand;
+
+  // 自分が持っているカードを呼ぶとひとり立ちになるので原則大幅減点。
+  if(hand.some(c=>sameCard(c,card))) return -10000;
+
+  let score=0;
+  if(card.joker) score+=55;
+  if(isMighty(card)) score+=100;
+  if(isRightBower(card,state.trumpSuit)) score+=88;
+  if(isLeftBower(card,state.trumpSuit)) score+=76;
+
+  if(!card.joker){
+    if(card.rank==='A') score+=62;
+    else if(card.rank==='K') score+=35;
+    else if(card.rank==='Q') score+=20;
+    else if(card.rank==='J') score+=30;
+
+    // 切り札の強札を副官に持たせる価値を少し高くする。
+    if(card.suit===state.trumpSuit) score+=14;
+  }
+
+  // 自分が弱いスートの強札を呼ぶと、外部の支援を得やすい。
+  if(!card.joker){
+    const ownSuitCount=hand.filter(c=>!c.joker && c.suit===card.suit).length;
+    score += Math.max(0,3-ownSuitCount)*4;
+  }
+  return score;
+}
+
+function chooseCpuAdjutantCard(pid){
+  const candidates=makeDeck();
+  const scored=candidates
+    .map(card=>({card,score:scoreAdjutantCandidate(card,pid)}))
+    .sort((a,b)=>b.score-a.score);
+
+  return scored[0];
+}
+
+function cpuSelectAdjutant(pid){
+  const best=chooseCpuAdjutantCard(pid);
+  const card=best.card;
+  log(`${state.players[pid].name} 副官候補評価 → ${formatCard(card)} (${best.score.toFixed(1)})`);
+  setTimeout(()=>setAdjutantCard(card),250);
+}
+function cardSortValue(c){
+  if(c.joker) return 1000;
+  return SUITS.indexOf(c.suit)*20+RANK_VALUE[c.rank];
+}
+function cpuDiscardPenalty(card,pid,hand){
+  // 値が低いほど捨てやすい。
+  let keep=0;
+
+  if(card.joker) keep+=1000;
+  if(isMighty(card)) keep+=950;
+  if(isRightBower(card,state.trumpSuit)) keep+=900;
+  if(isLeftBower(card,state.trumpSuit)) keep+=820;
+
+  if(!card.joker){
+    if(card.suit===state.trumpSuit) keep+=180;
+
+    if(card.rank==='A') keep+=180;
+    else if(card.rank==='K') keep+=120;
+    else if(card.rank==='Q') keep+=90;
+    else if(card.rank==='J') keep+=110;
+    else if(card.rank==='10') keep+=70;
+    else keep+=RANK_VALUE[card.rank]*3;
+
+    if(isPicture(card)) keep+=120;
+
+    const suitCount=hand.filter(c=>!c.joker && c.suit===card.suit).length;
+
+    // 1枚しかない非切り札スートは、捨ててボイドを作る価値が高い。
+    if(card.suit!==state.trumpSuit && suitCount===1) keep-=65;
+
+    // 2枚スートの低札も短いスート化に使いやすい。
+    if(card.suit!==state.trumpSuit && suitCount===2 && !isPicture(card)) keep-=25;
+  }
+
+  return keep;
+}
+
+function chooseCpuDiscard(pid){
+  const p=state.players[pid];
+  const hand=[...p.hand];
+
+  // 3枚同時選択で、捨てた後の形も評価する。
+  let best=null;
+  for(let i=0;i<hand.length-2;i++){
+    for(let j=i+1;j<hand.length-1;j++){
+      for(let k=j+1;k<hand.length;k++){
+        const drop=[hand[i],hand[j],hand[k]];
+        const remain=hand.filter((_,idx)=>idx!==i&&idx!==j&&idx!==k);
+
+        let penalty=drop.reduce((s,c)=>s+cpuDiscardPenalty(c,pid,hand),0);
+
+        // 絵札を埋めるのはかなり避ける。
+        penalty += drop.filter(isPicture).length*220;
+
+        // 捨てた後に切り札を多く残す形を評価。
+        const trumpRemain=remain.filter(c=>!c.joker && c.suit===state.trumpSuit).length;
+        penalty -= trumpRemain*14;
+
+        // 非切り札で0枚のスートを作れたら加点（penalty減）。
+        for(const s of SUITS){
+          if(s===state.trumpSuit) continue;
+          const before=hand.filter(c=>!c.joker && c.suit===s).length;
+          const after=remain.filter(c=>!c.joker && c.suit===s).length;
+          if(before>0 && after===0) penalty-=55;
+        }
+
+        if(!best || penalty<best.penalty){
+          best={drop,penalty,remain};
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function cpuDiscard(pid){
+  const p=state.players[pid];
+  const choice=chooseCpuDiscard(pid);
+  const drop=choice.drop;
+
+  for(const d of drop){
+    const idx=p.hand.findIndex(c=>sameCard(c,d));
+    p.hand.splice(idx,1);
+  }
+
+  state.discardPile=drop;
+  const buried=drop.filter(isPicture).length;
+  log(`${p.name} 捨て札評価 → ${drop.map(formatCard).join(' ')} / 埋め${buried} / score ${choice.penalty.toFixed(1)}`);
+  beginPlay();
+}
+function openDiscardModal(){
+  state.selectedDiscard.clear();
+  renderDiscardModal();
+  document.getElementById('discardModal').classList.add('show');
+}
+function renderDiscardModal(){
+  const box=document.getElementById('discardHand');box.innerHTML='';
+  const hand=state.players[0].hand;
+  hand.forEach((c,i)=>{
+    const el=makeCardEl(c,false);
+    if(state.selectedDiscard.has(i)) el.style.outline='4px solid #ffb300';
+    el.onclick=()=>{
+      if(state.selectedDiscard.has(i)) state.selectedDiscard.delete(i);
+      else if(state.selectedDiscard.size<3) state.selectedDiscard.add(i);
+      renderDiscardModal();
+    };
+    box.appendChild(el);
+  });
+  document.getElementById('discardCount').textContent=state.selectedDiscard.size;
+  document.getElementById('confirmDiscard').disabled=state.selectedDiscard.size!==3;
+}
+document.getElementById('confirmDiscard').onclick=()=>{
+  const hand=state.players[0].hand;
+  const idxs=[...state.selectedDiscard].sort((a,b)=>b-a);
+  const drop=[];
+  for(const i of idxs) drop.push(hand.splice(i,1)[0]);
+  state.discardPile=drop;
+  document.getElementById('discardModal').classList.remove('show');
+  log(`あなたが3枚を捨てた (埋め${drop.filter(isPicture).length})`);
+  beginPlay();
+};
+
+function beginPlay(){
+  state.phase='PLAYING';
+  state.trickNumber=1;
+  state.currentTrick=[];
+  state.leaderId=state.napoleonId;
+  state.currentPlayer=state.leaderId;
+  render();
+  advancePlay();
+}
+
+function leadSuitOf(trick){
+  if(!trick.length) return null;
+  const lead=trick[0].card;
+  return lead.joker ? (trick[0].requestedSuit||null) : lead.suit;
+}
+function isJokerRequestLead(trick){
+  return !!(trick.length && !trick[0].card.joker &&
+    trick[0].card.suit==='C' && trick[0].card.rank==='3');
+}
+function getLegalCards(hand,trick){
+  if(!trick.length) return [...hand];
+
+  // Web版v1.0: ♣3をリードするとJoker請求。
+  // Joker保持者は、通常のマストフォローより優先してJokerを出す。
+  if(isJokerRequestLead(trick)){
+    const joker=hand.find(c=>c.joker);
+    if(joker) return [joker];
+  }
+
+  const leadSuit=leadSuitOf(trick);
+  if(!leadSuit) return [...hand];
+  const suited=hand.filter(c=>!c.joker && c.suit===leadSuit);
+  const jokers=hand.filter(c=>c.joker);
+  return suited.length ? [...suited,...jokers] : [...hand];
+}
+function isRightBower(c,trump){ return !c.joker && c.rank==='J' && c.suit===trump; }
+function sameColorSuit(s){
+  if(s==='H')return'D'; if(s==='D')return'H'; if(s==='S')return'C'; return'S';
+}
+function isLeftBower(c,trump){ return !c.joker && c.rank==='J' && c.suit===sameColorSuit(trump); }
+function isMighty(c){ return !c.joker && c.suit==='S' && c.rank==='A'; }
+function isYoromeki(c){ return !c.joker && c.suit==='H' && c.rank==='Q'; }
+
+function evaluateTrick(trick,trump,trickNumber){
+  if(!trick.length) return null;
+  const cards=trick.map(x=>x.card);
+
+  const mightyIndex=cards.findIndex(isMighty);
+  const yoroIndex=cards.findIndex(isYoromeki);
+  if(mightyIndex>=0 && yoroIndex>=0) return trick[yoroIndex].playerId;
+
+  if(cards[0].joker) return trick[0].playerId;
+
+  if(mightyIndex>=0) return trick[mightyIndex].playerId;
+
+  const rj=cards.findIndex(c=>isRightBower(c,trump));
+  if(rj>=0) return trick[rj].playerId;
+
+  const leadSuit=leadSuitOf(trick);
+  const allSame = leadSuit && cards.every(c=>!c.joker && c.suit===leadSuit);
+  if(trickNumber>=2 && allSame){
+    const two=cards.findIndex(c=>c.rank==='2'&&c.suit===leadSuit);
+    if(two>=0) return trick[two].playerId;
+  }
+
+  const lj=cards.findIndex(c=>isLeftBower(c,trump));
+  if(lj>=0) return trick[lj].playerId;
+
+  const trumpCandidates=trick.filter(x=>!x.card.joker && x.card.suit===trump);
+  if(trumpCandidates.length){
+    return trumpCandidates.reduce((a,b)=>RANK_VALUE[b.card.rank]>RANK_VALUE[a.card.rank]?b:a).playerId;
+  }
+
+  const leadCandidates=trick.filter(x=>!x.card.joker && x.card.suit===leadSuit);
+  if(leadCandidates.length){
+    return leadCandidates.reduce((a,b)=>RANK_VALUE[b.card.rank]>RANK_VALUE[a.card.rank]?b:a).playerId;
+  }
+  return trick[0].playerId;
+}
+
+function playCard(pid,card,requestedSuit=null){
+  if(state.phase!=='PLAYING'||pid!==state.currentPlayer) return false;
+  const p=state.players[pid];
+  const legal=getLegalCards(p.hand,state.currentTrick);
+  if(!legal.some(c=>sameCard(c,card))) return false;
+  const idx=p.hand.findIndex(c=>sameCard(c,card));
+  const actual=p.hand.splice(idx,1)[0];
+  state.currentTrick.push({playerId:pid,card:actual,requestedSuit});
+  log(`${p.name}: ${formatCard(actual)}${requestedSuit?` → ${SUIT_SYMBOL[requestedSuit]}要求`:''}`);
+  if(state.currentTrick.length===1 && !actual.joker && actual.suit==='C' && actual.rank==='3'){
+    log('♣3 ジョーカー請求！ Joker保持者はJokerを出す');
+    document.getElementById('notice').textContent='♣3 ジョーカー請求！';
+  }
+
+  if(state.adjutantCard && sameCard(actual,state.adjutantCard) && state.adjutantId!==null && !state.adjutantRevealed){
+    state.adjutantRevealed=true;
+    log(`副官判明: ${state.players[state.adjutantId].name}`);
+  }
+
+  if(state.currentTrick.length===5){
+    const winner=evaluateTrick(state.currentTrick,state.trumpSuit,state.trickNumber);
+    const pics=state.currentTrick.filter(x=>isPicture(x.card)).length;
+    state.pictureCounts[winner]+=pics;
+    log(`TRICK ${state.trickNumber} WINNER=${state.players[winner].name} 絵札+${pics}`);
+    document.getElementById('notice').textContent=
+      `第${state.trickNumber}トリック：${state.players[winner].name} が獲得（絵札 +${pics}）`;
+    state.currentTrick=[];
+    if(state.trickNumber>=10){
+      state.phase='RESULT';
+      finishGame();
+      return true;
+    }
+    state.trickNumber++;
+    state.leaderId=winner;
+    state.currentPlayer=winner;
+    render();
+    setTimeout(advancePlay,300);
+    return true;
+  }
+  state.currentPlayer=(pid+1)%5;
+  render();
+  setTimeout(advancePlay,220);
+  return true;
+}
+
+function isKnownTeammate(viewerId,otherId){
+  if(viewerId===otherId) return true;
+  const n=state.napoleonId;
+  const a=state.adjutantId;
+
+  // 副官本人は自分が副官だと知っているので、ナポレオンを味方と認識できる。
+  if(a!==null && viewerId===a && otherId===n) return true;
+
+  // 副官公開後はナポレオン軍同士が互いを味方と認識する。
+  if(state.adjutantRevealed && a!==null){
+    if((viewerId===n && otherId===a) || (viewerId===a && otherId===n)) return true;
+  }
+
+  // 連合軍は副官公開後に互いを味方と認識できる。
+  if(state.adjutantRevealed){
+    const viewerAllied=viewerId!==n && viewerId!==a;
+    const otherAllied=otherId!==n && otherId!==a;
+    if(viewerAllied && otherAllied) return true;
+  }
+  return false;
+}
+
+function cpuCardCost(c,pid){
+  if(c.joker){
+    // 序盤は非常に高価、終盤は使いやすくする。
+    if(state.trickNumber<=3) return 1000;
+    if(state.trickNumber<=7) return 500;
+    return 120;
+  }
+  if(isMighty(c)) return state.trickNumber<=6 ? 850 : 250;
+  if(isRightBower(c,state.trumpSuit)) return state.trickNumber<=6 ? 760 : 230;
+  if(isLeftBower(c,state.trumpSuit)) return state.trickNumber<=6 ? 680 : 210;
+
+  let cost=RANK_VALUE[c.rank] || 0;
+  if(c.suit===state.trumpSuit) cost+=25;
+  if(isPicture(c)) cost+=18;
+  return cost;
+}
+
+function cpuDiscardCost(c,pid){
+  // 「捨てやすさ」。点札・特殊札は高コストで温存。
+  let cost=cpuCardCost(c,pid);
+  if(isPicture(c)) cost+=35;
+  return cost;
+}
+
+function simulatedWinnerAfter(pid,card){
+  const trick=[...state.currentTrick,{playerId:pid,card,requestedSuit:card.joker?'H':null}];
+  return evaluateTrick(trick,state.trumpSuit,state.trickNumber);
+}
+
+function chooseLowestCost(cards,pid,costFn=cpuCardCost){
+  return [...cards].sort((a,b)=>costFn(a,pid)-costFn(b,pid))[0];
+}
+
+function napoleonTeamPictureCount(){
+  if(state.napoleonId===null) return 0;
+  let total=state.pictureCounts[state.napoleonId] || 0;
+  if(state.adjutantId!==null) total += state.pictureCounts[state.adjutantId] || 0;
+  return total;
+}
+
+function remainingTricks(){
+  return Math.max(0, 11 - state.trickNumber);
+}
+
+function cpuContractUrgency(pid){
+  const n=state.napoleonId;
+  const a=state.adjutantId;
+  const onNapoleonTeam = pid===n || (a!==null && pid===a);
+  const teamPics = napoleonTeamPictureCount();
+  const need = Math.max(0, (state.contractCount||0) - teamPics);
+  const remain = remainingTricks();
+
+  // ナポレオン軍は「契約まで何枚必要か」、連合軍は「あと何枚取られると達成されるか」で緊急度を見る。
+  if(onNapoleonTeam){
+    if(need===0) return 0.15;
+    if(remain<=2) return 1.0;
+    if(need >= remain*2) return 0.95;
+    if(need >= remain) return 0.75;
+    return 0.45;
+  }else{
+    if(need===0) return 1.0; // すでに契約達成済みなら阻止不能だが、絵札流出は抑える
+    if(remain<=2) return 0.9;
+    if(need<=2) return 0.9;
+    if(need<=4) return 0.7;
+    return 0.4;
+  }
+}
+
+function adjustedCpuCardCost(c,pid,context={}){
+  let cost=cpuCardCost(c,pid);
+  const urgency=cpuContractUrgency(pid);
+  const picsOnTable=context.picturesOnTable||0;
+  const canWin=context.canWin||false;
+
+  // 終盤または契約が迫った局面では、勝てるなら特殊札の温存ペナルティを弱める。
+  if(canWin && (urgency>=0.75 || state.trickNumber>=8 || picsOnTable>=2)){
+    if(c.joker) cost-=350;
+    if(isMighty(c)) cost-=320;
+    if(isRightBower(c,state.trumpSuit)) cost-=260;
+    if(isLeftBower(c,state.trumpSuit)) cost-=220;
+  }
+
+  // 絵札が多く乗ったトリックほど勝ちを優先。
+  if(canWin) cost -= picsOnTable*45;
+
+  return cost;
+}
+
+function cpuChooseCard(pid){
+  const p=state.players[pid];
+  const legal=getLegalCards(p.hand,state.currentTrick);
+  if(legal.length===1) return legal[0];
+
+  const urgency=cpuContractUrgency(pid);
+
+  // リード時：通常は安い札から。終盤か高緊急度なら、
+  // 絵札回収を狙って高い支配札を使う余地を増やす。
+  if(state.currentTrick.length===0){
+    const nonJoker=legal.filter(c=>!c.joker);
+    const pool=nonJoker.length ? nonJoker : legal;
+
+    if(state.trickNumber>=9 || urgency>=0.9){
+      const strong = [...pool].sort((a,b)=>adjustedCpuCardCost(b,pid,{canWin:true})-adjustedCpuCardCost(a,pid,{canWin:true}));
+      // ただし毎回最強札ではなく、支配札がある場合だけ候補にする。
+      const dominant = strong.find(c=>isMighty(c) || isRightBower(c,state.trumpSuit) || isLeftBower(c,state.trumpSuit) || (c.suit===state.trumpSuit && RANK_VALUE[c.rank]>=12));
+      if(dominant) return dominant;
+    }
+    return chooseLowestCost(pool,pid,cpuDiscardCost);
+  }
+
+  const currentWinner=evaluateTrick(state.currentTrick,state.trumpSuit,state.trickNumber);
+  const friendWinning=isKnownTeammate(pid,currentWinner);
+  const isLast=state.currentTrick.length===4;
+  const picturesOnTable=state.currentTrick.filter(x=>isPicture(x.card)).length;
+
+  if(friendWinning){
+    // 味方が勝っている場合。最後手なら絵札を渡す。
+    if(isLast){
+      const pictureCards=legal.filter(isPicture);
+      if(pictureCards.length){
+        return [...pictureCards].sort((a,b)=>cpuCardCost(b,pid)-cpuCardCost(a,pid))[0];
+      }
+    }
+
+    // 契約達成済み、または味方の勝ちが十分強いなら温存。
+    return chooseLowestCost(legal,pid,cpuDiscardCost);
+  }
+
+  const winningCards=legal.filter(c=>simulatedWinnerAfter(pid,c)===pid);
+  if(winningCards.length){
+    let candidates=winningCards;
+
+    // 序盤・低価値トリックではJokerをできるだけ温存。
+    if(state.trickNumber<=3 && picturesOnTable===0 && urgency<0.8){
+      const withoutJoker=winningCards.filter(c=>!c.joker);
+      if(withoutJoker.length) candidates=withoutJoker;
+    }
+
+    // 契約が迫る/終盤/絵札が多い場合は、特殊札を使ってでも取りに行く。
+    return [...candidates].sort((a,b)=>
+      adjustedCpuCardCost(a,pid,{picturesOnTable,canWin:true}) -
+      adjustedCpuCardCost(b,pid,{picturesOnTable,canWin:true})
+    )[0];
+  }
+
+  // 勝てない。最後手なら敵に渡す絵札を極力減らす。
+  if(isLast){
+    const nonPictures=legal.filter(c=>!isPicture(c));
+    if(nonPictures.length) return chooseLowestCost(nonPictures,pid,cpuDiscardCost);
+  }
+
+  return chooseLowestCost(legal,pid,cpuDiscardCost);
+}
+
+function cpuChooseJokerSuit(pid){
+  const hand=state.players[pid].hand.filter(c=>!c.joker);
+  if(!hand.length) return 'H';
+
+  // 要求後に相手へ出させたいスートとして、自分が短いスートを優先。
+  const counts=Object.fromEntries(SUITS.map(s=>[s,hand.filter(c=>c.suit===s).length]));
+  return [...SUITS].sort((a,b)=>counts[a]-counts[b])[0];
+}
+
+function advancePlay(){
+  if(state.phase!=='PLAYING') return;
+  if(state.currentPlayer===0){ render(); return; }
+  const c=cpuChooseCard(state.currentPlayer);
+  if(c.joker && state.currentTrick.length===0){
+    playCard(state.currentPlayer,c,cpuChooseJokerSuit(state.currentPlayer));
+  }else playCard(state.currentPlayer,c);
+}
+function finishGame(){
+  const n=state.napoleonId;
+  const a=state.adjutantId;
+  const total=state.pictureCounts[n]+(a===null?0:state.pictureCounts[a]);
+  const buried=state.discardPile.filter(isPicture).length;
+  const win=total>=state.contractCount;
+
+  const scores=[0,0,0,0,0];
+  if(a===null){
+    scores[n]=win?4:-4;
+    for(let i=0;i<5;i++) if(i!==n) scores[i]=win?-1:1;
+  }else{
+    scores[n]=win?4:-4;
+    scores[a]=win?2:-2;
+    for(let i=0;i<5;i++) if(i!==n && i!==a) scores[i]=win?-2:2;
+  }
+
+  log(`GAME END: ナポレオン軍 ${total}/${state.contractCount} → ${win?'勝利':'敗北'}`);
+  log(`埋め=${buried} / 得点=${scores.map((s,i)=>`${state.players[i].name}:${s>0?'+':''}${s}`).join(' ')}`);
+
+  const adjText=a===null?'なし（ひとり立ち）':state.players[a].name;
+  const scoreText=scores.map((s,i)=>`${state.players[i].name} ${s>0?'+':''}${s}`).join(' / ');
+  document.getElementById('notice').innerHTML=
+    `<b>${win?'ナポレオン軍の勝利':'連合軍の勝利'}</b>　絵札 ${total}/${state.contractCount}`+
+    `<br>副官：${adjText}　埋め：${buried}`+
+    `<br>${scoreText}`;
+  render();
+}
+function humanPlay(card){
+  if(state.currentPlayer!==0||state.phase!=='PLAYING') return;
+  if(card.joker && state.currentTrick.length===0){
+    const suit=prompt('Jokerで要求するスートを C / D / H / S で入力','H');
+    const s=SUITS.includes((suit||'').toUpperCase())?(suit||'H').toUpperCase():'H';
+    playCard(0,card,s);
+  }else playCard(0,card);
+}
+
+function makeCardEl(c,clickable){
+  const el=document.createElement('div');
+  el.className='card'+(isRed(c)?' red':'');
+  el.innerHTML=c.joker?'<span>★</span><span>JOKER</span>':`<span>${SUIT_SYMBOL[c.suit]}</span><span>${c.rank}</span>`;
+  if(clickable) el.onclick=()=>humanPlay(c);
+  return el;
+}
+function render(){
+  document.getElementById('stPhase').textContent=state.phase;
+  document.getElementById('stTrump').textContent=state.trumpSuit?SUIT_SYMBOL[state.trumpSuit]:'-';
+  document.getElementById('stContract').textContent=state.contractCount??'-';
+  document.getElementById('stNapoleon').textContent=state.napoleonId===null?'-':state.players[state.napoleonId]?.name;
+  let adjStatus='?';
+  if(state.phase==='ADJUTANT_SELECT'){
+    adjStatus='?';
+  }else if(state.adjutantRevealed && state.adjutantId!==null){
+    adjStatus=`${state.players[state.adjutantId].name}（${formatCard(state.adjutantCard)}）`;
+  }else if(state.adjutantCard){
+    adjStatus=`宣言 ${formatCard(state.adjutantCard)}`;
+  }else if(state.adjutantId===null){
+    adjStatus='なし';
+  }
+  document.getElementById('stAdjutant').textContent=adjStatus;
+  const teamPics = state.napoleonId===null ? 0 :
+    state.pictureCounts[state.napoleonId] +
+    (state.adjutantId===null ? 0 : state.pictureCounts[state.adjutantId]);
+  document.getElementById('stTeamPics').textContent=teamPics;
+  document.getElementById('stTrick').textContent=state.trickNumber||'-';
+
+  const players=document.getElementById('players');players.innerHTML='';
+  state.players.forEach((p,i)=>{
+    const d=document.createElement('div');
+    d.className='player'+(state.currentPlayer===i?' active':'');
+    d.innerHTML=`<b>${p.name}</b><small>手札 ${p.hand.length} / 絵札 ${state.pictureCounts[i]}</small>`;
+    if(i===state.napoleonId)d.innerHTML+='<small>👑 ナポレオン</small>';
+    if(state.adjutantRevealed&&i===state.adjutantId)d.innerHTML+='<small>🤝 副官</small>';
+    players.appendChild(d);
+  });
+
+  const trick=document.getElementById('trickArea');trick.innerHTML='';
+  state.currentTrick.forEach(x=>{
+    const wrap=document.createElement('div');
+    wrap.style.textAlign='center';
+    wrap.innerHTML=`<small>${state.players[x.playerId].name}</small>`;
+    wrap.appendChild(makeCardEl(x.card,false));
+    trick.appendChild(wrap);
+  });
+  if(!state.currentTrick.length && state.phase==='PLAYING') trick.textContent='カードを出してください';
+
+  const hand=document.getElementById('humanHand');hand.innerHTML='';
+  const h=state.players[0]?.hand||[];
+  const legal=state.phase==='PLAYING'&&state.currentPlayer===0?getLegalCards(h,state.currentTrick):[];
+  h.forEach(c=>{
+    const ok=legal.some(x=>sameCard(x,c));
+    const el=makeCardEl(c,ok);
+    if(ok) el.classList.add('playable'); else el.classList.add('blocked');
+    hand.appendChild(el);
+  });
+
+  document.getElementById('controls').innerHTML='';
+}
+
+function assert(cond,msg){ if(!cond) throw new Error(msg); }
+function runTests(){
+  const tests=[];
+  const t=(name,fn)=>{
+    try{ fn(); tests.push({name,ok:true}); }
+    catch(e){ tests.push({name,ok:false,msg:e.message}); }
+  };
+
+  t('T001 53枚生成',()=>assert(makeDeck().length===53,'53枚ではない'));
+  t('T002 重複なし',()=>{
+    const d=makeDeck(); assert(new Set(d.map(cardId)).size===53,'重複あり');
+  });
+  t('T003/T004/T005 配札 10×5 + 3',()=>{
+    const d=makeDeck(); const ps=Array.from({length:5},()=>[]);
+    for(let r=0;r<10;r++)for(let p=0;p<5;p++)ps[p].push(d.pop());
+    const blind=d.splice(0,3);
+    assert(ps.every(h=>h.length===10),'10枚でない');
+    assert(blind.length===3,'blindが3枚でない');
+    assert(ps.flat().length+blind.length===53,'合計53でない');
+  });
+
+  t('T010 ♣11 < ♦11',()=>assert(isHigherBid({count:11,suit:'D'},{count:11,suit:'C'}),'競り順不正'));
+  t('T011 ♦11 < ♥11',()=>assert(isHigherBid({count:11,suit:'H'},{count:11,suit:'D'}),'競り順不正'));
+  t('T012 ♥11 < ♠11',()=>assert(isHigherBid({count:11,suit:'S'},{count:11,suit:'H'}),'競り順不正'));
+  t('T013 ♠11 < ♣12',()=>assert(isHigherBid({count:12,suit:'C'},{count:11,suit:'S'}),'競り順不正'));
+  t('T016 10不可',()=>assert(!isHigherBid({count:10,suit:'S'},null),'10が許可された'));
+  t('T018 20可',()=>assert(isHigherBid({count:20,suit:'C'},null),'20が不可'));
+  t('T019 21不可',()=>assert(!isHigherBid({count:21,suit:'C'},null),'21が許可'));
+
+  const H=(arr)=>arr.map(([s,r])=>({suit:s,rank:r,joker:false}));
+
+  t('T021 CPU強手は11以上に参加',()=>{
+    const hand=H([['S','A'],['S','K'],['S','Q'],['S','J'],['S','10'],['H','A'],['D','K'],['C','9'],['C','8'],['D','7']]);
+    const ev=evaluateBidHand(hand);
+    assert(ev.maxCount>=11,'強手なのに競り不参加');
+  });
+
+  t('T022 CPUは人間の♣11を上回れる',()=>{
+    const hand=H([['S','A'],['S','K'],['S','Q'],['S','J'],['S','10'],['H','A'],['D','K'],['C','9'],['C','8'],['D','7']]);
+    const ev=evaluateBidHand(hand);
+    const bid=nextLegalBidAbove({count:11,suit:'C'},ev.bestSuit,ev.maxCount);
+    assert(bid && isHigherBid(bid,{count:11,suit:'C'}),'競り返せない');
+  });
+  t('T050 マストフォロー',()=>{
+    const hand=H([['H','3'],['S','A']]);
+    const trick=[{playerId:1,card:{suit:'H',rank:'7',joker:false}}];
+    const legal=getLegalCards(hand,trick);
+    assert(legal.length===1&&legal[0].suit==='H','♥以外が合法');
+  });
+  t('T051 スートなしなら任意',()=>{
+    const hand=H([['C','3'],['S','A']]);
+    const trick=[{playerId:1,card:{suit:'H',rank:'7',joker:false}}];
+    assert(getLegalCards(hand,trick).length===2,'任意になっていない');
+  });
+  t('T052 Joker例外',()=>{
+    const hand=[{suit:'H',rank:'3',joker:false},{joker:true,rank:'JOKER',suit:null}];
+    const trick=[{playerId:1,card:{suit:'H',rank:'7',joker:false}}];
+    assert(getLegalCards(hand,trick).length===2,'Jokerが合法でない');
+  });
+
+  t('T053 ♣3リードでJoker請求',()=>{
+    const hand=[
+      {suit:'C',rank:'A',joker:false},
+      {joker:true,rank:'JOKER',suit:null},
+      {suit:'H',rank:'5',joker:false}
+    ];
+    const trick=[{playerId:1,card:{suit:'C',rank:'3',joker:false}}];
+    const legal=getLegalCards(hand,trick);
+    assert(legal.length===1 && legal[0].joker,'Jokerが強制されていない');
+  });
+
+  t('T054 ♣3請求でもJoker非所持なら通常フォロー',()=>{
+    const hand=[
+      {suit:'C',rank:'A',joker:false},
+      {suit:'H',rank:'5',joker:false}
+    ];
+    const trick=[{playerId:1,card:{suit:'C',rank:'3',joker:false}}];
+    const legal=getLegalCards(hand,trick);
+    assert(legal.length===1 && legal[0].suit==='C','通常フォローになっていない');
+  });
+
+  const E=(cards,trump='H',n=2)=>evaluateTrick(cards.map((c,i)=>({playerId:i,card:c})),trump,n);
+  t('T060 台札A勝利',()=>{
+    const cards=H([['C','7'],['C','A'],['C','K'],['D','A'],['H','2']]);
+    assert(E(cards,'S',2)===1,'♣Aでない');
+  });
+  t('T061 切り札2勝利',()=>{
+    const cards=H([['H','A'],['H','K'],['S','2'],['H','Q'],['H','J']]);
+    assert(E(cards,'S',2)===2,'♠2でない');
+  });
+  t('T070 正J勝利',()=>{
+    const cards=H([['C','A'],['H','J'],['H','A'],['C','K'],['D','A']]);
+    assert(E(cards,'H',2)===1,'正Jでない');
+  });
+  t('T071 裏J > 切り札A',()=>{
+    const cards=H([['C','A'],['D','J'],['H','A'],['C','K'],['S','K']]);
+    assert(E(cards,'H',2)===1,'裏Jでない');
+  });
+  t('T072 マイティ > 正J',()=>{
+    const cards=H([['C','A'],['H','J'],['S','A'],['C','K'],['D','K']]);
+    assert(E(cards,'H',2)===2,'マイティでない');
+  });
+  t('T073 よろめき > マイティ',()=>{
+    const cards=H([['C','A'],['H','Q'],['S','A'],['C','K'],['D','K']]);
+    assert(E(cards,'H',2)===1,'よろめきでない');
+  });
+  t('T080 セイム2 第2トリック',()=>{
+    const cards=H([['C','A'],['C','K'],['C','2'],['C','Q'],['C','10']]);
+    assert(E(cards,'H',2)===2,'セイム2不成立');
+  });
+  t('T081 第1トリックはセイム2なし',()=>{
+    const cards=H([['C','A'],['C','K'],['C','2'],['C','Q'],['C','10']]);
+    assert(E(cards,'H',1)===0,'第1でセイム2発動');
+  });
+  t('T091 Jokerリード勝利',()=>{
+    const cards=[
+      {joker:true,rank:'JOKER',suit:null},
+      ...H([['H','A'],['H','K'],['H','Q'],['H','J']])
+    ];
+    const trick=cards.map((c,i)=>({playerId:i,card:c,requestedSuit:i===0?'H':null}));
+    assert(evaluateTrick(trick,'S',2)===0,'Jokerリードで勝っていない');
+  });
+
+  t('T160 CPU序盤リードでJokerを温存',()=>{
+    const backup={trickNumber:state.trickNumber,trumpSuit:state.trumpSuit,currentTrick:state.currentTrick,
+      napoleonId:state.napoleonId,adjutantId:state.adjutantId,adjutantRevealed:state.adjutantRevealed};
+    state.trickNumber=2; state.trumpSuit='H'; state.currentTrick=[];
+    state.napoleonId=1; state.adjutantId=2; state.adjutantRevealed=false;
+    const hand=[{joker:true,rank:'JOKER',suit:null},...H([['C','4'],['D','8']])];
+    const oldHand=state.players[1]?.hand;
+    if(!state.players[1]) throw new Error('player state unavailable');
+    state.players[1].hand=hand;
+    const c=cpuChooseCard(1);
+    assert(!c.joker,'序盤にJokerをリードした');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T161 CPUは敵を抜ける最小勝ち札を選ぶ',()=>{
+    const backup={trickNumber:state.trickNumber,trumpSuit:state.trumpSuit,currentTrick:state.currentTrick,
+      napoleonId:state.napoleonId,adjutantId:state.adjutantId,adjutantRevealed:state.adjutantRevealed};
+    state.trickNumber=5; state.trumpSuit='S';
+    state.napoleonId=0; state.adjutantId=4; state.adjutantRevealed=true;
+    state.currentTrick=[{playerId:0,card:{suit:'H',rank:'10',joker:false}}];
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=H([['H','J'],['H','K'],['H','3']]);
+    const c=cpuChooseCard(1);
+    assert(c.suit==='H' && c.rank==='J','最小勝ち札Jを選んでいない');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T162 副官CPUはナポレオン勝勢を邪魔しない',()=>{
+    const backup={trickNumber:state.trickNumber,trumpSuit:state.trumpSuit,currentTrick:state.currentTrick,
+      napoleonId:state.napoleonId,adjutantId:state.adjutantId,adjutantRevealed:state.adjutantRevealed};
+    state.trickNumber=4; state.trumpSuit='S';
+    state.napoleonId=0; state.adjutantId=2; state.adjutantRevealed=false;
+    state.currentTrick=[{playerId:0,card:{suit:'H',rank:'K',joker:false}}];
+    const oldHand=state.players[2].hand;
+    state.players[2].hand=H([['H','A'],['H','3']]);
+    const c=cpuChooseCard(2);
+    assert(c.rank==='3','味方KをAで上回った');
+    state.players[2].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T170 CPU副官指定は自分の所持カードを避ける',()=>{
+    const backup={trumpSuit:state.trumpSuit};
+    state.trumpSuit='H';
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=H([['S','A'],['H','J'],['C','3'],['D','4'],['H','5'],['S','6'],['C','7'],['D','8'],['H','9'],['C','10']]);
+    const best=chooseCpuAdjutantCard(1);
+    assert(!state.players[1].hand.some(c=>sameCard(c,best.card)),'自分の所持カードを副官指定した');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T171 CPU副官指定はマイティを高評価',()=>{
+    const backup={trumpSuit:state.trumpSuit};
+    state.trumpSuit='H';
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=H([['H','K'],['H','Q'],['C','3'],['D','4'],['H','5'],['S','6'],['C','7'],['D','8'],['H','9'],['C','10']]);
+    const best=chooseCpuAdjutantCard(1);
+    assert(isMighty(best.card),'マイティを最優先できていない');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T172 CPU捨て札はマイティを守る',()=>{
+    const backup={trumpSuit:state.trumpSuit};
+    state.trumpSuit='H';
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=[
+      ...H([['S','A'],['H','J'],['D','J'],['H','A'],['H','K'],['H','Q'],['H','10'],['C','2'],['C','3'],['D','2'],['D','3'],['S','2'],['S','3']])
+    ];
+    const choice=chooseCpuDiscard(1);
+    assert(!choice.drop.some(isMighty),'マイティを捨てた');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T173 CPU捨て札は絵札より低札を優先',()=>{
+    const backup={trumpSuit:state.trumpSuit};
+    state.trumpSuit='S';
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=H([['S','A'],['S','K'],['H','A'],['H','K'],['D','Q'],['C','J'],['C','10'],['H','2'],['D','2'],['C','2'],['H','3'],['D','3'],['C','3']]);
+    const choice=chooseCpuDiscard(1);
+    assert(choice.drop.filter(isPicture).length===0,'絵札を捨てた');
+    state.players[1].hand=oldHand;
+    Object.assign(state,backup);
+  });
+
+  t('T180 契約直前のナポレオン軍は高緊急度',()=>{
+    const backup={napoleonId:state.napoleonId,adjutantId:state.adjutantId,contractCount:state.contractCount,
+      trickNumber:state.trickNumber,pictureCounts:[...state.pictureCounts]};
+    state.napoleonId=1; state.adjutantId=2; state.contractCount=11; state.trickNumber=9;
+    state.pictureCounts=[0,4,3,0,0];
+    assert(cpuContractUrgency(1)>=0.75,'終盤なのに緊急度が低い');
+    state.napoleonId=backup.napoleonId; state.adjutantId=backup.adjutantId; state.contractCount=backup.contractCount;
+    state.trickNumber=backup.trickNumber; state.pictureCounts=backup.pictureCounts;
+  });
+
+  t('T181 終盤高価値トリックでは特殊札使用を許容',()=>{
+    const backup={napoleonId:state.napoleonId,adjutantId:state.adjutantId,contractCount:state.contractCount,
+      trickNumber:state.trickNumber,pictureCounts:[...state.pictureCounts],trumpSuit:state.trumpSuit,currentTrick:state.currentTrick};
+    state.napoleonId=1; state.adjutantId=2; state.contractCount=11; state.trickNumber=9; state.trumpSuit='H';
+    state.pictureCounts=[0,4,3,0,0];
+    state.currentTrick=[
+      {playerId:3,card:{suit:'C',rank:'10',joker:false}},
+      {playerId:4,card:{suit:'C',rank:'K',joker:false}}
+    ];
+    const oldHand=state.players[1].hand;
+    state.players[1].hand=[
+      {suit:'C',rank:'2',joker:false},
+      {suit:'S',rank:'A',joker:false}
+    ];
+    const c=cpuChooseCard(1);
+    assert(isMighty(c),'終盤高価値トリックでマイティを使わない');
+    state.players[1].hand=oldHand;
+    state.napoleonId=backup.napoleonId; state.adjutantId=backup.adjutantId; state.contractCount=backup.contractCount;
+    state.trickNumber=backup.trickNumber; state.pictureCounts=backup.pictureCounts; state.trumpSuit=backup.trumpSuit; state.currentTrick=backup.currentTrick;
+  });
+
+  t('T182 最後手で勝てないとき絵札を捨てない',()=>{
+    const backup={napoleonId:state.napoleonId,adjutantId:state.adjutantId,contractCount:state.contractCount,
+      trickNumber:state.trickNumber,pictureCounts:[...state.pictureCounts],trumpSuit:state.trumpSuit,currentTrick:state.currentTrick};
+    state.napoleonId=0; state.adjutantId=4; state.contractCount=11; state.trickNumber=6; state.trumpSuit='S';
+    state.pictureCounts=[2,0,0,0,1];
+    state.currentTrick=[
+      {playerId:0,card:{suit:'H',rank:'A',joker:false}},
+      {playerId:1,card:{suit:'H',rank:'K',joker:false}},
+      {playerId:3,card:{suit:'H',rank:'Q',joker:false}},
+      {playerId:4,card:{suit:'H',rank:'J',joker:false}}
+    ];
+    const oldHand=state.players[2].hand;
+    state.players[2].hand=H([['H','10'],['H','3']]);
+    const c=cpuChooseCard(2);
+    assert(c.rank==='3','勝てないのに絵札10を捨てた');
+    state.players[2].hand=oldHand;
+    state.napoleonId=backup.napoleonId; state.adjutantId=backup.adjutantId; state.contractCount=backup.contractCount;
+    state.trickNumber=backup.trickNumber; state.pictureCounts=backup.pictureCounts; state.trumpSuit=backup.trumpSuit; state.currentTrick=backup.currentTrick;
+  });
+
+  // 押すたびに異なる実データで行うランダム回帰テスト
+  let randomFingerprint = '';
+  t('T200 ランダム配札100回 整合性',()=>{
+    const fingerprints=[];
+    for(let run=0; run<100; run++){
+      const d=shuffle(makeDeck());
+      const ps=Array.from({length:5},()=>[]);
+      for(let r=0;r<10;r++) for(let p=0;p<5;p++) ps[p].push(d.pop());
+      const blind=d.splice(0,3);
+      const all=[...ps.flat(),...blind];
+      assert(all.length===53,`run ${run}: 合計${all.length}`);
+      assert(new Set(all.map(cardId)).size===53,`run ${run}: 重複または欠落`);
+      assert(ps.every(h=>h.length===10),`run ${run}: 手札枚数異常`);
+      assert(blind.length===3,`run ${run}: blind異常`);
+      fingerprints.push(ps[0].slice(0,3).map(cardId).join('-'));
+    }
+    randomFingerprint=fingerprints.slice(0,3).join(' / ');
+    assert(new Set(fingerprints).size>1,'100回すべて同じ配札になった');
+  });
+
+  t('T201 現在ゲームのカード整合性',()=>{
+    if(!state.players || state.players.length!==5) return;
+    const live=[
+      ...state.players.flatMap(p=>p.hand),
+      ...state.blind,
+      ...state.discardPile,
+      ...state.currentTrick.map(x=>x.card)
+    ];
+    assert(new Set(live.map(cardId)).size===live.length,'現在ゲーム内に同一カードが重複');
+  });
+
+  const box=document.getElementById('testResults');
+  const pass=tests.filter(x=>x.ok).length;
+  const allOk=pass===tests.length;
+  testRunCounter++;
+  const executedAt=new Date();
+  const runId=`RUN-${testRunCounter}-${executedAt.getTime().toString(36).toUpperCase()}`;
+  const timeText=executedAt.toLocaleTimeString('ja-JP',{hour12:false});
+  box.innerHTML=
+    `<div class="test-summary ${allOk?'test-pass':'test-fail'}">${pass}/${tests.length} PASS</div>`+
+    `<div class="test-row"><b>実行ID:</b> ${runId}</div>`+
+    `<div class="test-row"><b>実行時刻:</b> ${timeText}</div>`+
+    `<div class="test-row"><b>ランダム配札例:</b> ${randomFingerprint||'-'}</div>`+
+    `<hr>`+
+    tests.map(x=>`<div class="test-row ${x.ok?'test-pass':'test-fail'}">${x.ok?'PASS':'FAIL'} ${x.name}${x.msg?' : '+x.msg:''}</div>`).join('');
+
+  const toast=document.getElementById('testToast');
+  toast.textContent=`${runId}: ${pass}/${tests.length} PASS${allOk?' ✓':' — FAILあり'}`;
+  toast.className=`test-toast show ${allOk?'ok':'ng'}`;
+  clearTimeout(window.__testToastTimer);
+  window.__testToastTimer=setTimeout(()=>toast.classList.remove('show'),3500);
+
+  const btn=document.getElementById('btnTests');
+  btn.textContent=allOk?'テスト ✓':'テスト FAIL';
+  setTimeout(()=>btn.textContent='自動テスト',1800);
+}
+document.getElementById('btnTests').addEventListener('click',()=>{
+  try{ runTests(); }
+  catch(e){
+    const toast=document.getElementById('testToast');
+    toast.textContent='自動テスト実行エラー: '+e.message;
+    toast.className='test-toast show ng';
+    console.error(e);
+  }
+});
+document.getElementById('btnNew').onclick=startNewGame;
+
+function startNewGame(){
+  document.getElementById('notice').textContent='';
+  resetState();deal();
+}
+startNewGame();
+</script>
+</body>
+</html>
