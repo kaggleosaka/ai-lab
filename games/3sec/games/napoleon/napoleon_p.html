@@ -469,6 +469,8 @@ function setAdjutantCard(card){
   else state.adjutantId=holder.id;
   log(`副官指定: ${formatCard(card)}${state.adjutantId===null?' (ひとり立ち候補)':''}`);
   state.phase='DISCARD';
+  // ルール資料準拠:
+  // 副官指定後にblind 3枚をすべて手札へ加え、13枚から3枚を捨てる。
   state.players[n].hand.push(...state.blind);
   state.blind=[];
   if(n===0) openDiscardModal();
