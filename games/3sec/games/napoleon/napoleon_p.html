@@ -144,7 +144,7 @@ main{padding:12px;max-width:1100px;margin:auto}
 </head>
 <body>
 <header>
-  <h1>ナポレオン Prototype 1.0 <span style="font-size:12px;color:#ffd54f">BUILD P5-CPU-20260808</span></h1>
+  <h1>ナポレオン Prototype 1.0 <span style="font-size:12px;color:#ffd54f">BUILD P5.2-CPU-20260809</span></h1>
   <div>
     <a href="https://kaggleosaka.github.io/ai-lab/games/3sec/index.html" style="text-decoration:none"><button class="ghost" type="button">MENU</button></a>
     <button class="ghost" id="btnTests">自動テスト</button>
@@ -182,7 +182,7 @@ main{padding:12px;max-width:1100px;margin:auto}
 
   <section class="panel">
     <h2>テスト結果</h2>
-    <div id="testResults">「自動テスト」を押すと現在の全テストをその場で実行します。BUILD P5-CPU-20260808</div>
+    <div id="testResults">「自動テスト」を押すと現在の全テストをその場で実行します。BUILD P5.2-CPU-20260809</div>
   </section>
 </main>
 
@@ -375,9 +375,10 @@ function evaluateBidHand(hand){
   let maxCount=10;
   if(score>=4.2) maxCount=11;
   if(score>=5.8) maxCount=12;
-  if(score>=7.3) maxCount=13;
-  if(score>=9.0) maxCount=14;
-  if(score>=11.0) maxCount=15;
+  // P5.2: 実戦で評価7.6/7.7の13宣言が連続失敗したため13以上を慎重化。
+  if(score>=8.5) maxCount=13;
+  if(score>=9.8) maxCount=14;
+  if(score>=11.5) maxCount=15;
 
   return {score,bestSuit,maxCount};
 }
@@ -945,8 +946,19 @@ function cpuChooseCard(pid){
     )[0];
   }
 
-  // 勝てない。最後手なら敵に渡す絵札を極力減らす。
+  // 勝てない。最後手でも「絵札を守るためにJoker等の特殊札を捨てる」のは避ける。
+  // まず特殊札を除いた通常札から選び、その中で非絵札を優先する。
   if(isLast){
+    const ordinary=legal.filter(c=>
+      !c.joker &&
+      !isMighty(c) &&
+      !isRightBower(c,state.trumpSuit) &&
+      !isLeftBower(c,state.trumpSuit)
+    );
+    const ordinaryNonPictures=ordinary.filter(c=>!isPicture(c));
+    if(ordinaryNonPictures.length) return chooseLowestCost(ordinaryNonPictures,pid,cpuDiscardCost);
+    if(ordinary.length) return chooseLowestCost(ordinary,pid,cpuDiscardCost);
+
     const nonPictures=legal.filter(c=>!isPicture(c));
     if(nonPictures.length) return chooseLowestCost(nonPictures,pid,cpuDiscardCost);
   }
@@ -1112,6 +1124,28 @@ function runTests(){
     const ev=evaluateBidHand(hand);
     const bid=nextLegalBidAbove({count:11,suit:'C'},ev.bestSuit,ev.maxCount);
     assert(bid && isHigherBid(bid,{count:11,suit:'C'}),'競り返せない');
+  });
+
+  t('T023 評価8.5未満は13まで上げない',()=>{
+    const scores=[4.2,5.8,7.6,7.7,8.49];
+    for(const score of scores){
+      let maxCount=10;
+      if(score>=4.2) maxCount=11;
+      if(score>=5.8) maxCount=12;
+      if(score>=8.5) maxCount=13;
+      if(score>=9.8) maxCount=14;
+      if(score>=11.5) maxCount=15;
+      assert(maxCount<=12,'8.5未満なのに13以上');
+    }
+  });
+
+  t('T024 13宣言は評価8.5以上',()=>{
+    const score=8.5;
+    let maxCount=10;
+    if(score>=4.2) maxCount=11;
+    if(score>=5.8) maxCount=12;
+    if(score>=8.5) maxCount=13;
+    assert(maxCount===13,'8.5で13にならない');
   });
   t('T050 マストフォロー',()=>{
     const hand=H([['H','3'],['S','A']]);
@@ -1329,6 +1363,30 @@ function runTests(){
     const c=cpuChooseCard(2);
     assert(c.rank==='3','勝てないのに絵札10を捨てた');
     state.players[2].hand=oldHand;
+    state.napoleonId=backup.napoleonId; state.adjutantId=backup.adjutantId; state.contractCount=backup.contractCount;
+    state.trickNumber=backup.trickNumber; state.pictureCounts=backup.pictureCounts; state.trumpSuit=backup.trumpSuit; state.currentTrick=backup.currentTrick;
+  });
+
+
+  t('T183 勝てない最後手でJokerより通常絵札を捨てる',()=>{
+    const backup={napoleonId:state.napoleonId,adjutantId:state.adjutantId,contractCount:state.contractCount,
+      trickNumber:state.trickNumber,pictureCounts:[...state.pictureCounts],trumpSuit:state.trumpSuit,currentTrick:state.currentTrick};
+    state.napoleonId=3; state.adjutantId=null; state.contractCount=13; state.trickNumber=4; state.trumpSuit='S';
+    state.pictureCounts=[0,0,0,1,0];
+    state.currentTrick=[
+      {playerId:4,card:{suit:'C',rank:'8',joker:false}},
+      {playerId:0,card:{suit:'S',rank:'8',joker:false}},
+      {playerId:1,card:{suit:'C',rank:'6',joker:false}},
+      {playerId:2,card:{suit:'C',rank:'Q',joker:false}}
+    ];
+    const oldHand=state.players[3].hand;
+    state.players[3].hand=[
+      {suit:'C',rank:'10',joker:false},
+      {joker:true,rank:'JOKER',suit:null}
+    ];
+    const c=cpuChooseCard(3);
+    assert(!c.joker && c.suit==='C' && c.rank==='10','Jokerを絵札10より先に捨てた');
+    state.players[3].hand=oldHand;
     state.napoleonId=backup.napoleonId; state.adjutantId=backup.adjutantId; state.contractCount=backup.contractCount;
     state.trickNumber=backup.trickNumber; state.pictureCounts=backup.pictureCounts; state.trumpSuit=backup.trumpSuit; state.currentTrick=backup.currentTrick;
   });
