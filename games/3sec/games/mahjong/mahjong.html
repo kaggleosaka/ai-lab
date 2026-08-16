@@ -1,4 +1,4 @@
-<!-- mahjong.html v013 -->
+<!-- mahjong.html v014 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -20,8 +20,9 @@
     --accent:#ffd35a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body,#app{touch-action:manipulation}
   html,body{margin:0;width:100%;height:100%;background:var(--bg2);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;overflow:hidden}
-  button{font:inherit}
+  button{font:inherit;touch-action:manipulation;-webkit-user-select:none;user-select:none}
   #app{
     width:100vw;
     height:100dvh;
@@ -153,6 +154,9 @@
     padding:5px 2px 3px;
   }
   .tile{
+    touch-action:manipulation;
+    -webkit-user-select:none;
+    user-select:none;
     flex:0 0 auto;
     width:min(48px, calc((100vw - 46px) / 14));
     height:min(67px, calc((100vw - 46px) / 14 * 1.42));
@@ -280,7 +284,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v013</div>
+    <div class="brand">麻雀 v014</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -568,7 +572,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v013';
+const VERSION = 'v014';
 const DEBUG = false;
 
 const TILE_TYPES = [
