@@ -350,6 +350,37 @@
     }
     #doraTile{width:22px;height:28px;font-size:18px}
     #message{min-height:22px;font-size:10px;line-height:1.15;margin-top:2px}
+
+    /* v015 landscape result dialog: keep the OK/next button easy to reach. */
+    #overlay{
+      align-items:flex-start;
+      padding:6px max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+      overflow:auto;
+    }
+    #overlay .dialog{
+      width:min(82vw,520px);
+      max-height:calc(100dvh - 12px);
+      overflow:auto;
+      padding:10px 14px 8px;
+      border-radius:14px;
+    }
+    #overlay .dialog h2{margin:0 0 3px;font-size:21px;line-height:1.05}
+    #overlay .dialog p{margin:2px 0 5px;font-size:12px;line-height:1.2}
+    #overlay #scoreBreakdown{margin:4px 0;font-size:11px;line-height:1.35}
+    #overlay #standings{margin:4px auto 6px;width:min(100%,360px);font-size:11px}
+    #overlay .standing-row{padding:2px 6px}
+    #overlay .primary{
+      /* v015 hotfix: landscape result button is always reachable at upper-right. */
+      position:fixed;
+      top:max(10px, env(safe-area-inset-top));
+      right:max(14px, env(safe-area-inset-right));
+      bottom:auto;
+      z-index:30;
+      padding:11px 24px;
+      min-width:150px;
+      font-size:16px;
+      box-shadow:0 5px 16px rgba(0,0,0,.42);
+    }
   }
 
   @media (orientation:portrait){
