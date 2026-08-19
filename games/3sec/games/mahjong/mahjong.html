@@ -285,7 +285,10 @@
   #rotateHint .rotate-icon{font-size:20px;display:inline;margin-right:5px}
 
   @media (hover:none) and (pointer:coarse) and (orientation:landscape){
-    #app{padding:3px 6px;gap:3px}
+    #app{
+      padding:3px max(10px, env(safe-area-inset-right)) 3px max(10px, env(safe-area-inset-left));
+      gap:3px
+    }
     #topbar{min-height:32px}
     .small-btn{padding:5px 8px;font-size:12px}
     #playerArea{min-height:116px;gap:2px}
@@ -301,9 +304,19 @@
     /* v015 landscape fix: keep CPU areas away from the center panel. */
     .seat{padding:3px;min-height:48px}
     .seat-title{font-size:10px;margin-bottom:1px}
-    .seat.top{top:2px;width:min(38%,300px);min-height:42px}
+    .seat.top{
+      top:2px;
+      width:min(56%,440px);
+      min-height:34px;
+      display:grid;
+      grid-template-columns:auto 1fr;
+      align-items:start;
+      column-gap:5px;
+    }
+    .seat.top .seat-title{margin:2px 0 0;white-space:nowrap}
     .seat.top .back-row{display:none}
-    .seat.left{left:3px;top:54%;width:min(22%,155px);min-height:48px}
+    .seat.top .river{min-height:22px;align-content:flex-start}
+    .seat.left{left:8px;top:54%;width:min(22%,155px);min-height:48px}
     .seat.right{right:3px;top:54%;width:min(22%,155px);min-height:48px}
     .seat.bottom{bottom:2px;width:min(52%,420px);min-height:46px}
     .mini-tile{width:17px;height:22px;font-size:15px}
@@ -319,8 +332,23 @@
     }
     #round{font-size:16px;line-height:1.05}
     #wallCount{font-size:10px;margin-top:1px;line-height:1.1}
-    #doraLine,#analysisLine{font-size:9px;margin-top:1px;line-height:1.15}
-    #doraTile{width:20px;height:25px;font-size:16px}
+    #analysisLine{font-size:9px;margin-top:1px;line-height:1.15}
+    /* v015: on mobile landscape, move dora to the right of the center panel. */
+    #doraLine{
+      position:absolute;
+      left:calc(100% + 12px);
+      top:8px;
+      width:max-content;
+      margin:0;
+      padding:3px 6px;
+      font-size:10px;
+      line-height:1.15;
+      border-radius:8px;
+      background:rgba(0,0,0,.22);
+      border:1px solid var(--line);
+      z-index:3;
+    }
+    #doraTile{width:22px;height:28px;font-size:18px}
     #message{min-height:22px;font-size:10px;line-height:1.15;margin-top:2px}
   }
 
