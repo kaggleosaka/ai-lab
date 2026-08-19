@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Gate Heroes v0.9 Promo Edition</title>
+<title>Gate Heroes v0.10 Fire Boss Edition</title>
 <style>
   html, body {
     margin: 0;
@@ -289,6 +289,7 @@
     warningSide: null,
     warningTimer: 0,
     attackFlashTimer: 0,
+    lastAttackType: null,
     phase: 1,
     phaseAnnounced: 1,
     phaseShieldTimer: 0,
@@ -456,6 +457,7 @@
       warningSide: null,
       warningTimer: 0,
       attackFlashTimer: 0,
+      lastAttackType: null,
       phase: 1,
       phaseAnnounced: 1,
       phaseShieldTimer: 0,
@@ -815,6 +817,8 @@
     boss.attackTimer = 2.0;
     boss.warningSide = null;
     boss.warningTimer = 0;
+    boss.attackFlashTimer = 0;
+    boss.lastAttackType = null;
     boss.phase = 1;
     boss.phaseAnnounced = 1;
     boss.phaseShieldTimer = 0;
@@ -974,20 +978,36 @@
     if (boss.warningTimer > 0) {
       boss.warningTimer -= dt * phaseSpeed;
       if (boss.warningTimer <= 0 && boss.warningSide !== null) {
-        boss.attackFlashTimer = 0.35;
-        const sideLateral = boss.warningSide === "left" ? -0.45 : 0.45;
-        if (Math.abs(player.visualLateral - sideLateral) < 0.5) {
-          damagePlayer(phaseDamage);
-        }
+        const attackType = boss.warningSide;
+        boss.lastAttackType = attackType;
+        boss.attackFlashTimer = attackType === "both" ? 0.62 : 0.50;
+
+        // Fire attacks deliberately reach the road edges, so parking at x = +/-1 is no longer safe.
+        let hit = false;
+        if (attackType === "left") hit = player.visualLateral < -0.35;
+        else if (attackType === "right") hit = player.visualLateral > 0.35;
+        else if (attackType === "both") hit = Math.abs(player.visualLateral) > 0.42;
+
+        if (hit) damagePlayer(attackType === "both" ? phaseDamage + 4 : phaseDamage);
+        screenShake = Math.max(screenShake, attackType === "both" ? 18 : 12);
         boss.warningSide = null;
       }
     } else {
       boss.attackTimer -= dt * phaseSpeed;
       if (boss.attackTimer <= 0) {
         boss.attackTimer = nextAttack;
-        boss.warningSide = Math.random() < 0.5 ? "left" : "right";
+
+        // Stage 1 teaches left/right fire first. Later stages sometimes burn BOTH edges,
+        // making the middle of the road the safe place.
+        const bothChance = stage === 1 ? 0.10 : stage === 2 ? 0.24 : 0.34;
+        boss.warningSide = Math.random() < bothChance ? "both" : (Math.random() < 0.5 ? "left" : "right");
         boss.warningTimer = warningDuration;
-        addText(boss.phase >= 3 ? "FAST MOVE!" : "MOVE!", centerX, 210, "#eb5757", 38, 0.7);
+
+        if (boss.warningSide === "both") {
+          addText("MIDDLE!", centerX, 210, "#ffffff", 46, 0.8);
+        } else {
+          addText(boss.warningSide === "left" ? "FIRE LEFT!" : "FIRE RIGHT!", centerX, 210, "#eb5757", 40, 0.75);
+        }
       }
     }
 
@@ -1542,6 +1562,73 @@
     ctx.restore();
   }
 
+  function drawBossFireAttack(p, size) {
+    if (boss.attackFlashTimer <= 0 || !boss.lastAttackType) return;
+
+    const life = clamp(boss.attackFlashTimer / (boss.lastAttackType === "both" ? 0.62 : 0.50), 0, 1);
+    const burst = 1 - life;
+    const mouthY = p.y + size * 0.02;
+    const leftTargetX = centerX - getRoadLayout().controlHalf * 0.82;
+    const rightTargetX = centerX + getRoadLayout().controlHalf * 0.82;
+
+    const drawFlameLane = (targetX) => {
+      const dx = targetX - p.x;
+      const dy = (player.y - 10) - mouthY;
+      const len = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.translate(p.x, mouthY);
+      ctx.rotate(angle);
+
+      const flicker = Math.sin(performance.now() / 35) * 12;
+      const flameLen = len * (0.78 + burst * 0.20);
+      const outerW = 52 + flicker;
+      const innerW = 25 + flicker * 0.35;
+
+      ctx.globalAlpha = 0.82;
+      const g = ctx.createLinearGradient(0, 0, flameLen, 0);
+      g.addColorStop(0, "#fff59d");
+      g.addColorStop(0.20, "#ffd54f");
+      g.addColorStop(0.55, "#ff8a00");
+      g.addColorStop(1, "rgba(235,87,87,0.12)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, -outerW * 0.22);
+      ctx.quadraticCurveTo(flameLen * 0.45, -outerW, flameLen, 0);
+      ctx.quadraticCurveTo(flameLen * 0.45, outerW, 0, outerW * 0.22);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "#fff3b0";
+      ctx.beginPath();
+      ctx.moveTo(4, -innerW * 0.20);
+      ctx.quadraticCurveTo(flameLen * 0.38, -innerW, flameLen * 0.78, 0);
+      ctx.quadraticCurveTo(flameLen * 0.38, innerW, 4, innerW * 0.20);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Flame sparks make the attack feel alive without any extra PNG asset.
+      for (let i = 0; i < 5; i++) {
+        const t = Math.random() * 0.85 + 0.08;
+        const x = p.x + dx * t + rand(-24, 24);
+        const y = mouthY + dy * t + rand(-18, 18);
+        ctx.save();
+        ctx.globalAlpha = 0.45 + Math.random() * 0.45;
+        ctx.fillStyle = Math.random() < 0.5 ? "#ffd54f" : "#ff8a00";
+        ctx.beginPath();
+        ctx.arc(x, y, rand(4, 11), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    };
+
+    if (boss.lastAttackType === "left" || boss.lastAttackType === "both") drawFlameLane(leftTargetX);
+    if (boss.lastAttackType === "right" || boss.lastAttackType === "both") drawFlameLane(rightTargetX);
+  }
+
   function drawBoss() {
     const p = project(boss.lateral, boss.z);
     const s = p.scale;
@@ -1550,29 +1637,41 @@
     ctx.save();
     ctx.translate(p.x, p.y);
 
-    // Warning side mark
+    // Warning marks show exactly where the fire will land.
     if (boss.warningSide) {
-      const sideLat = boss.warningSide === "left" ? -0.45 : 0.45;
-      const wp = project(sideLat, 0.18);
+      const warningSides = boss.warningSide === "both" ? ["left", "right"] : [boss.warningSide];
       ctx.save();
       ctx.setTransform(1,0,0,1,0,0);
-      ctx.globalAlpha = 0.35 + Math.sin(performance.now() / 80) * 0.15;
-      ctx.fillStyle = "#eb5757";
-      ctx.beginPath();
-      ctx.ellipse(wp.x, 610, 175, 54, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.textAlign = "center";
-      ctx.font = "900 38px Arial";
-      ctx.fillStyle = "#ffffff";
-      ctx.strokeStyle = "rgba(0,0,0,0.6)";
-      ctx.lineWidth = 5;
-      ctx.strokeText("DANGER", wp.x, 610);
-      ctx.fillText("DANGER", wp.x, 610);
+      for (const side of warningSides) {
+        const sideLat = side === "left" ? -0.72 : 0.72;
+        const wp = project(sideLat, 0.18);
+        ctx.globalAlpha = 0.35 + Math.sin(performance.now() / 80) * 0.15;
+        ctx.fillStyle = "#eb5757";
+        ctx.beginPath();
+        ctx.ellipse(wp.x, 610, 205, 58, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.textAlign = "center";
+        ctx.font = "900 34px Arial";
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "rgba(0,0,0,0.6)";
+        ctx.lineWidth = 5;
+        const label = boss.warningSide === "both" ? "FIRE!" : "DANGER";
+        ctx.strokeText(label, wp.x, 610);
+        ctx.fillText(label, wp.x, 610);
+      }
+      if (boss.warningSide === "both") {
+        ctx.font = "900 34px Arial";
+        ctx.strokeText("SAFE", centerX, 610);
+        ctx.fillStyle = "#34c759";
+        ctx.fillText("SAFE", centerX, 610);
+      }
       ctx.restore();
     }
 
     ctx.restore();
+
+    drawBossFireAttack(p, size);
 
     if (boss.phase >= 2) {
       ctx.save();
