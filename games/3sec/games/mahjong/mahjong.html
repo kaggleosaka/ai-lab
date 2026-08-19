@@ -1,11 +1,11 @@
-<!-- mahjong.html v014 -->
+<!-- mahjong.html v015 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0d5c43" />
-<title>Mahjong v013</title>
+<title>Mahjong v015</title>
 <style>
   :root{
     --bg:#0d5c43;
@@ -270,6 +270,42 @@
     border:0;border-radius:12px;padding:12px 18px;
     background:var(--accent);color:#302500;font-weight:900;
   }
+  /* v015: mobile landscape mode. Desktop layout remains unchanged. */
+  #rotateHint{
+    position:fixed;inset:0;z-index:60;display:none;
+    align-items:center;justify-content:center;text-align:center;
+    padding:24px;background:rgba(4,28,21,.96);color:#fff;
+  }
+  #rotateHint.show{display:flex}
+  #rotateHint .rotate-card{
+    width:min(88vw,420px);padding:24px 20px;border-radius:18px;
+    border:1px solid rgba(255,255,255,.24);background:#153f34;
+    box-shadow:0 18px 50px rgba(0,0,0,.45);font-weight:800;line-height:1.65;
+  }
+  #rotateHint .rotate-icon{font-size:48px;display:block;margin-bottom:8px}
+
+  @media (hover:none) and (pointer:coarse) and (orientation:landscape){
+    #app{padding:3px 6px;gap:3px}
+    #topbar{min-height:32px}
+    .small-btn{padding:5px 8px;font-size:12px}
+    #playerArea{min-height:116px;gap:2px}
+    #playerInfo{font-size:11px}
+    #hand{gap:3px;padding:3px 2px 2px}
+    .tile{
+      width:min(58px, calc((100vw - 72px) / 14));
+      height:min(82px, calc((100vw - 72px) / 14 * 1.42));
+      font-size:clamp(30px,4.7vw,50px);
+    }
+    .tile.drawn{margin-left:8px}
+    .seat{padding:4px;min-height:58px}
+    .seat-title{font-size:10px;margin-bottom:2px}
+    .mini-tile{width:18px;height:24px;font-size:16px}
+    #center{padding:6px;width:min(34%,260px)}
+    #round{font-size:18px}
+    #message{min-height:30px;font-size:12px;margin-top:4px}
+    #doraLine,#analysisLine{font-size:10px;margin-top:2px}
+  }
+
   @media (orientation:portrait){
     #table{min-height:0}
     .seat.left,.seat.right{width:31%;top:48%}
@@ -284,7 +320,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v014</div>
+    <div class="brand">麻雀 v015</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -334,6 +370,14 @@
     </div>
     <div id="hand"></div>
   </section>
+</div>
+
+<div id="rotateHint" aria-live="polite">
+  <div class="rotate-card">
+    <span class="rotate-icon">↻</span>
+    スマホは横画面で遊ぶと牌が大きく見えます。<br>
+    自動回転できない場合は、端末を横向きにしてください。
+  </div>
 </div>
 
 <div id="actionBar">
@@ -572,7 +616,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v014';
+const VERSION = 'v015';
 const DEBUG = false;
 
 const TILE_TYPES = [
@@ -1834,6 +1878,38 @@ function endGame(kind,winnerId,text,payment=null,ctx=null){
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
+function isLikelyMobile(){
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
+function updateRotateHint(){
+  const hint=document.getElementById('rotateHint');
+  if(!hint)return;
+  const portrait=window.matchMedia('(orientation: portrait)').matches;
+  hint.classList.toggle('show', isLikelyMobile() && portrait);
+}
+
+async function tryLandscapeLock(){
+  if(!isLikelyMobile())return false;
+  try{
+    if(screen.orientation && typeof screen.orientation.lock==='function'){
+      // Many browsers only allow orientation lock while fullscreen and after a user gesture.
+      if(!document.fullscreenElement && document.documentElement.requestFullscreen){
+        try{ await document.documentElement.requestFullscreen({navigationUI:'hide'}); }catch(_){ }
+      }
+      await screen.orientation.lock('landscape');
+      return true;
+    }
+  }catch(err){
+    console.info('Landscape lock unavailable; using rotate hint.',err);
+  }
+  updateRotateHint();
+  return false;
+}
+
+window.addEventListener('orientationchange',updateRotateHint);
+window.addEventListener('resize',updateRotateHint);
+
 document.getElementById('menuBtn').addEventListener('click',()=>{
   window.location.href='../../index.html';
 });
@@ -1843,6 +1919,9 @@ document.getElementById('soundBtn').addEventListener('click',async()=>{
 });
 
 document.addEventListener('pointerdown', async ()=>{
+  // v015: On mobile, try automatic landscape lock on the first user gesture.
+  // If unsupported (notably some Safari/iPhone cases), the rotate hint remains as fallback.
+  await tryLandscapeLock();
   if(!soundEnabled){
     await enableAudio();
   }
@@ -1917,13 +1996,14 @@ window.addEventListener('error',e=>{
 
 function bootMahjong(){
   try{
+    updateRotateHint();
     newGame();
   }catch(err){
     console.error('mahjong boot error',err);
     const msg=document.getElementById('message');
     if(msg) msg.textContent='起動エラー：' + (err && err.message ? err.message : String(err));
     const status=document.getElementById('status');
-    if(status) status.textContent='v012 起動失敗';
+    if(status) status.textContent='v015 起動失敗';
   }
 }
 
