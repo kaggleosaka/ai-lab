@@ -297,13 +297,31 @@
       font-size:clamp(30px,4.7vw,50px);
     }
     .tile.drawn{margin-left:8px}
-    .seat{padding:4px;min-height:58px}
-    .seat-title{font-size:10px;margin-bottom:2px}
-    .mini-tile{width:18px;height:24px;font-size:16px}
-    #center{padding:6px;width:min(34%,260px)}
-    #round{font-size:18px}
-    #message{min-height:30px;font-size:12px;margin-top:4px}
-    #doraLine,#analysisLine{font-size:10px;margin-top:2px}
+
+    /* v015 landscape fix: keep CPU areas away from the center panel. */
+    .seat{padding:3px;min-height:48px}
+    .seat-title{font-size:10px;margin-bottom:1px}
+    .seat.top{top:2px;width:min(38%,300px);min-height:42px}
+    .seat.top .back-row{display:none}
+    .seat.left{left:3px;top:54%;width:min(22%,155px);min-height:48px}
+    .seat.right{right:3px;top:54%;width:min(22%,155px);min-height:48px}
+    .seat.bottom{bottom:2px;width:min(52%,420px);min-height:46px}
+    .mini-tile{width:17px;height:22px;font-size:15px}
+    .river{min-height:20px;gap:1px}
+
+    /* Fit the complete center information inside the short landscape table. */
+    #center{
+      top:52%;
+      width:min(31%,235px);
+      max-height:calc(100% - 88px);
+      padding:4px 5px;
+      border-radius:10px;
+    }
+    #round{font-size:16px;line-height:1.05}
+    #wallCount{font-size:10px;margin-top:1px;line-height:1.1}
+    #doraLine,#analysisLine{font-size:9px;margin-top:1px;line-height:1.15}
+    #doraTile{width:20px;height:25px;font-size:16px}
+    #message{min-height:22px;font-size:10px;line-height:1.15;margin-top:2px}
   }
 
   @media (orientation:portrait){
