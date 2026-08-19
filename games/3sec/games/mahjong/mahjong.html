@@ -272,17 +272,17 @@
   }
   /* v015: mobile landscape mode. Desktop layout remains unchanged. */
   #rotateHint{
-    position:fixed;inset:0;z-index:60;display:none;
-    align-items:center;justify-content:center;text-align:center;
-    padding:24px;background:rgba(4,28,21,.96);color:#fff;
+    position:fixed;left:50%;top:max(48px, env(safe-area-inset-top));
+    transform:translateX(-50%);z-index:60;display:none;
+    width:min(92vw,520px);pointer-events:none;color:#fff;text-align:center;
   }
-  #rotateHint.show{display:flex}
+  #rotateHint.show{display:block}
   #rotateHint .rotate-card{
-    width:min(88vw,420px);padding:24px 20px;border-radius:18px;
-    border:1px solid rgba(255,255,255,.24);background:#153f34;
-    box-shadow:0 18px 50px rgba(0,0,0,.45);font-weight:800;line-height:1.65;
+    padding:9px 14px;border-radius:12px;
+    border:1px solid rgba(255,255,255,.24);background:rgba(21,63,52,.94);
+    box-shadow:0 6px 18px rgba(0,0,0,.32);font-weight:800;line-height:1.4;font-size:13px;
   }
-  #rotateHint .rotate-icon{font-size:48px;display:block;margin-bottom:8px}
+  #rotateHint .rotate-icon{font-size:20px;display:inline;margin-right:5px}
 
   @media (hover:none) and (pointer:coarse) and (orientation:landscape){
     #app{padding:3px 6px;gap:3px}
@@ -374,9 +374,7 @@
 
 <div id="rotateHint" aria-live="polite">
   <div class="rotate-card">
-    <span class="rotate-icon">↻</span>
-    スマホは横画面で遊ぶと牌が大きく見えます。<br>
-    自動回転できない場合は、端末を横向きにしてください。
+    <span class="rotate-icon">↻</span>スマホは横画面推奨です。横向きにすると牌が大きくなります。
   </div>
 </div>
 
@@ -1882,11 +1880,17 @@ function isLikelyMobile(){
   return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
+let rotateHintTimer=null;
 function updateRotateHint(){
   const hint=document.getElementById('rotateHint');
   if(!hint)return;
   const portrait=window.matchMedia('(orientation: portrait)').matches;
-  hint.classList.toggle('show', isLikelyMobile() && portrait);
+  const shouldShow=isLikelyMobile() && portrait;
+  hint.classList.toggle('show', shouldShow);
+  if(rotateHintTimer){ clearTimeout(rotateHintTimer); rotateHintTimer=null; }
+  if(shouldShow){
+    rotateHintTimer=setTimeout(()=>hint.classList.remove('show'),3000);
+  }
 }
 
 async function tryLandscapeLock(){
