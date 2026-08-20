@@ -44,6 +44,7 @@ canvas{
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const W=canvas.width,H=canvas.height;
+const TOUCH_PLAYER_OFFSET=150; // Hetzer Road方式: 指より上にキャラを表示
 
 // Character images (place these PNG files beside csurvivor.html)
 const IMG={};
@@ -342,7 +343,7 @@ function updateInput(dt){
   if(dx||dy){
     const d=Math.hypot(dx,dy); player.x+=dx/d*player.speed*dt;player.y+=dy/d*player.speed*dt;
   }else if(pointer.active){
-    const tx=pointer.x,ty=pointer.y-85;
+    const tx=pointer.x,ty=pointer.y-TOUCH_PLAYER_OFFSET;
     const vx=tx-player.x,vy=ty-player.y,d=Math.hypot(vx,vy);
     if(d>10){player.x+=vx/d*player.speed*dt;player.y+=vy/d*player.speed*dt}
   }
