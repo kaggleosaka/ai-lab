@@ -89,7 +89,7 @@ let lastPlayer={x:W/2,y:H*0.68};
 const player={
   x:W/2,y:H*0.70,r:26,hp:100,maxHp:100,speed:270,
   fireTimer:0,fireInterval:0.70,damage:16,bulletSize:9,
-  exp:0,nextExp:8,level:1,ice:false,orbitals:0,allies:0,
+  exp:0,nextExp:6,level:1,ice:false,orbitals:0,allies:0,
   lightning:false,inv:0
 };
 
@@ -119,7 +119,7 @@ function reset(){
   elapsed=0;bossSpawned=false;bossStage=0;nextBossStage=1;nextBossAt=cfg.bossTime;score=0; enemies=[];bullets=[];gems=[];heals=[];particles=[];texts=[];lightningFx=[];boss=null;
   Object.assign(player,{
     x:W/2,y:H*.70,hp:100,maxHp:100,speed:270,fireTimer:0,fireInterval:.70,damage:16,bulletSize:9,
-    exp:0,nextExp:8,level:1,ice:false,orbitals:0,allies:0,lightning:false,inv:0
+    exp:0,nextExp:6,level:1,ice:false,orbitals:0,allies:0,lightning:false,inv:0
   });
   state=STATE.PLAY;
   addText("START!",W/2,H*.42,"#fff",72,1.1);
@@ -153,6 +153,10 @@ const enemyWaves=[
 function unlockedEnemyTypes(){
   // Vampire Survivors風：時間経過で敵の種類を1種類ずつ追加する。
   // 追加済みの種類は消えず、後半ほど複数種類が混ざって出現する。
+  // 最初30秒は「ちびっこ保護時間」。敵の種類をゆっくり増やす。
+  // 0-20秒: slimeのみ / 20-30秒: slime+bat / 30秒以降: 従来カーブへ合流。
+  if(elapsed<20)return enemyWaves.slice(0,1);
+  if(elapsed<30)return enemyWaves.slice(0,2);
   const span=cfg.bossTime/enemyWaves.length;
   const unlocked=Math.min(enemyWaves.length,1+Math.floor(elapsed/span));
   return enemyWaves.slice(0,unlocked);
@@ -178,7 +182,7 @@ function spawnEnemy(type=currentWaveEnemyType()){
 
   const scale=1+elapsed/175;
   const data={
-    slime:{r:22,hp:32*scale,sp:72,damage:10,c:"#79e35e",xp:1},
+    slime:{r:22,hp:28*scale,sp:72,damage:8,c:"#79e35e",xp:1},
     bat:{r:18,hp:22*scale,sp:120,damage:8,c:"#a87cff",xp:1},
     big:{r:36,hp:105*scale,sp:48,damage:16,c:"#ff9d45",xp:4},
     rush:{r:24,hp:40*scale,sp:96,damage:10,c:"#ff5b4d",xp:2},
@@ -291,7 +295,8 @@ function update(dt){
 
   spawnTimer-=dt;
   if(!bossSpawned && spawnTimer<=0){
-    spawnTimer=Math.max(.33,.85-elapsed*.003);
+    // 最初30秒だけ敵の出現をゆっくりにし、その後は従来難易度へ戻す。
+    spawnTimer=elapsed<15?1.20:elapsed<30?1.00:Math.max(.33,.85-elapsed*.003);
     const count=elapsed>90?2:1;
     // 同じ出現タイミングでも、それぞれ解禁済みの種類から選ぶ。
     // そのため後半は複数種類の敵が同時に混ざって出現する。
