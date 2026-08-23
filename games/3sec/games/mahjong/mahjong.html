@@ -1,11 +1,11 @@
-<!-- mahjong.html v024 meld-layout-hotfix -->
+<!-- mahjong.html v026 kan-ai-yaku-expansion -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0d5c43" />
-<title>Mahjong v024</title>
+<title>Mahjong v026</title>
 <style>
   :root{
     --bg:#0d5c43;
@@ -231,14 +231,20 @@
     justify-items:center;
     margin:auto;
   }
+  /* v025 hotfix: 6-pin uses a rosette/wheel motif like the original circle tiles. */
   .pin6-dot{
-    width:.22em;
-    height:.22em;
+    width:.30em;
+    height:.30em;
     border-radius:50%;
-    background:#1565c0;
-    box-shadow:inset 0 0 0 .035em rgba(255,255,255,.55);
+    color:#1565c0;
+    background:
+      radial-gradient(circle at center, currentColor 0 13%, transparent 15% 28%, currentColor 30% 39%, transparent 41% 55%, currentColor 57% 64%, transparent 66%),
+      repeating-conic-gradient(from 0deg, currentColor 0 8deg, transparent 8deg 22deg);
+    -webkit-mask:radial-gradient(circle at center,#000 0 72%,transparent 74%);
+            mask:radial-gradient(circle at center,#000 0 72%,transparent 74%);
+    filter:drop-shadow(0 0 .012em currentColor);
   }
-  .pin6-dot.red{background:#c62828;}
+  .pin6-dot.red{color:#c62828;}
   .mini-tile .pin6-face,#doraTile .pin6-face,.recommend-tile .pin6-face{
     width:.78em;height:.96em;gap:.045em .07em;
   }
@@ -464,7 +470,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v024</div>
+    <div class="brand">麻雀 v026</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -764,7 +770,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v024';
+const VERSION = 'v026';
 const DEBUG = false;
 
 const TILE_TYPES = [
@@ -810,6 +816,7 @@ let riichiPending = false;
 let pendingRon = null;
 let pendingCall = null;
 let pendingRinshan = null;
+let pendingChankan = null;
 
 function createWall(){
   const wall = [];
@@ -867,6 +874,7 @@ function newGame(){
     wall,
     deadWall,
     doraIndicator,
+    doraIndicators:[doraIndicator],
     players,
     turn:0,
     gameOver:false,
@@ -882,6 +890,7 @@ function newGame(){
   pendingRon = null;
   pendingCall = null;
   pendingRinshan = null;
+  pendingChankan = null;
 
   logEvent('START', {
     version: VERSION,
@@ -889,7 +898,7 @@ function newGame(){
     dealer:0,
     doraIndicator:doraIndicator.type,
     dora:nextDoraType(doraIndicator.type),
-    shantenEngine:'v024-calls',
+    shantenEngine:'v026-kan-ai-yaku',
     initialHands: players.map(p=>p.hand.map(t=>t.type))
   });
 
@@ -997,8 +1006,21 @@ function shouldCpuCall(playerId,discarderId,tile){
     const cand={...tr,after};
     if(!best || cand.after<best.after || (cand.after===best.after && cand.priority>best.priority))best=cand;
   }
-  // CPUは基本、向聴を悪化させる鳴きはしない。カンは同向聴まで許容。
+  // v026: 向聴数に加え、鳴いた後の受け入れと役の作りやすさを軽く評価。
   if(!best || best.after>before)return null;
+  const p=gameState.players[playerId];
+  const valueTypes=new Set(['P','F','C',gameState.roundWind,p.seatWind]);
+  const yakuBias=(best.kind==='PON'||best.kind==='KAN') && valueTypes.has(tile.type) ? 2 : 0;
+  const concealed=p.hand.slice(); removeTypesFromHand(concealed,best.consume);
+  const fm={kind:best.kind,tiles:[tile.type,...best.consume],open:true};
+  let bestU=0;
+  for(let i=0;i<concealed.length;i++){
+    const c2=concealed.slice(); c2.splice(i,1);
+    const u=calculateUkeire(c2.concat(structuralMeldTiles(fm))); bestU=Math.max(bestU,u.total);
+  }
+  best.ukeire=bestU; best.yakuBias=yakuBias;
+  if(best.after===before && best.kind==='CHI' && bestU<6)return null;
+  if(best.after===before && !yakuBias && bestU<4 && best.kind!=='KAN')return null;
   return best;
 }
 
@@ -1026,6 +1048,7 @@ async function executeCall(playerId,discarderId,tile,kind,consume){
   processing=true;
   setMessage(`${PLAYER_NAMES[playerId]} が ${kind==='CHI'?'チー':kind==='PON'?'ポン':'カン'}！`);
   if(kind==='KAN'){
+    revealKanDora();
     await sleep(120);
     const r=drawRinshanTile(playerId);
     if(!r)return true;
@@ -1068,6 +1091,42 @@ async function checkCallsAfterDiscard(discarderId,tile){
   return false;
 }
 
+
+function addedKanOptions(playerId){
+  const p=gameState.players[playerId], out=[];
+  if(p.riichi)return out;
+  for(let mi=0;mi<p.melds.length;mi++){
+    const m=p.melds[mi];
+    if(m.kind!=='PON')continue;
+    const type=m.called||m.tiles[0];
+    if(countTypeInHand(playerId,type)>0)out.push({meldIndex:mi,type});
+  }
+  return out;
+}
+async function executeAddedKan(playerId,opt){
+  const p=gameState.players[playerId], m=p.melds[opt.meldIndex];
+  if(!m || m.kind!=='PON')return false;
+  const idx=p.hand.findIndex(t=>t.type===opt.type); if(idx<0)return false;
+  const tile=p.hand[idx];
+  // 槍槓判定: 加槓牌で他家がロンできる場合は槓を成立させない。
+  for(let off=1;off<=3;off++){
+    const pid=(playerId+off)%4; const base=expandedHandForPlayer(pid);
+    const h=base.concat([{id:tile.id,type:tile.type}]);
+    const ctx={winnerId:pid,winType:'ron',discarderId:playerId,winTileType:tile.type,baseHand13:base,chankan:true};
+    if(canWinWithYaku(h,ctx)){
+      if(pid===0){ pendingRon={discarderId:playerId,tile,cpuCandidates:[],humanHand:h,chankan:true}; processing=false; setMessage('槍槓できます！'); render(); return true; }
+      const pay=applyWinScores(h,ctx); endGame('WIN',pid,`${PLAYER_NAMES[pid]} 槍槓`,pay,ctx); return true;
+    }
+  }
+  p.hand.splice(idx,1); m.kind='KAKAN'; m.tiles.push(opt.type); m.open=true;
+  revealKanDora();
+  logEvent('CALL',{turn:gameState.turn,player:playerId,from:playerId,kind:'KAKAN',tile:opt.type,tiles:m.tiles.slice()});
+  processing=true; const r=drawRinshanTile(playerId); if(!r)return true;
+  sortHand(p.hand); processing=false; render();
+  if(playerId===0)setMessage(`加カン ${opt.type}。嶺上牌を引きました`);
+  return true;
+}
+
 function concealedKanOptions(playerId){
   const p=gameState.players[playerId];
   if(p.riichi)return [];
@@ -1081,6 +1140,7 @@ async function executeConcealedKan(playerId,type){
   const removed=removeTypesFromHand(p.hand,[type,type,type,type]);
   if(!removed)return false;
   p.melds.push({kind:'ANKAN',tiles:[type,type,type,type],called:type,from:playerId,open:false});
+  revealKanDora();
   logEvent('CALL',{turn:gameState.turn,player:playerId,from:playerId,kind:'ANKAN',tile:type,tiles:[type,type,type,type]});
   processing=true; selectedIndex=null;
   const r=drawRinshanTile(playerId);
@@ -1323,7 +1383,7 @@ function visibleCount(type){
   for(const p of gameState.players){
     for(const t of p.discards) if(t.type===type)n++;
   }
-  if(gameState.doraIndicator && gameState.doraIndicator.type===type)n++;
+  for(const di of (gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean)) if(di.type===type)n++;
   return n;
 }
 
@@ -1373,7 +1433,8 @@ function handCountKey(hand){
 
 function doraKeepBonus(type){
   if(!gameState || !gameState.doraIndicator)return 0;
-  return type===nextDoraType(gameState.doraIndicator.type) ? -4 : 0;
+  const ds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean).map(x=>nextDoraType(x.type));
+  return ds.includes(type) ? -4 : 0;
 }
 
 // 手牌の「伸びしろ」を軽く評価する。完成メンツを固定認定せず、
@@ -1481,7 +1542,7 @@ function analyzeDiscardChoices(hand14,withUkeire=false){
 
   // visible 情報も候補順位に影響するため、現在の河とドラ表示をキーに含める。
   const vis=gameState ? gameState.players.map(p=>p.discards.map(t=>t.type).join('.')).join('|') : '';
-  const dk=gameState && gameState.doraIndicator ? gameState.doraIndicator.type : '-';
+  const dk=gameState ? (gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean).map(x=>x.type).join('.') : '-';
   const key=handCountKey(hand14)+'#'+vis+'#'+dk;
   if(DISCARD_ANALYSIS_CACHE.has(key))return DISCARD_ANALYSIS_CACHE.get(key).map(x=>({...x,tiles:x.tiles.slice()}));
 
@@ -1543,8 +1604,23 @@ function nextDoraType(ind){
 
 function countDora(hand){
   if(!gameState || !gameState.doraIndicator)return 0;
-  const dora=nextDoraType(gameState.doraIndicator.type);
-  return hand.filter(t=>t.type===dora).length;
+  const inds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean);
+  let n=0;
+  for(const ind of inds){
+    const dora=nextDoraType(ind.type);
+    n += hand.filter(t=>t.type===dora).length;
+  }
+  return n;
+}
+
+function revealKanDora(){
+  if(!gameState || !gameState.deadWall || gameState.deadWall.length<2)return null;
+  const inds=gameState.doraIndicators||(gameState.doraIndicators=[gameState.doraIndicator]);
+  if(inds.length>=5)return null;
+  const idx=Math.min(gameState.deadWall.length-1, 4+inds.length*2);
+  const ind=gameState.deadWall[idx];
+  if(ind && !inds.some(x=>x.id===ind.id)){ inds.push(ind); logEvent('KAN_DORA',{indicator:ind.type,dora:nextDoraType(ind.type),count:inds.length}); }
+  return ind||null;
 }
 
 function isTanyao(hand){
@@ -1624,6 +1700,39 @@ function hasIttsu(dec){
 }
 function isToitoiDec(dec){return dec.melds.every(m=>m.kind==='triplet');}
 
+function isTerminalHonorIndex(i){return i>=27 || i%9===0 || i%9===8;}
+function isChantaDec(dec){
+  if(!isTerminalHonorIndex(dec.pair))return false;
+  let hasSeq=false, hasHonor=false;
+  for(const m of dec.melds){
+    if(m.kind==='sequence'){
+      hasSeq=true;
+      const n=m.start%9;
+      if(n!==0 && n!==6)return false;
+    }else if(!isTerminalHonorIndex(m.tile))return false;
+    if(m.kind==='triplet' && m.tile>=27)hasHonor=true;
+  }
+  if(dec.pair>=27)hasHonor=true;
+  return hasSeq && hasHonor;
+}
+function isJunchanDec(dec){
+  if(dec.pair>=27 || !isTerminalHonorIndex(dec.pair))return false;
+  let hasSeq=false;
+  for(const m of dec.melds){
+    if(m.kind==='sequence'){
+      hasSeq=true; const n=m.start%9; if(n!==0 && n!==6)return false;
+    }else if(m.tile>=27 || !isTerminalHonorIndex(m.tile))return false;
+  }
+  return hasSeq;
+}
+function isHonroutou(hand){return hand.every(t=>isTerminalHonorIndex(TILE_ORDER[t.type]));}
+function isShousangenDec(dec){
+  const dragons=new Set([31,32,33]);
+  const trip=new Set(dec.melds.filter(m=>m.kind==='triplet').map(m=>m.tile));
+  return dragons.has(dec.pair) && [...dragons].filter(x=>trip.has(x)).length===2;
+}
+function kanCount(playerId){return gameState.players[playerId].melds.filter(m=>m.kind==='KAN'||m.kind==='ANKAN'||m.kind==='KAKAN'||(m.tiles||[]).length===4).length;}
+
 function suitComposition(hand){
   const suits=new Set(); let honors=false;
   for(const tile of hand){
@@ -1698,14 +1807,35 @@ function getYaku(hand, ctx){
   if(comp.suits.size===1 && !comp.honors) yaku.push({name:'清一色',han:open?5:6});
   else if(comp.suits.size===1 && comp.honors) yaku.push({name:'混一色',han:open?2:3});
   if(decs.some(isToitoiDec)) yaku.push({name:'対々和',han:2});
+  if(decs.some(isJunchanDec)) yaku.push({name:'純全帯幺九',han:open?2:3});
+  else if(decs.some(isChantaDec)) yaku.push({name:'混全帯幺九',han:open?1:2});
+  if(isHonroutou(hand)) yaku.push({name:'混老頭',han:2});
+  if(decs.some(isShousangenDec)) yaku.push({name:'小三元',han:2});
+  if(kanCount(ctx.winnerId)>=3) yaku.push({name:'三槓子',han:2});
+  if(ctx.rinshan) yaku.push({name:'嶺上開花',han:1});
+  if(ctx.chankan) yaku.push({name:'槍槓',han:1});
 
-  // 三暗刻：門前ツモなら刻子3組以上。ロン時は和了牌で完成した刻子を1組だけ明刻扱いにする。
+  // v025: 三暗刻は副露したポン/大明槓を暗刻として数えない。暗槓は暗刻扱い。
   let bestConcealedTriplets=0;
+  const fixedTripletTypes=[];
+  let concealedKanCount=0;
+  for(const m of p.melds){
+    if(m.kind==='PON' || m.kind==='KAN' || m.kind==='ANKAN' || m.kind==='KAKAN'){
+      fixedTripletTypes.push(TILE_ORDER[m.called || (m.tiles&&m.tiles[0])]);
+      if(m.kind==='ANKAN' || m.open===false) concealedKanCount++;
+    }
+  }
   for(const d of decs){
-    let n=d.melds.filter(m=>m.kind==='triplet').length;
+    const trips=d.melds.filter(m=>m.kind==='triplet').map(m=>m.tile);
+    let n=trips.length;
+    for(const ft of fixedTripletTypes){
+      const idx=trips.indexOf(ft);
+      if(idx>=0){ trips.splice(idx,1); n--; }
+    }
+    n += concealedKanCount;
     if(ctx.winType==='ron' && ctx.winTileType){
       const wi=TILE_ORDER[ctx.winTileType];
-      if(d.melds.some(m=>m.kind==='triplet'&&m.tile===wi))n--;
+      if(trips.includes(wi)) n--;
     }
     bestConcealedTriplets=Math.max(bestConcealedTriplets,n);
   }
@@ -1734,25 +1864,55 @@ function yakuSummary(hand,ctx){
 // ============================================================
 function ceil100(n){ return Math.ceil(n/100)*100; }
 
+function meldFu(m){
+  if(!m || !m.tiles || !m.tiles.length) return 0;
+  if(m.kind!=='PON' && m.kind!=='KAN' && m.kind!=='ANKAN' && m.kind!=='KAKAN') return 0;
+  const type=m.called || m.tiles[0];
+  const oi=TILE_ORDER[type];
+  const terminalHonor=oi>=27 || oi%9===0 || oi%9===8;
+  const concealed=(m.kind==='ANKAN' || m.open===false);
+  const kan=(m.kind==='KAN' || m.kind==='ANKAN' || m.kind==='KAKAN' || m.tiles.length===4);
+  if(kan) return terminalHonor ? (concealed?32:16) : (concealed?16:8);
+  return terminalHonor ? (concealed?8:4) : (concealed?4:2);
+}
+
 function estimateFu(hand,ctx,yaku){
-  // v019: 門前手の実戦用符計算（七対子・平和・雀頭・刻子・待ち・ツモ/門前ロン）。
+  // v025: 副露・槓を含む符計算。門前ロン+10符は門前時のみ。
   if(yaku.some(x=>x.name==='七対子'))return 25;
   if(ctx.winType==='tsumo' && yaku.some(x=>x.name==='平和'))return 20;
 
+  const p=gameState.players[ctx.winnerId];
+  const open=isOpenHand(ctx.winnerId);
   const decs=getStandardDecompositions(hand);
   if(!decs.length)return 30;
   let best=20;
   const wi=ctx.winTileType ? TILE_ORDER[ctx.winTileType] : -1;
+  const fixedTripletTypes=[];
+  let fixedFu=0;
+  for(const m of p.melds){
+    fixedFu += meldFu(m);
+    if(m.kind==='PON' || m.kind==='KAN' || m.kind==='ANKAN' || m.kind==='KAKAN'){
+      fixedTripletTypes.push(TILE_ORDER[m.called || (m.tiles&&m.tiles[0])]);
+    }
+  }
+
   for(const d of decs){
-    let f=20;
-    if(ctx.winType==='ron')f+=10; else f+=2;
+    let f=20 + fixedFu;
+    if(ctx.winType==='ron'){
+      if(!open) f+=10;
+    }else{
+      f+=2;
+    }
     const pairType=TILE_TYPES[d.pair];
     if(pairType==='P'||pairType==='F'||pairType==='C')f+=2;
     if(pairType===gameState.roundWind)f+=2;
-    if(pairType===gameState.players[ctx.winnerId].seatWind)f+=2;
+    if(pairType===p.seatWind)f+=2;
 
+    const skip=fixedTripletTypes.slice();
     for(const m of d.melds){
       if(m.kind!=='triplet')continue;
+      const si=skip.indexOf(m.tile);
+      if(si>=0){ skip.splice(si,1); continue; }
       const terminalHonor=m.tile>=27 || m.tile%9===0 || m.tile%9===8;
       let concealed=true;
       if(ctx.winType==='ron' && wi===m.tile)concealed=false;
@@ -1760,16 +1920,19 @@ function estimateFu(hand,ctx,yaku){
     }
 
     if(wi>=0){
-      if(d.pair===wi)f+=2; // 単騎
+      if(d.pair===wi)f+=2;
       for(const m of d.melds){
         if(m.kind!=='sequence')continue;
         const pos=wi-m.start;
-        if(pos===1)f+=2; // 嵌張
-        if(pos===2 && m.start%9===0)f+=2; // 123の3待ち
-        if(pos===0 && m.start%9===6)f+=2; // 789の7待ち
+        if(pos===1)f+=2;
+        if(pos===2 && m.start%9===0)f+=2;
+        if(pos===0 && m.start%9===6)f+=2;
       }
     }
-    best=Math.max(best,Math.ceil(f/10)*10);
+    let rounded=Math.ceil(f/10)*10;
+    // 喰い平和形など、ロン和了の20符形は30符として扱う。
+    if(open && ctx.winType==='ron' && rounded===20) rounded=30;
+    best=Math.max(best,rounded);
   }
   return best;
 }
@@ -2495,7 +2658,9 @@ function render(){
   if(gameState.doraIndicator){
     setTileFace(el.doraTile,gameState.doraIndicator.type);
     el.doraTile.className=tileColorClass(gameState.doraIndicator.type);
-    el.doraTile.title=`ドラ表示牌 ${gameState.doraIndicator.type} → ドラ ${nextDoraType(gameState.doraIndicator.type)}`;
+    const ds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean);
+    el.doraTile.title=ds.map(x=>`ドラ表示牌 ${x.type} → ドラ ${nextDoraType(x.type)}`).join(' / ');
+    if(ds.length>1) el.doraTile.title=`${ds.length}枚: `+el.doraTile.title;
   }
 
   const human=gameState.players[0];
@@ -2523,8 +2688,10 @@ function render(){
   el.chiBtn.classList.toggle('show', !!callOpt && callOpt.chi.length>0 && !gameState.gameOver);
   el.ponBtn.classList.toggle('show', !!callOpt && callOpt.pon && !gameState.gameOver);
   const ankan=(!pendingCall && gameState.currentPlayer===0 && !processing && !gameState.gameOver) ? concealedKanOptions(0) : [];
-  el.kanBtn.classList.toggle('show', (!!callOpt && callOpt.kan) || ankan.length>0);
+  const kakan=(!pendingCall && gameState.currentPlayer===0 && !processing && !gameState.gameOver) ? addedKanOptions(0) : [];
+  el.kanBtn.classList.toggle('show', (!!callOpt && callOpt.kan) || ankan.length>0 || kakan.length>0);
   el.kanBtn.dataset.ankan=ankan[0]||'';
+  el.kanBtn.dataset.kakan=kakan.length?JSON.stringify(kakan[0]):'';
   el.skipBtn.classList.toggle('show', (!!pendingRon || !!pendingCall) && !gameState.gameOver);
 
   const canRiichi = !gameState.gameOver && !pendingRon &&
@@ -2790,7 +2957,7 @@ document.getElementById('riichiBtn').addEventListener('click',()=>{
 document.getElementById('tsumoBtn').addEventListener('click',()=>{
   if(!gameState || gameState.gameOver || processing || pendingRon)return;
   if(gameState.currentPlayer!==0 || !playerCanTsumo)return;
-  const ctx={winnerId:0,winType:'tsumo',winTileType:playerLastDrawType};
+  const ctx={winnerId:0,winType:'tsumo',winTileType:playerLastDrawType,rinshan:!!pendingRinshan};
   const winHand=expandedHandForPlayer(0);
   if(!canWinWithYaku(winHand,ctx))return;
   const pay=applyWinScores(winHand,ctx);
@@ -2801,7 +2968,7 @@ document.getElementById('tsumoBtn').addEventListener('click',()=>{
 document.getElementById('ronBtn').addEventListener('click',()=>{
   if(!pendingRon || gameState.gameOver)return;
   const pr=pendingRon;
-  const ctx={winnerId:0,winType:'ron',discarderId:pr.discarderId,winTileType:pr.tile.type};
+  const ctx={winnerId:0,winType:'ron',discarderId:pr.discarderId,winTileType:pr.tile.type,chankan:!!pr.chankan};
   const pay=applyWinScores(pr.humanHand,ctx);
   pendingRon=null;
   endGame('WIN',0,`PLAYER ロン（${PLAYER_NAMES[pr.discarderId]}から）`,pay,ctx);
@@ -2833,7 +3000,9 @@ document.getElementById('kanBtn').addEventListener('click',async()=>{
   if(pendingCall && pendingCall.options.kan){
     const pc=pendingCall; await executeCall(0,pc.discarderId,pc.tile,'KAN',[pc.tile.type,pc.tile.type,pc.tile.type]); return;
   }
-  const type=document.getElementById('kanBtn').dataset.ankan;
+  const kb=document.getElementById('kanBtn');
+  if(kb.dataset.kakan && !processing && gameState.currentPlayer===0){ await executeAddedKan(0,JSON.parse(kb.dataset.kakan)); return; }
+  const type=kb.dataset.ankan;
   if(type && !processing && gameState.currentPlayer===0){ await executeConcealedKan(0,type); }
 });
 
@@ -2879,7 +3048,7 @@ function bootMahjong(){
     const msg=document.getElementById('message');
     if(msg) msg.textContent='起動エラー：' + (err && err.message ? err.message : String(err));
     const status=document.getElementById('status');
-    if(status) status.textContent='v024 起動失敗';
+    if(status) status.textContent='v025 起動失敗';
   }
 }
 
