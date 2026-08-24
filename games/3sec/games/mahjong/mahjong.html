@@ -1,11 +1,11 @@
-<!-- mahjong.html v027 kan-ai-yaku-expansion -->
+<!-- mahjong.html v031 ankou-regression-guard -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0d5c43" />
-<title>Mahjong v027</title>
+<title>Mahjong v031</title>
 <style>
   :root{
     --bg:#0d5c43;
@@ -471,7 +471,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v027</div>
+    <div class="brand">麻雀 v031</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -772,7 +772,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v027';
+const VERSION = 'v031';
 const DEBUG = false;
 
 const TILE_TYPES = [
@@ -813,7 +813,10 @@ let selectedIndex = null;
 let processing = false;
 let playerCanTsumo = false;
 let playerDrawnTileId = null;
+let playerLastDrawTileId = null;
 let playerLastDrawType = null;
+// v030: 嶺上開花はフラグではなく、和了牌IDと嶺上牌IDの一致で判定する。
+let lastRinshanTileIdByPlayer = [null,null,null,null];
 let riichiPending = false;
 let pendingRon = null;
 let pendingCall = null;
@@ -880,6 +883,7 @@ function newGame(){
     deadWall,
     doraIndicator,
     doraIndicators:[doraIndicator],
+    uraIndicators:[deadWall[5]].filter(Boolean),
     callsMade:0,
     players,
     turn:0,
@@ -891,7 +895,9 @@ function newGame(){
   processing = false;
   playerCanTsumo = false;
   playerDrawnTileId = null;
+  playerLastDrawTileId = null;
   playerLastDrawType = null;
+  lastRinshanTileIdByPlayer = [null,null,null,null];
   riichiPending = false;
   pendingRon = null;
   pendingCall = null;
@@ -904,7 +910,7 @@ function newGame(){
     dealer:0,
     doraIndicator:doraIndicator.type,
     dora:nextDoraType(doraIndicator.type),
-    shantenEngine:'v027-special-rounds',
+    shantenEngine:'v029-rinshan-context-fix',
     initialHands: players.map(p=>p.hand.map(t=>t.type))
   });
 
@@ -1080,7 +1086,8 @@ function drawRinshanTile(playerId){
   if(!gameState.deadWall.length){ endGame('DRAW',null,'王牌がなくなりました'); return null; }
   const tile=gameState.deadWall.pop();
   gameState.players[playerId].hand.push(tile);
-  if(playerId===0){ playerDrawnTileId=tile.id; playerLastDrawType=tile.type; }
+  lastRinshanTileIdByPlayer[playerId]=tile.id;
+  if(playerId===0){ playerDrawnTileId=tile.id; playerLastDrawTileId=tile.id; playerLastDrawType=tile.type; }
   else sortHand(gameState.players[playerId].hand);
   pendingRinshan={playerId,type:tile.type,id:tile.id};
   logEvent('RINSHAN_DRAW',{turn:gameState.turn,player:playerId,tile:tile.type});
@@ -1093,10 +1100,12 @@ async function executeCall(playerId,discarderId,tile,kind,consume){
   const removed=removeTypesFromHand(p.hand,consume);
   if(!removed)return false;
   const tiles=[tile.type,...consume];
+  tile.calledBy=playerId;
   p.melds.push({kind,tiles,called:tile.type,from:discarderId,open:true});
   clearIppatsuByCall();
   logEvent('CALL',{turn:gameState.turn,player:playerId,from:discarderId,kind,tile:tile.type,tiles});
   pendingCall=null; pendingRon=null; selectedIndex=null; riichiPending=false; playerCanTsumo=false;
+  if(playerId===0){ playerDrawnTileId=null; playerLastDrawTileId=null; playerLastDrawType=null; }
   gameState.currentPlayer=playerId;
   processing=true;
   setMessage(`${PLAYER_NAMES[playerId]} が ${kind==='CHI'?'チー':kind==='PON'?'ポン':'カン'}！`);
@@ -1183,11 +1192,28 @@ async function executeAddedKan(playerId,opt){
   return true;
 }
 
-function concealedKanOptions(playerId){
+function riichiAnkanKeepsWait(playerId,type,drawnType=null){
   const p=gameState.players[playerId];
-  if(p.riichi)return [];
+  if(!p.riichi)return true;
+  const dt=drawnType || (playerId===0?playerLastDrawType:null);
+  if(!dt)return false;
+  const before=p.hand.slice();
+  const di=before.findIndex(t=>t.type===dt); if(di<0)return false;
+  before.splice(di,1);
+  const beforeExpanded=expandedHandForPlayer(playerId,before);
+  const beforeWaits=getStructuralWaitTypes(beforeExpanded).sort().join(',');
+  const after=p.hand.slice(); if(!removeTypesFromHand(after,[type,type,type,type]))return false;
+  const fake={kind:'ANKAN',tiles:[type,type,type,type],called:type,from:playerId,open:false};
+  const afterExpanded=after.concat(structuralMeldTiles(fake));
+  const afterWaits=getStructuralWaitTypes(afterExpanded).sort().join(',');
+  return beforeWaits && beforeWaits===afterWaits;
+}
+function concealedKanOptions(playerId,drawnType=null){
+  const p=gameState.players[playerId];
   const c=countTiles(p.hand), out=[];
-  for(const type of TILE_TYPES)if(c[TILE_ORDER[type]]===4)out.push(type);
+  for(const type of TILE_TYPES){
+    if(c[TILE_ORDER[type]]===4 && (!p.riichi || riichiAnkanKeepsWait(playerId,type,drawnType)))out.push(type);
+  }
   return out;
 }
 
@@ -1219,8 +1245,10 @@ function drawTile(playerId){
   playSE('draw');
 
   // PLAYERはツモ牌をいったん右端に見せてから理牌する。
+  lastRinshanTileIdByPlayer[playerId]=null;
   if(playerId===0){
     playerDrawnTileId = tile.id;
+    playerLastDrawTileId = tile.id;
     playerLastDrawType = tile.type;
   }else{
     sortHand(gameState.players[playerId].hand);
@@ -1660,24 +1688,54 @@ function nextDoraType(ind){
   return ind;
 }
 
-function countDora(hand){
-  if(!gameState || !gameState.doraIndicator)return 0;
-  const inds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean);
+function countIndicatorDora(types, indicators){
   let n=0;
-  for(const ind of inds){
+  for(const ind of (indicators||[]).filter(Boolean)){
     const dora=nextDoraType(ind.type);
-    n += hand.filter(t=>t.type===dora).length;
+    n += types.filter(t=>t===dora).length;
   }
   return n;
+}
+
+function winnerPhysicalTypes(hand,ctx){
+  if(!ctx || !gameState || !gameState.players || !gameState.players[ctx.winnerId]){
+    return hand.map(t=>t.type);
+  }
+  const p=gameState.players[ctx.winnerId];
+  // In live play p.hand contains concealed tiles (including tsumo tile), while melds keep all 4 kan tiles.
+  // In isolated tests p.hand may be empty, so fall back to the supplied 14-tile hand.
+  if(!p.hand || !p.hand.length)return hand.map(t=>t.type);
+  const out=p.hand.map(t=>t.type);
+  for(const m of (p.melds||[]))out.push(...(m.tiles||[]));
+  if(ctx.winType==='ron' && ctx.winTileType)out.push(ctx.winTileType);
+  return out;
+}
+
+function countDora(hand,ctx=null){
+  if(!gameState || !gameState.doraIndicator)return 0;
+  const inds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean);
+  return countIndicatorDora(winnerPhysicalTypes(hand,ctx),inds);
+}
+
+function countUraDora(hand,ctx){
+  if(!ctx || !gameState || !gameState.players[ctx.winnerId] || !gameState.players[ctx.winnerId].riichi)return 0;
+  const inds=(gameState.uraIndicators||[]).slice(0,(gameState.doraIndicators||[]).length);
+  return countIndicatorDora(winnerPhysicalTypes(hand,ctx),inds);
 }
 
 function revealKanDora(){
   if(!gameState || !gameState.deadWall || gameState.deadWall.length<2)return null;
   const inds=gameState.doraIndicators||(gameState.doraIndicators=[gameState.doraIndicator]);
+  const uras=gameState.uraIndicators||(gameState.uraIndicators=[]);
   if(inds.length>=5)return null;
   const idx=Math.min(gameState.deadWall.length-1, 4+inds.length*2);
   const ind=gameState.deadWall[idx];
-  if(ind && !inds.some(x=>x.id===ind.id)){ inds.push(ind); logEvent('KAN_DORA',{indicator:ind.type,dora:nextDoraType(ind.type),count:inds.length}); }
+  if(ind && !inds.some(x=>x.id===ind.id)){
+    inds.push(ind);
+    const ura=gameState.deadWall[idx+1];
+    if(ura && !uras.some(x=>x.id===ura.id))uras.push(ura);
+    logEvent('KAN_DORA',{indicator:ind.type,dora:nextDoraType(ind.type),count:inds.length});
+  }
   return ind||null;
 }
 
@@ -1741,10 +1799,11 @@ function isPinfuShape(hand,playerId,winTileType){
 }
 
 function sequenceStarts(dec){return dec.melds.filter(m=>m.kind==='sequence').map(m=>m.start);}
-
-function hasIipeikou(dec){
-  const a=sequenceStarts(dec);
-  return a.some((x,i)=>a.indexOf(x,i+1)>=0);
+function hasIipeikou(dec){const a=sequenceStarts(dec);return a.some((x,i)=>a.indexOf(x,i+1)>=0);}
+function hasRyanpeikou(dec){
+  const a=sequenceStarts(dec).slice().sort((x,y)=>x-y);
+  if(a.length!==4)return false;
+  return a[0]===a[1] && a[2]===a[3];
 }
 function hasSanshoku(dec){
   const a=new Set(sequenceStarts(dec));
@@ -1757,6 +1816,11 @@ function hasIttsu(dec){
   return false;
 }
 function isToitoiDec(dec){return dec.melds.every(m=>m.kind==='triplet');}
+function hasSanshokuDoukou(dec){
+  const trip=new Set(dec.melds.filter(m=>m.kind==='triplet' && m.tile<27).map(m=>m.tile));
+  for(let n=0;n<9;n++)if(trip.has(n)&&trip.has(9+n)&&trip.has(18+n))return true;
+  return false;
+}
 
 function isTerminalHonorIndex(i){return i>=27 || i%9===0 || i%9===8;}
 function isChantaDec(dec){
@@ -1819,7 +1883,6 @@ function isFuriten(playerId,baseHand13=null){
   const p=gameState.players[playerId];
   if(!p)return false;
   if(p.riichiFuriten || p.temporaryFuriten)return true;
-  // v017: 待ち牌のどれか1種でも自分の河にあれば捨て牌フリテン。
   if(baseHand13 && baseHand13.length===13){
     const waits=new Set(getStructuralWaitTypes(baseHand13));
     if(p.discards.some(t=>waits.has(t.type)))return true;
@@ -1827,84 +1890,162 @@ function isFuriten(playerId,baseHand13=null){
   return false;
 }
 
-function getYaku(hand, ctx){
+function tripletStats(hand,ctx,decs){
   const p=gameState.players[ctx.winnerId];
-  const c=countTiles(hand);
-  const yaku=[];
-  const kokushi=isKokushi(c), chiitoi=isSevenPairs(c);
-  const decs=(!kokushi&&!chiitoi)?getStandardDecompositions(hand):[];
-
-  if(kokushi) yaku.push({name:'国士無双',han:13});
-  else if(chiitoi) yaku.push({name:'七対子',han:2});
-
-  const open=isOpenHand(ctx.winnerId);
-  if(p.riichi && !open) yaku.push({name:p.doubleRiichi?'ダブルリーチ':'リーチ',han:p.doubleRiichi?2:1});
-  if(p.riichi && p.ippatsuEligible && !open) yaku.push({name:'一発',han:1});
-  if(ctx.haitei) yaku.push({name:'海底摸月',han:1});
-  if(ctx.houtei) yaku.push({name:'河底撈魚',han:1});
-  if(ctx.winType==='tsumo' && !open) yaku.push({name:'門前ツモ',han:1});
-  if(isTanyao(hand)) yaku.push({name:'タンヤオ',han:1});
-
-  const yakuhai=[
-    ['P','白'],['F','發'],['C','中'],
-    [gameState.roundWind,'場風'],
-    [p.seatWind,'自風']
-  ];
-  for(const [type,label] of yakuhai){
-    if(c[TILE_ORDER[type]]>=3) yaku.push({name:`役牌 ${label}`,han:1});
-  }
-
-  if(!open && isPinfuShape(hand,ctx.winnerId,ctx.winTileType)){
-    yaku.push({name:'平和',han:1});
-  }
-
-  // v020: 門前の順子系役。
-  if(!open && decs.some(hasIipeikou)) yaku.push({name:'一盃口',han:1});
-  if(decs.some(hasSanshoku)) yaku.push({name:'三色同順',han:open?1:2});
-  if(decs.some(hasIttsu)) yaku.push({name:'一気通貫',han:open?1:2});
-
-  // v021: 染め手・刻子系役。現状は門前専用なので門前翻数。
-  const comp=suitComposition(hand);
-  if(comp.suits.size===1 && !comp.honors) yaku.push({name:'清一色',han:open?5:6});
-  else if(comp.suits.size===1 && comp.honors) yaku.push({name:'混一色',han:open?2:3});
-  if(decs.some(isToitoiDec)) yaku.push({name:'対々和',han:2});
-  if(decs.some(isJunchanDec)) yaku.push({name:'純全帯幺九',han:open?2:3});
-  else if(decs.some(isChantaDec)) yaku.push({name:'混全帯幺九',han:open?1:2});
-  if(isHonroutou(hand)) yaku.push({name:'混老頭',han:2});
-  if(decs.some(isShousangenDec)) yaku.push({name:'小三元',han:2});
-  if(kanCount(ctx.winnerId)>=3) yaku.push({name:'三槓子',han:2});
-  if(ctx.rinshan) yaku.push({name:'嶺上開花',han:1});
-  if(ctx.chankan) yaku.push({name:'槍槓',han:1});
-
-  // v025: 三暗刻は副露したポン/大明槓を暗刻として数えない。暗槓は暗刻扱い。
-  let bestConcealedTriplets=0;
+  let bestConcealed=0;
   const fixedTripletTypes=[];
   let concealedKanCount=0;
   for(const m of p.melds){
-    if(m.kind==='PON' || m.kind==='KAN' || m.kind==='ANKAN' || m.kind==='KAKAN'){
-      fixedTripletTypes.push(TILE_ORDER[m.called || (m.tiles&&m.tiles[0])]);
-      if(m.kind==='ANKAN' || m.open===false) concealedKanCount++;
+    if(m.kind==='PON'||m.kind==='KAN'||m.kind==='ANKAN'||m.kind==='KAKAN'){
+      fixedTripletTypes.push(TILE_ORDER[m.called||(m.tiles&&m.tiles[0])]);
+      if(m.kind==='ANKAN'||m.open===false)concealedKanCount++;
     }
   }
   for(const d of decs){
     const trips=d.melds.filter(m=>m.kind==='triplet').map(m=>m.tile);
     let n=trips.length;
-    for(const ft of fixedTripletTypes){
-      const idx=trips.indexOf(ft);
-      if(idx>=0){ trips.splice(idx,1); n--; }
-    }
-    n += concealedKanCount;
-    if(ctx.winType==='ron' && ctx.winTileType){
-      const wi=TILE_ORDER[ctx.winTileType];
-      if(trips.includes(wi)) n--;
-    }
-    bestConcealedTriplets=Math.max(bestConcealedTriplets,n);
+    for(const ft of fixedTripletTypes){const idx=trips.indexOf(ft);if(idx>=0){trips.splice(idx,1);n--;}}
+    n+=concealedKanCount;
+    if(ctx.winType==='ron'&&ctx.winTileType){const wi=TILE_ORDER[ctx.winTileType];if(trips.includes(wi))n--;}
+    bestConcealed=Math.max(bestConcealed,n);
   }
-  if(bestConcealedTriplets>=3)yaku.push({name:'三暗刻',han:2});
+  return {bestConcealed};
+}
+
+// v031: 三暗刻/四暗刻のロン境界を固定する回帰テスト。
+// ゲーム進行には影響しない。開発者コンソールから runAnkouRegressionTests() でも再実行可能。
+function runAnkouRegressionTests(){
+  if(!gameState || !gameState.players)return {ok:false,reason:'gameState unavailable'};
+  const originalPlayer=gameState.players[0];
+  const originalRoundWind=gameState.roundWind;
+  const originalDealer=gameState.dealer;
+  const makeTiles=(types)=>types.map((type,i)=>({id:-20000-i,type}));
+  const names=(ys)=>new Set(ys.map(y=>y.name));
+  const results=[];
+  const check=(name,fullTypes,concealedTypes,melds,ctx,expect)=>{
+    gameState.players[0]={...originalPlayer,hand:makeTiles(concealedTypes),melds:melds.map(m=>({...m,tiles:m.tiles.slice()})),riichi:false,doubleRiichi:false,ippatsuEligible:false,discards:[],seatWind:'S'};
+    gameState.roundWind='E'; gameState.dealer=1;
+    const hand=makeTiles(fullTypes);
+    const ys=names(getYaku(hand,{winnerId:0,...ctx}));
+    const got={toitoi:ys.has('対々和'),sanankou:ys.has('三暗刻'),suuankou:ys.has('四暗刻')};
+    const ok=Object.entries(expect).every(([k,v])=>got[k]===v);
+    results.push({name,ok,got,expect});
+    if(!ok)console.error('[v031 ankou regression FAIL]',name,{got,expect});
+    return ok;
+  };
+  const PON1=[{kind:'PON',tiles:['1m','1m','1m'],called:'1m',from:1,open:true}];
+  // 1) ポン1 + 暗刻2 + シャンポンのロンで3つ目の刻子完成 => 対々和○ / 三暗刻×
+  check('open-pon shanpon ron', ['1m','1m','1m','2p','2p','2p','3s','3s','3s','4m','4m','4m','5p','5p'], ['2p','2p','2p','3s','3s','3s','4m','4m','5p','5p'], PON1, {winType:'ron',discarderId:1,winTileType:'4m'}, {toitoi:true,sanankou:false,suuankou:false});
+  // 2) ポン1 + 暗刻3 + 単騎ロンで雀頭完成 => 対々和○ / 三暗刻○
+  check('open-pon tanki ron', ['1m','1m','1m','2p','2p','2p','3s','3s','3s','4m','4m','4m','5p','5p'], ['2p','2p','2p','3s','3s','3s','4m','4m','4m','5p'], PON1, {winType:'ron',discarderId:1,winTileType:'5p'}, {toitoi:true,sanankou:true,suuankou:false});
+  // 3) ポン1 + ツモで3つ目の暗刻完成 => 対々和○ / 三暗刻○
+  check('open-pon shanpon tsumo', ['1m','1m','1m','2p','2p','2p','3s','3s','3s','4m','4m','4m','5p','5p'], ['2p','2p','2p','3s','3s','3s','4m','4m','4m','5p','5p'], PON1, {winType:'tsumo',winTileType:'4m'}, {toitoi:true,sanankou:true,suuankou:false});
+  // 4) 門前で暗刻2 + ロンで3つ目の刻子完成 => 三暗刻×
+  check('closed shanpon ron', ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6m','7m','8m','5p','5p'], ['2p','2p','2p','3s','3s','3s','4m','4m','6m','7m','8m','5p','5p'], [], {winType:'ron',discarderId:1,winTileType:'4m'}, {sanankou:false,suuankou:false});
+  // 5) 門前で暗刻3 + 単騎ロン => 三暗刻○
+  check('closed tanki ron sanankou', ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6m','7m','8m','5p','5p'], ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6m','7m','8m','5p'], [], {winType:'ron',discarderId:1,winTileType:'5p'}, {sanankou:true,suuankou:false});
+  // 6a) 四暗刻シャンポン形をロン => 四暗刻×（三暗刻は○）
+  check('suuankou shanpon ron', ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6p','6p','6p','5m','5m'], ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6p','6p','5m','5m'], [], {winType:'ron',discarderId:1,winTileType:'6p'}, {sanankou:true,suuankou:false});
+  // 6b) 四暗刻単騎をロン => 四暗刻○
+  check('suuankou tanki ron', ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6p','6p','6p','5m','5m'], ['2p','2p','2p','3s','3s','3s','4m','4m','4m','6p','6p','6p','5m'], [], {winType:'ron',discarderId:1,winTileType:'5m'}, {sanankou:false,suuankou:true});
+  gameState.players[0]=originalPlayer; gameState.roundWind=originalRoundWind; gameState.dealer=originalDealer;
+  const ok=results.every(r=>r.ok);
+  console.info(`[v031 ankou regression] ${ok?'PASS':'FAIL'} ${results.filter(r=>r.ok).length}/${results.length}`,results);
+  return {ok,results};
+}
+window.runAnkouRegressionTests=runAnkouRegressionTests;
+
+function isChuuren(hand,playerId){
+  if(isOpenHand(playerId))return false;
+  const comp=suitComposition(hand); if(comp.suits.size!==1||comp.honors)return false;
+  const suit=[...comp.suits][0], counts=Array(9).fill(0);
+  for(const t of hand)counts[Number(t.type[0])-1]++;
+  const min=[3,1,1,1,1,1,1,1,3];
+  return counts.reduce((a,b)=>a+b,0)===14 && counts.every((x,i)=>x>=min[i]);
+}
+function isRyuuiisou(hand){const ok=new Set(['2s','3s','4s','6s','8s','F']);return hand.every(t=>ok.has(t.type));}
+function allHonors(hand){return hand.every(t=>TILE_ORDER[t.type]>=27);}
+function allTerminals(hand){return hand.every(t=>{const i=TILE_ORDER[t.type];return i<27&&(i%9===0||i%9===8);});}
+function dragonTripletCount(c){return [31,32,33].filter(i=>c[i]>=3).length;}
+function windTripletCount(c){return [27,28,29,30].filter(i=>c[i]>=3).length;}
+function hasWindPair(c){return [27,28,29,30].some(i=>c[i]===2);}
+
+function yakumanYaku(hand,ctx,c,decs,kokushi){
+  const out=[];
+  const p=gameState.players[ctx.winnerId];
+  if(kokushi)out.push({name:'国士無双',han:13,yakuman:1});
+  if(dragonTripletCount(c)===3)out.push({name:'大三元',han:13,yakuman:1});
+  const wt=windTripletCount(c);
+  if(wt===4)out.push({name:'大四喜',han:13,yakuman:1});
+  else if(wt===3&&hasWindPair(c))out.push({name:'小四喜',han:13,yakuman:1});
+  if(allHonors(hand))out.push({name:'字一色',han:13,yakuman:1});
+  if(allTerminals(hand))out.push({name:'清老頭',han:13,yakuman:1});
+  if(isRyuuiisou(hand))out.push({name:'緑一色',han:13,yakuman:1});
+  if(isChuuren(hand,ctx.winnerId))out.push({name:'九蓮宝燈',han:13,yakuman:1});
+  if(kanCount(ctx.winnerId)>=4)out.push({name:'四槓子',han:13,yakuman:1});
+  if(!isOpenHand(ctx.winnerId)){
+    const four=tripletStats(hand,ctx,decs).bestConcealed>=4;
+    const wi=ctx.winTileType?TILE_ORDER[ctx.winTileType]:-1;
+    const tanki=wi>=0&&decs.some(d=>d.pair===wi);
+    if(four && (ctx.winType==='tsumo' || (ctx.winType==='ron'&&tanki)))out.push({name:'四暗刻',han:13,yakuman:1});
+  }
+  if(ctx.winType==='tsumo' && ctx.firstTurn===true && (gameState.callsMade||0)===0 && p.discards.length===0){
+    if(ctx.winnerId===gameState.dealer)out.push({name:'天和',han:13,yakuman:1});
+    else if(ctx.winnerId!==gameState.dealer)out.push({name:'地和',han:13,yakuman:1});
+  }
+  return out;
+}
+
+function getYaku(hand, ctx){
+  const p=gameState.players[ctx.winnerId];
+  const c=countTiles(hand);
+  const yaku=[];
+  const kokushi=isKokushi(c), chiitoi=isSevenPairs(c);
+  const decs=!kokushi?getStandardDecompositions(hand):[];
+  const useChiitoi=chiitoi && !decs.some(hasRyanpeikou);
+
+  const yakuman=yakumanYaku(hand,ctx,c,decs,kokushi);
+  if(yakuman.length)return yakuman;
+  if(useChiitoi)yaku.push({name:'七対子',han:2});
+
+  const open=isOpenHand(ctx.winnerId);
+  if(p.riichi && !open)yaku.push({name:p.doubleRiichi?'ダブルリーチ':'リーチ',han:p.doubleRiichi?2:1});
+  if(p.riichi && p.ippatsuEligible && !open)yaku.push({name:'一発',han:1});
+  if(ctx.haitei)yaku.push({name:'海底摸月',han:1});
+  if(ctx.houtei)yaku.push({name:'河底撈魚',han:1});
+  if(ctx.winType==='tsumo'&&!open)yaku.push({name:'門前ツモ',han:1});
+  if(isTanyao(hand))yaku.push({name:'タンヤオ',han:1});
+
+  const yakuhai=[['P','白'],['F','發'],['C','中'],[gameState.roundWind,'場風'],[p.seatWind,'自風']];
+  for(const [type,label] of yakuhai)if(c[TILE_ORDER[type]]>=3)yaku.push({name:`役牌 ${label}`,han:1});
+
+  if(!open&&isPinfuShape(hand,ctx.winnerId,ctx.winTileType))yaku.push({name:'平和',han:1});
+  if(!open){
+    if(decs.some(hasRyanpeikou))yaku.push({name:'二盃口',han:3});
+    else if(decs.some(hasIipeikou))yaku.push({name:'一盃口',han:1});
+  }
+  if(decs.some(hasSanshoku))yaku.push({name:'三色同順',han:open?1:2});
+  if(decs.some(hasSanshokuDoukou))yaku.push({name:'三色同刻',han:2});
+  if(decs.some(hasIttsu))yaku.push({name:'一気通貫',han:open?1:2});
+
+  const comp=suitComposition(hand);
+  if(comp.suits.size===1&&!comp.honors)yaku.push({name:'清一色',han:open?5:6});
+  else if(comp.suits.size===1&&comp.honors)yaku.push({name:'混一色',han:open?2:3});
+  if(decs.some(isToitoiDec))yaku.push({name:'対々和',han:2});
+  if(decs.some(isJunchanDec))yaku.push({name:'純全帯幺九',han:open?2:3});
+  else if(decs.some(isChantaDec))yaku.push({name:'混全帯幺九',han:open?1:2});
+  if(isHonroutou(hand))yaku.push({name:'混老頭',han:2});
+  if(decs.some(isShousangenDec))yaku.push({name:'小三元',han:2});
+  if(kanCount(ctx.winnerId)>=3)yaku.push({name:'三槓子',han:2});
+  if(ctx.rinshan)yaku.push({name:'嶺上開花',han:1});
+  if(ctx.chankan)yaku.push({name:'槍槓',han:1});
+  if(tripletStats(hand,ctx,decs).bestConcealed>=3)yaku.push({name:'三暗刻',han:2});
 
   const baseHan=yaku.reduce((sum,y)=>sum+y.han,0);
-  const dora=baseHan>0 ? countDora(hand) : 0;
-  if(dora>0)yaku.push({name:`ドラ${dora}`,han:dora,dora:true});
+  if(baseHan>0){
+    const dora=countDora(hand,ctx); if(dora>0)yaku.push({name:`ドラ${dora}`,han:dora,dora:true});
+    const ura=countUraDora(hand,ctx); if(ura>0)yaku.push({name:`裏ドラ${ura}`,han:ura,dora:true});
+  }
   return yaku;
 }
 
@@ -1916,8 +2057,10 @@ function canWinWithYaku(hand,ctx){
 
 function yakuSummary(hand,ctx){
   const y=getYaku(hand,ctx);
+  const yakuman=y.reduce((s,x)=>s+(x.yakuman||0),0);
   const han=y.reduce((s,x)=>s+x.han,0);
-  return {yaku:y,han,text:y.length ? `${y.map(x=>x.name).join('・')} / ${han}翻` : '役なし'};
+  const text=y.length ? (yakuman?`${y.map(x=>x.name).join('・')} / ${yakuman>1?yakuman+'倍役満':'役満'}`:`${y.map(x=>x.name).join('・')} / ${han}翻`) : '役なし';
+  return {yaku:y,han,yakuman,text};
 }
 
 // ============================================================
@@ -1981,14 +2124,16 @@ function estimateFu(hand,ctx,yaku){
     }
 
     if(wi>=0){
-      if(d.pair===wi)f+=2;
-      for(const m of d.melds){
-        if(m.kind!=='sequence')continue;
-        const pos=wi-m.start;
-        if(pos===1)f+=2;
-        if(pos===2 && m.start%9===0)f+=2;
-        if(pos===0 && m.start%9===6)f+=2;
+      let waitFu=0;
+      if(d.pair===wi)waitFu=2;
+      if(!waitFu){
+        for(const m of d.melds){
+          if(m.kind!=='sequence')continue;
+          const pos=wi-m.start;
+          if(pos===1 || (pos===2&&m.start%9===0) || (pos===0&&m.start%9===6)){waitFu=2;break;}
+        }
       }
+      f+=waitFu;
     }
     let rounded=Math.ceil(f/10)*10;
     // 喰い平和形など、ロン和了の20符形は30符として扱う。
@@ -1998,8 +2143,9 @@ function estimateFu(hand,ctx,yaku){
   return best;
 }
 
-function scoreLimitName(han,fu){
-  if(han>=13)return '役満';
+function scoreLimitName(han,fu,yakuman=0){
+  if(yakuman>0)return yakuman>1?`${yakuman}倍役満`:'役満';
+  if(han>=13)return '数え役満';
   if(han>=11)return '三倍満';
   if(han>=8)return '倍満';
   if(han>=6)return '跳満';
@@ -2007,7 +2153,8 @@ function scoreLimitName(han,fu){
   return '';
 }
 
-function basePoints(han,fu){
+function basePoints(han,fu,yakuman=0){
+  if(yakuman>0)return 8000*yakuman;
   if(han>=13)return 8000;
   if(han>=11)return 6000;
   if(han>=8)return 4000;
@@ -2019,7 +2166,7 @@ function basePoints(han,fu){
 function calculatePayment(hand,ctx){
   const s=yakuSummary(hand,ctx);
   const fu=estimateFu(hand,ctx,s.yaku);
-  const base=basePoints(s.han,fu);
+  const base=basePoints(s.han,fu,s.yakuman);
   const dealer=ctx.winnerId===gameState.dealer;
   const payments={};
   let total=0;
@@ -2045,7 +2192,7 @@ function calculatePayment(hand,ctx){
 
   return {
     ...s,fu,base,total,payments,
-    limit:scoreLimitName(s.han,fu),
+    limit:scoreLimitName(s.han,fu,s.yakuman),
     dealer
   };
 }
@@ -2082,11 +2229,15 @@ function prepareNextHand(dealerContinues=false){
     gameState.honba=0;
     gameState.handNumber++;
     gameState.dealer=(gameState.dealer+1)%4;
-  }
-
-  if(gameState.handNumber>4){
-    showMatchEnd();
-    return false;
+    if(gameState.handNumber>4){
+      if(gameState.roundWind==='E'){
+        gameState.roundWind='S';
+        gameState.handNumber=1;
+      }else{
+        showMatchEnd();
+        return false;
+      }
+    }
   }
 
   const scores=gameState.players.map(p=>p.score);
@@ -2120,8 +2271,7 @@ function prepareNextHand(dealerContinues=false){
   gameState.wall=wall;
   gameState.deadWall=deadWall;
   gameState.doraIndicator=deadWall[4];
-  gameState.round=`E${handNo}`;
-  gameState.roundWind='E';
+  gameState.round=`${gameState.roundWind}${handNo}`;
   gameState.currentPlayer=dealer;
   gameState.turn=0;
   gameState.gameOver=false;
@@ -2129,13 +2279,16 @@ function prepareNextHand(dealerContinues=false){
   gameState.riichiPot=pot;
   gameState.honba=honba;
   gameState.doraIndicators=[gameState.doraIndicator];
+  gameState.uraIndicators=[deadWall[5]].filter(Boolean);
   gameState.callsMade=0;
 
   selectedIndex=null;
   processing=false;
   playerCanTsumo=false;
   playerDrawnTileId=null;
+  playerLastDrawTileId=null;
   playerLastDrawType=null;
+  lastRinshanTileIdByPlayer=[null,null,null,null];
   riichiPending=false;
   pendingRon=null;
 
@@ -2158,11 +2311,35 @@ function standingsData(){
     .sort((a,b)=>b.score-a.score || a.pid-b.pid);
 }
 
+// v028: nagashi mangan. A called discard disqualifies the player.
+function getNagashiManganPlayers(){
+  return gameState.players.map((p,pid)=>({pid,p}))
+    .filter(({p})=>p.discards.length>0 && p.discards.every(t=>terminalHonorType(t.type) && !t.calledBy))
+    .map(x=>x.pid);
+}
+function applyNagashiMangan(){
+  const winners=getNagashiManganPlayers();
+  if(!winners.length)return null;
+  const delta=[0,0,0,0];
+  for(const winner of winners){
+    const dealer=winner===gameState.dealer;
+    for(let pid=0;pid<4;pid++){
+      if(pid===winner)continue;
+      const amount=dealer?4000:(pid===gameState.dealer?4000:2000);
+      delta[pid]-=amount; delta[winner]+=amount;
+    }
+  }
+  gameState.players.forEach((p,i)=>p.score+=delta[i]);
+  // Riichi sticks are awarded to the first winner in turn order for this casual ruleset.
+  if(gameState.riichiPot>0){gameState.players[winners[0]].score+=gameState.riichiPot;delta[winners[0]]+=gameState.riichiPot;gameState.riichiPot=0;}
+  return {winners,delta,dealerWinner:winners.includes(gameState.dealer)};
+}
+
 // v016: exhaustive draw / tenpai-noten settlement.
 function getExhaustiveDrawTenpai(){
   return gameState.players.map((p,pid)=>({
     pid,
-    tenpai:p.hand.length===13 && calculateShanten(p.hand)===0
+    tenpai:expandedHandForPlayer(pid).length===13 && calculateShanten(expandedHandForPlayer(pid))===0
   }));
 }
 
@@ -2383,6 +2560,12 @@ async function runCpuTurn(playerId){
   render();
 
   let drawn=null;
+  // v029: 嶺上判定は「このCPUが直前に引いた嶺上牌」に限定する。
+  // 他家の pendingRinshan が残っていても誤って嶺上開花にしない。
+  if(pendingRinshan && pendingRinshan.playerId===playerId){
+    drawn={id:pendingRinshan.id,type:pendingRinshan.type};
+    pendingRinshan=null;
+  }
   const afterCount=expectedAfterDiscardCount(playerId);
   const readyCount=expectedReadyToDiscardCount(playerId);
   if(player.hand.length===afterCount){
@@ -2398,7 +2581,9 @@ async function runCpuTurn(playerId){
   }
 
   const cpuWinHand=expandedHandForPlayer(playerId);
-  const cpuTsumoCtx={winnerId:playerId,winType:'tsumo',winTileType:drawn?drawn.type:null,haitei:!!drawn&&gameState.wall.length===0,rinshan:!!pendingRinshan};
+  const cpuWinTileId=drawn?drawn.id:null;
+  const cpuIsRinshan=isRinshanWin(playerId,cpuWinTileId);
+  const cpuTsumoCtx={winnerId:playerId,winType:'tsumo',winTileType:drawn?drawn.type:null,winTileId:cpuWinTileId,haitei:!!drawn&&gameState.wall.length===0&&!cpuIsRinshan,rinshan:cpuIsRinshan,firstTurn:isFirstUninterruptedTurn(playerId)};
   if(canWinWithYaku(cpuWinHand,cpuTsumoCtx)){
     const ctx=cpuTsumoCtx;
     const pay=applyWinScores(cpuWinHand,ctx);
@@ -2454,6 +2639,36 @@ async function runCpuTurn(playerId){
   await beginCurrentTurn();
 }
 
+function isRinshanWin(playerId,winTileId){
+  return winTileId!==null && winTileId!==undefined && lastRinshanTileIdByPlayer[playerId]===winTileId;
+}
+
+function getHumanTsumoContext(){
+  const winTileId=playerLastDrawTileId;
+  const rinshan=isRinshanWin(0,winTileId);
+  return {
+    winnerId:0,
+    winType:'tsumo',
+    winTileType:playerLastDrawType,
+    winTileId,
+    haitei:playerLastDrawType!==null && gameState.wall.length===0 && !rinshan,
+    rinshan,
+    firstTurn:isFirstUninterruptedTurn(0)
+  };
+}
+
+function refreshHumanTsumoAvailability(){
+  if(!gameState || gameState.gameOver || gameState.currentPlayer!==0){ return false; }
+  const p=gameState.players[0];
+  if(!p || p.hand.length!==expectedReadyToDiscardCount(0) || playerLastDrawType===null){
+    playerCanTsumo=false;
+    return false;
+  }
+  const hand=expandedHandForPlayer(0);
+  playerCanTsumo=canWinWithYaku(hand,getHumanTsumoContext());
+  return playerCanTsumo;
+}
+
 async function beginCurrentTurn(){
   if(gameState.gameOver || pendingRon || pendingCall)return;
 
@@ -2489,9 +2704,8 @@ async function beginCurrentTurn(){
   }
 
   const humanWinHand=expandedHandForPlayer(0);
-  const humanTsumoCtx={winnerId:0,winType:'tsumo',winTileType:drawn?drawn.type:null,haitei:!!drawn&&gameState.wall.length===0,rinshan:!!pendingRinshan};
-  if(canWinWithYaku(humanWinHand,humanTsumoCtx)){
-    playerCanTsumo=true;
+  const humanTsumoCtx=getHumanTsumoContext();
+  if(refreshHumanTsumoAvailability()){
     processing=false;
     const s=yakuSummary(humanWinHand,humanTsumoCtx);
     setMessage(`ツモできます：${s.text}`);
@@ -2603,6 +2817,7 @@ function playerDiscard(index,force=false){
   selectedIndex=null;
   playerCanTsumo=false;
   playerDrawnTileId=null;
+  playerLastDrawTileId=null;
   playerLastDrawType=null;
 
   const declaringRiichi=riichiPending;
@@ -2762,6 +2977,9 @@ function render(){
   const playerHandLen = gameState.players[0].hand.length;
   el.handCount.textContent = `手牌 ${playerHandLen}枚`;
   el.turnText.textContent=gameState.currentPlayer===0 && !processing ? 'あなたの手番' : '';
+  if(gameState.currentPlayer===0 && !processing && !pendingRon && !pendingCall){
+    refreshHumanTsumoAvailability();
+  }
   el.tsumoBtn.classList.toggle('show',
     playerCanTsumo && !gameState.gameOver && gameState.currentPlayer===0 && !processing && !pendingRon
   );
@@ -2906,7 +3124,7 @@ function endGame(kind,winnerId,text,payment=null,ctx=null){
 
     if(payment){
       const limit=payment.limit?` ${payment.limit}`:'';
-      let detail=`${payment.fu}符 ${payment.han}翻${limit}<br>${payment.yaku.map(x=>x.name).join('・')}`;
+      let detail=payment.yakuman?`${payment.yakuman>1?payment.yakuman+'倍役満':'役満'}${limit&&payment.yakuman<=1?'': ''}<br>${payment.yaku.map(x=>x.name).join('・')}`:`${payment.fu}符 ${payment.han}翻${limit}<br>${payment.yaku.map(x=>x.name).join('・')}`;
       if(ctx && ctx.winType==='ron'){
         detail+=`<br><b>${payment.total}点</b>`;
       }else{
@@ -2932,6 +3150,16 @@ function endGame(kind,winnerId,text,payment=null,ctx=null){
     btn.dataset.mode='newmatch';
   }else{
     playSE('drawGame');
+    const nagashi=applyNagashiMangan();
+    if(nagashi){
+      el.resultTitle.textContent='流し満貫';
+      el.resultText.textContent=nagashi.winners.map(pid=>PLAYER_NAMES[pid]).join('・')+' が流し満貫';
+      el.scoreBreakdown.innerHTML=nagashi.delta.map((d,pid)=>d?`${PLAYER_NAMES[pid]} ${d>0?'+':''}${d}点`:null).filter(Boolean).join(' / ');
+      gameState.nextDealerContinues=nagashi.dealerWinner;
+      renderStandings();
+      el.overlay.classList.add('show');
+      return;
+    }
     const draw=applyExhaustiveDrawPayments();
     const tenpaiNames=draw.tenpai.map(pid=>PLAYER_NAMES[pid]);
     const notenNames=draw.noten.map(pid=>PLAYER_NAMES[pid]);
@@ -3053,7 +3281,8 @@ document.getElementById('kyushuBtn').addEventListener('click',()=>{
 document.getElementById('tsumoBtn').addEventListener('click',()=>{
   if(!gameState || gameState.gameOver || processing || pendingRon)return;
   if(gameState.currentPlayer!==0 || !playerCanTsumo)return;
-  const ctx={winnerId:0,winType:'tsumo',winTileType:playerLastDrawType,rinshan:!!pendingRinshan,haitei:gameState.wall.length===0 && !pendingRinshan};
+  // v030: 和了牌IDと直前の嶺上牌IDが一致した場合だけ嶺上開花。
+  const ctx=getHumanTsumoContext();
   const winHand=expandedHandForPlayer(0);
   if(!canWinWithYaku(winHand,ctx))return;
   const pay=applyWinScores(winHand,ctx);
@@ -3139,12 +3368,13 @@ function bootMahjong(){
   try{
     updateRotateHint();
     newGame();
+setTimeout(()=>{ try{ runAnkouRegressionTests(); }catch(e){ console.error('[v031 ankou regression error]',e); } },0);
   }catch(err){
     console.error('mahjong boot error',err);
     const msg=document.getElementById('message');
     if(msg) msg.textContent='起動エラー：' + (err && err.message ? err.message : String(err));
     const status=document.getElementById('status');
-    if(status) status.textContent='v027 起動失敗';
+    if(status) status.textContent='v028 起動失敗';
   }
 }
 
