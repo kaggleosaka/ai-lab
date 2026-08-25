@@ -1,11 +1,11 @@
-<!-- mahjong.html v031 ankou-regression-guard -->
+<!-- mahjong.html v036 automated-quality-baseline -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0d5c43" />
-<title>Mahjong v031</title>
+<title>Mahjong v036</title>
 <style>
   :root{
     --bg:#0d5c43;
@@ -471,7 +471,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v031</div>
+    <div class="brand">麻雀 v036</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -772,7 +772,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v031';
+const VERSION = 'v036';
 const DEBUG = false;
 
 const TILE_TYPES = [
@@ -3374,7 +3374,7 @@ setTimeout(()=>{ try{ runAnkouRegressionTests(); }catch(e){ console.error('[v031
     const msg=document.getElementById('message');
     if(msg) msg.textContent='起動エラー：' + (err && err.message ? err.message : String(err));
     const status=document.getElementById('status');
-    if(status) status.textContent='v028 起動失敗';
+    if(status) status.textContent='v036 起動失敗';
   }
 }
 
