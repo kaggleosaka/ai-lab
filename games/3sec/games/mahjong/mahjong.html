@@ -1,11 +1,11 @@
-<!-- mahjong.html v036 automated-quality-baseline -->
+<!-- mahjong.html v037 ura-dora-result-display -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
 <meta name="theme-color" content="#0d5c43" />
-<title>Mahjong v036</title>
+<title>Mahjong v039</title>
 <style>
   :root{
     --bg:#0d5c43;
@@ -295,6 +295,21 @@
     font-weight:900;
     margin-left:4px;
   }
+
+  .dealer-label{
+    display:inline-block;
+    margin-left:4px;
+    padding:1px 5px;
+    border-radius:999px;
+    background:#ffd35a;
+    color:#302500;
+    border:1px solid rgba(255,255,255,.55);
+    font-size:10px;
+    line-height:1.35;
+    font-weight:900;
+    vertical-align:1px;
+    white-space:nowrap;
+  }
   #doraLine,#analysisLine{
     font-size:12px;
     color:var(--muted);
@@ -471,7 +486,7 @@
 <body>
 <div id="app">
   <div id="topbar">
-    <div class="brand">麻雀 v036</div>
+    <div class="brand">麻雀 v039</div>
     <div id="status" class="status">準備中</div>
     <div class="top-actions">
       <button id="menuBtn" class="small-btn" type="button">MENU</button>
@@ -772,7 +787,7 @@ function stopBgm(){
 // ============================================================
 // MahjongEngine
 // ============================================================
-const VERSION = 'v036';
+const VERSION = 'v039';
 const DEBUG = false;
 
 const TILE_TYPES = [
@@ -1658,8 +1673,10 @@ function analyzeDiscardChoices(hand14,withUkeire=false){
 // v024 hotfix: リーチ可否は牌効率用シャンテン値ではなく、
 // 「その牌を切った13枚形に実際の和了牌が1種以上あるか」で直接判定する。
 // これにより複合形などでシャンテン計算が取りこぼしてもリーチ表示を失わない。
-function getRiichiDiscardTypes(hand14){
-  if(!hand14 || hand14.length!==14) return [];
+// v039: 暗槓は固定面子として扱い、手元の牌だけから打牌候補を選ぶ。
+function getRiichiDiscardTypes(hand14, melds=[]){
+  if(!hand14 || hand14.length!==14-3*melds.length) return [];
+  if(melds.some(m=>m.open!==false)) return [];
   const out=[];
   const seen=new Set();
   for(let i=0;i<hand14.length;i++){
@@ -1668,7 +1685,28 @@ function getRiichiDiscardTypes(hand14){
     seen.add(type);
     const h13=hand14.slice();
     h13.splice(i,1);
-    if(getStructuralWaitTypes(h13).length>0) out.push(type);
+    if(!melds.length){
+      if(getStructuralWaitTypes(h13).length>0) out.push(type);
+      continue;
+    }
+    // 暗槓の4枚を数えて5枚目待ちを除外。固定面子を順子へ組み替えない。
+    const held=countTiles(h13);
+    for(const m of melds)for(const t of m.tiles)held[TILE_ORDER[t]]++;
+    const c=countTiles(h13);
+    const hasWait=TILE_TYPES.some((wait,wi)=>{
+      if(held[wi]>=4)return false;
+      c[wi]++;
+      let wins=false;
+      for(let pair=0;pair<34 && !wins;pair++){
+        if(c[pair]<2)continue;
+        c[pair]-=2;
+        wins=canFormMelds(c);
+        c[pair]+=2;
+      }
+      c[wi]--;
+      return wins;
+    });
+    if(hasWait)out.push(type);
   }
   return out;
 }
@@ -2598,11 +2636,11 @@ async function runCpuTurn(playerId){
   if(player.riichi && drawn){
     idx=player.hand.findIndex(t=>t.id===drawn.id);
   }else{
-    const options=isOpenHand(playerId)?[]:getRiichiDiscardTypes(player.hand);
+    const options=isOpenHand(playerId)?[]:getRiichiDiscardTypes(player.hand,player.melds);
     if(!player.riichi && !isOpenHand(playerId) && player.score>=1000 && options.length){
       // v010 CPUはテンパイしたらリーチ。
-      const analyses=analyzePlayerDiscardChoices(playerId).filter(x=>x.shanten===0);
-      const best=analyses[0];
+      const analyses=analyzePlayerDiscardChoices(playerId).filter(x=>options.includes(x.type));
+      const best=analyses[0] || {type:options[0]};
       idx=player.hand.findIndex(t=>t.type===best.type);
       declaringRiichi=true;
       setRiichiState(playerId);
@@ -2799,7 +2837,7 @@ function playerDiscard(index,force=false){
   if(!chosen)return;
 
   if(riichiPending){
-    const legal=getRiichiDiscardTypes(hand);
+    const legal=getRiichiDiscardTypes(hand,gameState.players[0].melds);
     if(!legal.includes(chosen.type)){
       setMessage('その牌ではテンパイになりません。リーチ可能な牌を選んでください');
       return;
@@ -2941,7 +2979,7 @@ function render(){
     console.log('hand counts', counts, 'currentPlayer', gameState.currentPlayer, 'processing', processing);
   }
   document.getElementById('round').textContent=
-    `${gameState.round}${gameState.honba?` ${gameState.honba}本場`:''}`;
+    `${gameState.round}${gameState.honba?` ${gameState.honba}本場`:''}　親:${PLAYER_NAMES[gameState.dealer]}`;
   el.wallCount.textContent=`残り ${gameState.wall.length}牌 / 供託 ${gameState.riichiPot}点`;
   if(gameState.doraIndicator){
     const ds=(gameState.doraIndicators||[gameState.doraIndicator]).filter(Boolean);
@@ -3000,7 +3038,7 @@ function render(){
     gameState.players[0].hand.length===expectedReadyToDiscardCount(0) &&
     !gameState.players[0].riichi && !isOpenHand(0) &&
     gameState.players[0].score>=1000 &&
-    getRiichiDiscardTypes(gameState.players[0].hand).length>0;
+    getRiichiDiscardTypes(gameState.players[0].hand,gameState.players[0].melds).length>0;
   el.riichiBtn.classList.toggle('show',canRiichi || riichiPending);
   el.riichiBtn.textContent=riichiPending?'リーチ取消':'リーチ';
 
@@ -3014,6 +3052,15 @@ function render(){
     if(title){
       const old=title.querySelector('.riichi-label');
       if(old)old.remove();
+      const oldDealer=title.querySelector('.dealer-label');
+      if(oldDealer)oldDealer.remove();
+      if(pid===gameState.dealer){
+        const d=document.createElement('span');
+        d.className='dealer-label';
+        d.textContent='親';
+        d.title='このプレイヤーが親です';
+        title.appendChild(d);
+      }
       if(p.riichi){
         const r=document.createElement('span');
         r.className='riichi-label';
@@ -3080,7 +3127,7 @@ function renderHand(){
       + (selectedIndex===index ? ' selected' : '');
     setTileFace(btn,tile.type);
     btn.title=tile.type;
-    const riichiLegal = !riichiPending || getRiichiDiscardTypes(hand).includes(tile.type);
+    const riichiLegal = !riichiPending || getRiichiDiscardTypes(hand,gameState.players[0].melds).includes(tile.type);
     btn.disabled=gameState.gameOver || processing || gameState.currentPlayer!==0 || !riichiLegal || !!pendingRon || !!pendingCall;
     btn.addEventListener('click',()=>playerDiscard(index));
     el.hand.appendChild(btn);
@@ -3133,6 +3180,35 @@ function endGame(kind,winnerId,text,payment=null,ctx=null){
       }
       if(payment.riichiAward)detail+=`<br>供託 +${payment.riichiAward}点`;
       el.scoreBreakdown.innerHTML=detail;
+
+      // v037: リーチ和了時は結果画面に裏ドラ表示牌を実物で公開する。
+      // 裏ドラの翻数計算は従来どおり countUraDora() が担当し、ここは表示だけを追加する。
+      const winner=gameState.players[winnerId];
+      if(winner && winner.riichi){
+        const ura=(gameState.uraIndicators||[]).slice(0,(gameState.doraIndicators||[]).length).filter(Boolean);
+        if(ura.length){
+          const uraLine=document.createElement('div');
+          uraLine.style.marginTop='6px';
+          uraLine.style.display='flex';
+          uraLine.style.alignItems='center';
+          uraLine.style.justifyContent='center';
+          uraLine.style.gap='4px';
+          uraLine.style.flexWrap='wrap';
+
+          const label=document.createElement('span');
+          label.textContent='裏ドラ表示';
+          label.style.fontWeight='800';
+          uraLine.appendChild(label);
+
+          for(const ind of ura){
+            const tile=document.createElement('span');
+            tile.className='dora-extra';
+            setTileFace(tile,ind.type);
+            uraLine.appendChild(tile);
+          }
+          el.scoreBreakdown.appendChild(uraLine);
+        }
+      }
     }
 
     // 親が和了した場合は連荘。
@@ -3263,7 +3339,7 @@ document.getElementById('againBtn').addEventListener('click',()=>{
 document.getElementById('riichiBtn').addEventListener('click',()=>{
   if(!gameState || gameState.gameOver || processing || pendingRon || pendingCall)return;
   if(gameState.currentPlayer!==0 || gameState.players[0].riichi)return;
-  const legal=getRiichiDiscardTypes(gameState.players[0].hand);
+  const legal=getRiichiDiscardTypes(gameState.players[0].hand,gameState.players[0].melds);
   if(!legal.length)return;
   riichiPending=!riichiPending;
   selectedIndex=null;
