@@ -256,6 +256,12 @@
     <section id="casualPanel" class="hidden" aria-label="Casual game menu">
       <div class="panelTitle">CASUAL GAME</div>
       <div class="grid">
+        <a class="card" href="./volley_flash/volley_flash.html" data-icon="🏐">
+          <div class="title">閃光レシーブ / VOLLEY FLASH</div>
+          <div class="desc">左右に飛んでくるボールをタイミングよくレシーブ。ジャストで必殺スパイク！</div>
+          <span class="tag">Volleyball / Timing Action</span>
+        </a>
+
         <div class="card" data-icon="🛡️">
           <div class="title">HETZER ROAD</div>
           <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
@@ -471,6 +477,12 @@ function showPanel(name) {
   else if (name === "kids") crumb.textContent = "Category / Kids Game";
   else crumb.textContent = "Select a category";
 }
+function restoreCategory() {
+  const category = location.hash.slice(1);
+  showPanel(['casual', 'puzzle', 'visual', 'kids'].includes(category) ? category : 'home');
+}
+window.addEventListener('hashchange', restoreCategory);
+restoreCategory();
 </script>
 </body>
 </html>
