@@ -1,1 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3SEC GAMES</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #111318;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+  }
 
+  body {
+    display: flex;
+    justify-content: center;
+  }
+
+  .wrap {
+    width: 464px;
+    min-height: 825px;
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding: 28px 20px 36px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(255,255,255,0.12), transparent 32%),
+      linear-gradient(180deg, #1e2530 0%, #111318 100%);
+  }
+
+  h1 {
+    margin: 12px 0 4px;
+    font-size: 38px;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  .sub {
+    margin: 0 0 22px;
+    text-align: center;
+    color: #bfc7d5;
+    font-size: 15px;
+  }
+
+  .crumb {
+    min-height: 22px;
+    margin: 0 0 12px;
+    color: #9ca7b8;
+    font-size: 13px;
+    text-align: center;
+  }
+
+  .grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .card, .backBtn {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    text-decoration: none;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 16px;
+    padding: 18px 18px;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(255,255,255,0.18);
+  }
+
+  .card:active, .backBtn:active {
+    transform: scale(0.985);
+  }
+
+  .card.primary {
+    background:
+      linear-gradient(135deg, rgba(255,215,86,0.20), rgba(255,255,255,0.08));
+    border-color: rgba(255,215,86,0.35);
+  }
+
+  .card.search {
+    background:
+      linear-gradient(135deg, rgba(90,180,255,0.18), rgba(255,255,255,0.08));
+    border-color: rgba(90,180,255,0.34);
+  }
+
+  .card.puzzle {
+    background:
+      linear-gradient(135deg, rgba(80,220,150,0.18), rgba(255,255,255,0.08));
+    border-color: rgba(80,220,150,0.34);
+  }
+
+
+  .card.kids {
+    background:
+      linear-gradient(135deg, rgba(255,150,210,0.20), rgba(255,255,255,0.08));
+    border-color: rgba(255,150,210,0.38);
+  }
+
+
+  .card[data-icon] {
+    position: relative;
+    padding-left: 86px;
+    min-height: 112px;
+  }
+
+  .card[data-icon]::before {
+    content: attr(data-icon);
+    position: absolute;
+    left: 16px;
+    top: 18px;
+    width: 54px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.20), rgba(255,255,255,0.06));
+    border: 1px solid rgba(255,255,255,0.20);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 8px 18px rgba(0,0,0,0.24);
+    font-size: 31px;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .card[data-icon] .title {
+    font-size: 21px;
+    margin-bottom: 6px;
+  }
+
+  @media (max-width: 390px) {
+    .wrap { padding-left: 12px; padding-right: 12px; }
+    .card[data-icon] { padding-left: 76px; padding-right: 14px; }
+    .card[data-icon]::before { left: 12px; width: 50px; height: 50px; font-size: 28px; }
+  }
+
+  .title {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    pointer-events: none;
+  }
+
+  .desc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #d4d9e3;
+    pointer-events: none;
+  }
+
+  .tag {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.14);
+    font-size: 12px;
+    color: #edf2ff;
+    pointer-events: none;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .playBtn {
+    display: inline-block;
+    text-decoration: none;
+    color: #111318;
+    background: #ffd756;
+    border-radius: 999px;
+    padding: 9px 13px;
+    font-size: 13px;
+    font-weight: 800;
+    border: 1px solid rgba(255,255,255,0.26);
+  }
+
+  .playBtn.sub {
+    color: #edf2ff;
+    background: rgba(255,255,255,0.10);
+  }
+
+  .playBtn:active {
+    transform: scale(0.97);
+  }
+
+  .panelTitle {
+    margin: 8px 0 14px;
+    font-size: 22px;
+    font-weight: 800;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .backBtn {
+    margin-top: 16px;
+    padding: 13px 16px;
+    text-align: center;
+    font-size: 15px;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .footer {
+    margin-top: 30px;
+    text-align: center;
+    color: #7f8794;
+    font-size: 12px;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>3SEC GAMES</h1>
+    <p class="sub">Small browser games collection</p>
+    <div class="crumb" id="crumb">Select a category</div>
+
+    <section id="homeMenu" class="grid" aria-label="Category menu">
+      <button class="card primary" type="button" onclick="showPanel('casual')">
+        <div class="title">CASUAL GAME</div>
+        <div class="desc">Action games made for quick mobile play.</div>
+      </button>
+
+      <button class="card puzzle" type="button" onclick="showPanel('puzzle')">
+        <div class="title">PUZZLE GAME</div>
+        <div class="desc">Classic puzzles and thoughtful browser games.</div>
+        <span class="tag">Mine Clear / Connect Dots / Water Sort / Mancala / Match 3</span>
+      </button>
+
+      <button class="card search" type="button" onclick="showPanel('visual')">
+        <div class="title">VISUAL SEARCH</div>
+        <div class="desc">3-second visual search games. Find the target quickly.</div>
+        <span class="tag">Find Z / Find O / Find 3 / Memory / Signal Hunt / Count / Crowd Search / Odd One Out</span>
+      </button>
+
+
+      <button class="card kids" type="button" onclick="showPanel('kids')">
+        <div class="title">KIDS GAME</div>
+        <div class="desc">Simple browser games made for young children.</div>
+        <span class="tag">Kids Maze</span>
+      </button>
+    </section>
+
+    <section id="casualPanel" class="hidden" aria-label="Casual game menu">
+      <div class="panelTitle">CASUAL GAME</div>
+      <div class="grid">
+        <a class="card" href="./volley_flash/volley_flash.html" data-icon="🏐">
+          <div class="title">閃光レシーブ / VOLLEY FLASH</div>
+          <div class="desc">左右に飛んでくるボールをタイミングよくレシーブ。ジャストで必殺スパイク！</div>
+          <span class="tag">Volleyball / Timing Action</span>
+        </a>
+
+        <div class="card" data-icon="🛡️">
+          <div class="title">HETZER ROAD</div>
+          <div class="desc">Top-down tank shooter. Move, dodge, destroy enemies, and survive the road.</div>
+          <span class="tag">Tank Shooter</span>
+          <div class="actions">
+            <a class="playBtn" href="https://3secgames.itch.io/hetzer-road">Play on itch.io</a>
+            <a class="playBtn sub" href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/hetzer_road/hetzer_road.html">GitHub version</a>
+          </div>
+        </div>
+
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/gate_heroes/gate_heroes.html"
+         data-icon="🦸">
+          <div class="title">GATE HEROES</div>
+          <div class="desc">Ad-style runner shooter. Choose left or right gates, power up your heroes, and defeat the boss.</div>
+          <span class="tag">Gate Runner Shooter</span>
+        </a>
+
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/gogo_race/gogo_race.html"
+         data-icon="🏎️">
+          <div class="title">GoGo Race</div>
+          <div class="desc">Retro gadget racing. Dodge rivals, chase star lines, and survive night curves.</div>
+          <span class="tag">Gadget Racing</span>
+        </a>
+
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/zero_fighter/zero_fighter.html"
+         data-icon="✈️">
+          <div class="title">ZERO FIGHTER</div>
+          <div class="desc">Vertical air shooter. Collect power-up items, dodge bullets, and survive enemy waves.</div>
+          <span class="tag">Air Shooter</span>
+        </a>
+
+        <a
+          class="card"
+          href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/cat_tap/cat_tap.html"
+         data-icon="🐱">
+          <div class="title">CAT TAP</div>
+          <div class="desc">Cute cat tap game. Find the target cat and tap quickly through 2, 4, and 9 choices.</div>
+          <span class="tag">Cat Tap</span>
+        </a>
+
+        <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/color_drop.html" data-icon="🎨">
+          <div class="title">COLOR DROP</div>
+          <div class="desc">Catch and match falling colors in a quick smartphone challenge.</div>
+          <span class="tag">Casual Action</span>
+        </a>
+
+        <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/mini-breakout.html" data-icon="🧱">
+          <div class="title">MINI BREAKOUT</div>
+          <div class="desc">A compact brick-breaking action game made for quick play.</div>
+          <span class="tag">Breakout Action</span>
+        </a>
+
+        <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/monster-survivor.html" data-icon="👾">
+          <div class="title">MONSTER SURVIVOR</div>
+          <div class="desc">Move, survive, and defeat waves of monsters.</div>
+          <span class="tag">Survival Action</span>
+        </a>
+
+        <a class="card" href="https://kaggleosaka.github.io/ai-lab/games/3sec/games/napoleon/napoleon_p.html" data-icon="🃏">
+          <div class="title">NAPOLEON</div>
+          <div class="desc">Japanese five-player trick-taking card game. Bid for Napoleon, call a deputy, and capture picture cards.</div>
+          <span class="tag">Card Game / CPU Battle</span>
+        </a>
+
+
+        <a class="card" href="./games/csurvivor/csurvivor.html" data-icon="⚔️">
+          <div class="title">ちびっこサバイバー</div>
+          <div class="desc">Move to survive while attacks fire automatically. Power up and defeat three bosses.</div>
+          <span class="tag">Survival Action</span>
+        </a>
+
+        <a class="card" href="./games/mahjong/mahjong.html" data-icon="🀄">
+          <div class="title">MAHJONG</div>
+          <div class="desc">Japanese four-player mahjong against three CPU players. Draw, discard, reach, tsumo, and ron.</div>
+          <span class="tag">Mahjong / CPU Battle</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
+    <section id="puzzlePanel" class="hidden" aria-label="Puzzle game menu">
+      <div class="panelTitle">PUZZLE GAME</div>
+      <div class="grid">
+        <a
+          class="card puzzle"
+          href="./games/mine_clear/mine_clear.html?v=3"
+         data-icon="💣">
+          <div class="title">MINE CLEAR</div>
+          <div class="desc">Classic Minesweeper. Use the numbers to find the mines and open every safe tile.</div>
+          <span class="tag">Classic Puzzle</span>
+        </a>
+
+        <a class="card puzzle" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/connect-dots.html" data-icon="🔵">
+          <div class="title">CONNECT DOTS</div>
+          <div class="desc">Connect matching colored dots and solve the board.</div>
+          <span class="tag">Connection Puzzle</span>
+        </a>
+
+        <a class="card puzzle" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/water_sort_puzzle.html" data-icon="🧪">
+          <div class="title">WATER SORT PUZZLE</div>
+          <div class="desc">Sort the colored water so each container holds one color.</div>
+          <span class="tag">Sorting Puzzle</span>
+        </a>
+
+        <a class="card puzzle" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/mancala.html" data-icon="🫘">
+          <div class="title">MANCALA</div>
+          <div class="desc">Play the classic seed-sowing strategy board game.</div>
+          <span class="tag">Board Puzzle</span>
+        </a>
+
+        <a class="card puzzle" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/match3puzzle.html" data-icon="🍓">
+          <div class="title">MATCH 3 PUZZLE</div>
+          <div class="desc">Match three pieces to clear the board and build combinations.</div>
+          <span class="tag">Match Puzzle</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
+    <section id="visualPanel" class="hidden" aria-label="Visual search menu">
+      <div class="panelTitle">VISUAL SEARCH</div>
+      <div class="grid">
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-Z.html" data-icon="🔤">
+          <div class="title">FIND Z</div>
+          <div class="desc">Find the letter Z hidden among similar characters.</div>
+          <span class="tag">Visual Search</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-O.html" data-icon="🔎">
+          <div class="title">FIND O</div>
+          <div class="desc">Find the letter O hidden in the character grid.</div>
+          <span class="tag">Visual Search</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/find-3.html" data-icon="3️⃣">
+          <div class="title">FIND 3</div>
+          <div class="desc">Find the number 3 before the short timer runs out.</div>
+          <span class="tag">Visual Search</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/tea-set-memory.html" data-icon="🫖">
+          <div class="title">TEA SET MEMORY</div>
+          <div class="desc">Remember the tea set arrangement and identify what changed.</div>
+          <span class="tag">Visual Memory / PC</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/three-color-signal-hunt.html" data-icon="🚦">
+          <div class="title">THREE-COLOR SIGNAL HUNT</div>
+          <div class="desc">Search the screen for the specified three-color signal.</div>
+          <span class="tag">Visual Search / PC</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/visual-count-challenge.html" data-icon="🔢">
+          <div class="title">VISUAL COUNT CHALLENGE</div>
+          <div class="desc">Count the target objects accurately under time pressure.</div>
+          <span class="tag">Visual Count / PC</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/crowd-search.html" data-icon="👥">
+          <div class="title">CROWD SEARCH</div>
+          <div class="desc">Find the requested person hidden in a crowded scene.</div>
+          <span class="tag">Crowd Search / PC</span>
+        </a>
+
+        <a class="card search" href="https://kaggleosaka.github.io/ai-lab/games/3sec/visual-search/one-odd-one-out.html" data-icon="🧩">
+          <div class="title">ONE ODD ONE OUT</div>
+          <div class="desc">Spot the single item that differs from all the others.</div>
+          <span class="tag">Odd One Out / PC</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
+    <section id="kidsPanel" class="hidden" aria-label="Kids game menu">
+      <div class="panelTitle">KIDS GAME</div>
+      <div class="grid">
+        <a class="card kids" href="https://kaggleosaka.github.io/ai-lab/games/kids/kids_maze_p.html" data-icon="🧒">
+          <div class="title">KIDS MAZE</div>
+          <div class="desc">A simple maze game designed for young children to play on a smartphone or tablet.</div>
+          <span class="tag">Kids / Maze</span>
+        </a>
+      </div>
+      <button class="backBtn" type="button" onclick="showPanel('home')">← Back to categories</button>
+    </section>
+
+    <div class="footer">kaggleosaka / ai-lab / games / 3sec</div>
+  </main>
+
+<script>
+function showPanel(name) {
+  const home = document.getElementById("homeMenu");
+  const casual = document.getElementById("casualPanel");
+  const puzzle = document.getElementById("puzzlePanel");
+  const visual = document.getElementById("visualPanel");
+  const kids = document.getElementById("kidsPanel");
+  const crumb = document.getElementById("crumb");
+
+  home.classList.toggle("hidden", name !== "home");
+  casual.classList.toggle("hidden", name !== "casual");
+  puzzle.classList.toggle("hidden", name !== "puzzle");
+  visual.classList.toggle("hidden", name !== "visual");
+  kids.classList.toggle("hidden", name !== "kids");
+
+  if (name === "casual") crumb.textContent = "Category / Casual Game";
+  else if (name === "puzzle") crumb.textContent = "Category / Puzzle Game";
+  else if (name === "visual") crumb.textContent = "Category / Visual Search";
+  else if (name === "kids") crumb.textContent = "Category / Kids Game";
+  else crumb.textContent = "Select a category";
+}
+function restoreCategory() {
+  const category = location.hash.slice(1);
+  showPanel(['casual', 'puzzle', 'visual', 'kids'].includes(category) ? category : 'home');
+}
+window.addEventListener('hashchange', restoreCategory);
+restoreCategory();
+</script>
+</body>
+</html>
